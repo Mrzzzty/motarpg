@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260907T152058414Z-94164-7430ffe5a15d",
+  "runId": "20260907T152058414Z-94164-7430ffe5a15d",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": null,
+  "diffHash": "0d7b185e871b6733bc80552f27d7327de54c6c69acd4997e65e62322a903be54",
+  "rulesVersion": "unavailable",
+  "sessionHash": "7b69623b07a68ffa5e27095a551ef53994556f8ef760261e76a57d487484fdc2",
+  "reportRef": ".mimosa/reports/task-review-sess_86cca950-a91c-4ee7-ba88-d0a9f508cf9e-20260907T152058414Z-94164-7430ffe5a15d.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "src/ui/TitleScreen.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/main.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/core/GameLoop.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/core/Renderer.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-09-07T15:20:58.767Z"
+}

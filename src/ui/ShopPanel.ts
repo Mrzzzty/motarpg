@@ -1,0 +1,211 @@
+/**
+ * 商店面板：购买 / 回收 两个页签（按钮切换），固定大尺寸。
+ * 鼠标悬浮商品显示具体数值，装备类商品并排显示两个竖排悬浮窗：
+ * 商品本身 + 当前穿戴的同栏位装备对比。
+ */
+import type { Equipment } from '../types';
+import { dataManager } from '../core/DataManager';
+import { eventBus } from '../core/EventBus';
+import { gameState } from '../core/GameState';
+import { Player } from '../entities/Player';
+import { MerchantSystem, type ShopEntry } from '../systems/MerchantSystem';
+
+type ShopTab = 'buy' | 'sell';
+
+export class ShopPanel {
+  private el: HTMLElement;
+  /** 悬浮对比窗（两个竖排卡片并排） */
+  private hoverEl: HTMLElement;
+  private npcId = '';
+  private tab: ShopTab = 'buy';
+
+  constructor(layer: HTMLElement) {
+    this.el = document.createElement('div');
+    this.el.className = 'overlay-panel hidden';
+    layer.appendChild(this.el);
+    this.hoverEl = document.createElement('div');
+    this.hoverEl.id = 'shop-hover';
+    this.hoverEl.classList.add('hidden');
+    document.body.appendChild(this.hoverEl);
+
+    eventBus.on('merchantOpened', p => this.show(p.npcId));
+    eventBus.on('goldChanged', () => { if (!this.el.classList.contains('hidden')) this.render(); });
+    window.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !this.el.classList.contains('hidden')) this.close();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!this.hoverEl.classList.contains('hidden')) this.positionHover(e.clientX, e.clientY);
+    });
+  }
+
+  private show(npcId: string): void {
+    this.npcId = npcId;
+    this.tab = 'buy';
+    gameState.pushModal();
+    this.el.classList.remove('hidden');
+    this.render();
+  }
+
+  private render(): void {
+    const player = Player.getInstance();
+    const floorId = player.state.currentFloor;
+    const stock: ShopEntry[] = MerchantSystem.getInstance().openShop(this.npcId, floorId);
+    const isWitch = this.npcId === 'npc_witch';
+    const tab: ShopTab = isWitch ? 'buy' : this.tab;
+
+    // 购买页：库存（悬浮显示数值与穿戴对比）
+    const buyRows = stock.map((entry, i) => {
+      const soldOut = entry.quantity === 0;
+      const afford = player.state.gold >= entry.price;
+      const q = entry.equipment ? dataManager.equipment.quality[entry.equipment.quality] : null;
+      const sub = entry.equipment && q
+        ? `<div class="dim" style="color:${q.color}">${entry.equipment.name} · ${entry.equipment.affixes.map(a => a.name).join('·') || '无词条'}</div>`
+        : `<div class="dim">${entry.desc}</div>`;
+      const hoverAttr = entry.equipment
+        ? ` data-hover-equip="${i}"`
+        : entry.kind === 'potion' && entry.tier
+          ? ` data-hover-potion="${entry.tier}"`
+          : '';
+      return `<div class="shop-row shop-item ${soldOut ? 'soldout' : ''}"${hoverAttr}>
+        <div>
+          <div>${entry.icon} ${entry.name} <span class="dim">×${entry.quantity === -1 ? '∞' : entry.quantity}</span></div>
+          ${sub}
+        </div>
+        <button data-buy="${i}" ${soldOut || !afford ? 'disabled' : ''}>${entry.price} 🪙</button>
+      </div>`;
+    }).join('');
+
+    // 回收页：收藏置顶；已穿戴标记；收藏/已穿戴不可回收
+    const bag = [...player.state.bag].sort((a, b) => Number(!!b.isFavorite) - Number(!!a.isFavorite));
+    const sellRows = bag.length === 0
+      ? '<div class="dim">没有可回收的装备</div>'
+      : bag.map(e => {
+        const q = dataManager.equipment.quality[e.quality];
+        const equipped = e.id === player.state.weaponId || e.id === player.state.armorId;
+        const locked = equipped || !!e.isFavorite;
+        const tags = [
+          e.isFavorite ? '<span class="sell-tag fav-tag">⭐ 已收藏</span>' : '',
+          equipped ? '<span class="sell-tag equipped-tag">已装备</span>' : '',
+        ].join('');
+        return `<div class="shop-row shop-item" data-hover-sell="${e.id}">
+          <div>
+            <div><span style="color:${q.color}">${e.name}</span> <span class="dim">Lv.${e.level}</span> ${tags}</div>
+            <div class="dim">${e.slot === 'weapon' ? '🗡️ 武器' : '🛡️ 胸甲'} · ⚔️${e.attack} 🛡️${e.defense}</div>
+          </div>
+          <button data-sell="${e.id}" ${locked ? 'disabled' : ''}>+${e.sellPrice} 🪙</button>
+        </div>`;
+      }).join('');
+
+    this.el.innerHTML = `
+      <div class="op-box op-box-inv">
+        <div class="op-head"><span>${isWitch ? '🧪 女巫·薇薇安' : '🛒 商人·老古'}</span><button class="op-close">✕</button></div>
+        <div class="op-body">
+          <div class="shop-header">
+            <div class="shop-gold">持有金币：🪙 ${player.state.gold}</div>
+            <div class="shop-tabs">
+              <button class="inv-tab ${tab === 'buy' ? 'active' : ''}" data-shoptab="buy">${isWitch ? '🧪 秘药' : '🛒 购买'}</button>
+              ${isWitch ? '' : `<button class="inv-tab ${tab === 'sell' ? 'active' : ''}" data-shoptab="sell">💰 回收</button>`}
+            </div>
+          </div>
+          <div class="shop-content">${tab === 'buy' ? buyRows : sellRows}</div>
+        </div>
+      </div>
+    `;
+    this.el.querySelector('.op-close')!.addEventListener('click', () => this.close());
+    this.el.querySelectorAll('[data-shoptab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.tab = (btn as HTMLElement).dataset.shoptab as ShopTab;
+        this.render();
+      });
+    });
+    this.el.querySelectorAll('[data-buy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const result = MerchantSystem.getInstance().buy(this.npcId, floorId, parseInt((btn as HTMLElement).dataset.buy!, 10));
+        if (!result.ok) eventBus.emit('notification', { message: result.reason ?? '购买失败', type: 'warning', icon: '🛒' });
+        this.render();
+      });
+    });
+    this.el.querySelectorAll('[data-sell]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const result = MerchantSystem.getInstance().sell((btn as HTMLElement).dataset.sell!);
+        if (!result.ok) eventBus.emit('notification', { message: result.reason ?? '回收失败', type: 'warning', icon: '💰' });
+        this.render();
+      });
+    });
+    // 悬浮：装备类显示 商品 + 已穿戴 两卡对比；药水显示数值卡
+    this.el.querySelectorAll('[data-hover-equip]').forEach(row => {
+      const entry = stock[parseInt((row as HTMLElement).dataset.hoverEquip!, 10)];
+      if (!entry?.equipment) return;
+      this.bindHover(row as HTMLElement, () => this.compareHtml(entry.equipment!));
+    });
+    this.el.querySelectorAll('[data-hover-sell]').forEach(row => {
+      const equip = player.state.bag.find(e => e.id === (row as HTMLElement).dataset.hoverSell);
+      if (!equip) return;
+      this.bindHover(row as HTMLElement, () => this.compareHtml(equip));
+    });
+    this.el.querySelectorAll('[data-hover-potion]').forEach(row => {
+      const def = dataManager.getPotion((row as HTMLElement).dataset.hoverPotion as never);
+      if (!def) return;
+      this.bindHover(row as HTMLElement, () => `
+        <div class="hover-card">
+          <div class="tt-title">${def.icon} ${def.name}</div>
+          <div>❤️ 回复 ${Math.round(def.healPct * 100)}% 最大生命</div>
+          <div class="dim">售价：${def.price} 🪙（可拖入底部快捷栏）</div>
+        </div>`);
+    });
+  }
+
+  /** 商品 + 当前同栏位已穿戴装备：两个竖排卡片并排 */
+  private compareHtml(e: Equipment): string {
+    const player = Player.getInstance();
+    const current = e.slot === 'weapon' ? player.weapon : player.armor;
+    const currentHtml = current
+      ? this.equipCard(current, '已穿戴')
+      : `<div class="hover-card"><div class="tt-title dim">${e.slot === 'weapon' ? '🗡️ 武器' : '🛡️ 胸甲'}栏</div><div class="dim">未穿戴装备</div></div>`;
+    return this.equipCard(e, e.slot === 'weapon' ? '购买（武器）' : '购买（胸甲）') + currentHtml;
+  }
+
+  private equipCard(e: Equipment, heading: string): string {
+    const q = dataManager.equipment.quality[e.quality];
+    return `<div class="hover-card" style="border-color:${q.color}">
+      <div class="tt-title" style="color:${q.color}">${e.name}</div>
+      <div class="dim">${heading} · ${q.name} · Lv.${e.level}</div>
+      <div class="hover-stats">
+        <div>⚔️ 攻击力 <b>${e.attack}</b></div>
+        <div>🛡️ 防御力 <b>${e.defense}</b></div>
+      </div>
+      ${e.affixes.length > 0
+        ? `<div class="affix-list">${e.affixes.map(a => {
+            const def = dataManager.equipment.affixes.find(d => d.name === a.name);
+            return `<div class="affix-row">✦ ${a.name} ${def?.description?.replace('{v}', String(a.value)) ?? `+${a.value}`}</div>`;
+          }).join('')}</div>`
+        : '<div class="dim">无词条</div>'}
+      <div class="dim">回收价 ${e.sellPrice} 🪙</div>
+    </div>`;
+  }
+
+  private bindHover(row: HTMLElement, content: () => string): void {
+    row.addEventListener('mouseenter', () => {
+      this.hoverEl.innerHTML = content();
+      this.hoverEl.classList.remove('hidden');
+    });
+    row.addEventListener('mouseleave', () => this.hoverEl.classList.add('hidden'));
+  }
+
+  private positionHover(x: number, y: number): void {
+    const off = 14;
+    const rect = this.hoverEl.getBoundingClientRect();
+    let hx = x + off;
+    let hy = y + off;
+    if (hx + rect.width > window.innerWidth - 8) hx = x - rect.width - off;
+    if (hy + rect.height > window.innerHeight - 8) hy = Math.max(8, y - rect.height - off);
+    this.hoverEl.style.left = `${hx}px`;
+    this.hoverEl.style.top = `${hy}px`;
+  }
+
+  private close(): void {
+    this.el.classList.add('hidden');
+    this.hoverEl.classList.add('hidden');
+    gameState.popModal();
+  }
+}

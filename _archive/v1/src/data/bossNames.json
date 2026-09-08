@@ -1,0 +1,34 @@
+{
+  "bosses": [
+    { "floor": 5, "bossId": "jericho", "name": "耶利哥", "title": "昔年天使", "icon": "👼", "color": "#ffd700" },
+    { "floor": 10, "bossId": "beelzebub", "name": "别西卜", "title": "大罪司教", "icon": "🪰", "color": "#8d6e63" },
+    { "floor": 15, "bossId": "abaddon", "name": "亚巴顿", "title": "圣骸看守者", "icon": "💀", "color": "#7e57c2" },
+    { "floor": 20, "bossId": "gabriel", "name": "加百列", "title": "真理裁决官", "icon": "🎺", "color": "#4fc3f7" },
+    { "floor": 25, "bossId": "lucifer", "name": "路西法", "title": "终末使徒", "icon": " 😈", "color": "#ff5252" },
+    { "floor": 30, "bossId": "leviathan", "name": "利维坦", "title": "虚空凝视者", "icon": "🐋", "color": "#26a69a" },
+    { "floor": 35, "bossId": "moloch", "name": "摩洛克", "title": "原初罪业", "icon": "🔥", "color": "#ff7043" },
+    { "floor": 40, "bossId": "cain", "name": "该隐", "title": "圣杯腐蚀者", "icon": "🍷", "color": "#ab47bc" },
+    { "floor": 45, "bossId": "pale", "name": "苍白", "title": "天启第四骑", "icon": "🐴", "color": "#cfd8dc" },
+    { "floor": 50, "bossId": "baldr", "name": "巴德尔", "title": "永恒终末", "icon": "🕯️", "color": "#ffd54f" },
+    { "floor": 55, "bossId": "mammon", "name": "玛门", "title": "贪婪枢机", "icon": "💰", "color": "#ffca28" },
+    { "floor": 60, "bossId": "asmodeus", "name": "阿斯莫德", "title": "欲望执行官", "icon": "💗", "color": "#ec407a" },
+    { "floor": 65, "bossId": "samael", "name": "萨麦尔", "title": "毒之审判长", "icon": "🐍", "color": "#66bb6a" },
+    { "floor": 70, "bossId": "azrael", "name": "阿兹拉尔", "title": "死亡誊录者", "icon": "📜", "color": "#b0bec5" },
+    { "floor": 75, "bossId": "belial", "name": "彼列", "title": "堕落圣言", "icon": "📖", "color": "#5c6bc0" },
+    { "floor": 80, "bossId": "baphomet", "name": "巴弗灭", "title": "五芒星教宗", "icon": "🐐", "color": "#8d6e63" },
+    { "floor": 85, "bossId": "nergal", "name": "内尔伽勒", "title": "冥府执政", "icon": "⚔️", "color": "#ef5350" },
+    { "floor": 90, "bossId": "erebus", "name": "厄瑞玻斯", "title": "原初黑暗", "icon": "🌑", "color": "#455a64" },
+    { "floor": 95, "bossId": "michael", "name": "米迦勒", "title": "终焉圣枪", "icon": "🗡️", "color": "#42a5f5" },
+    { "floor": 100, "bossId": "metatron", "name": "梅塔特隆", "title": "天国之书记", "icon": "🌟", "color": "#fff176" }
+  ],
+  "endlessPool": [
+    { "bossId": "e_jericho", "name": "耶利哥", "title": "回响之影", "icon": "👼", "color": "#ffd700" },
+    { "bossId": "e_beelzebub", "name": "别西卜", "title": "腐沼之王", "icon": "🪰", "color": "#8d6e63" },
+    { "bossId": "e_abaddon", "name": "亚巴顿", "title": "深渊使徒", "icon": "💀", "color": "#7e57c2" },
+    { "bossId": "e_leviathan", "name": "利维坦", "title": "无底之渊", "icon": "🐋", "color": "#26a69a" },
+    { "bossId": "e_lucifer", "name": "路西法", "title": "晨星坠落", "icon": "😈", "color": "#ff5252" },
+    { "bossId": "e_moloch", "name": "摩洛克", "title": "焚世之焰", "icon": "🔥", "color": "#ff7043" },
+    { "bossId": "e_pale", "name": "苍白", "title": "永恒骑手", "icon": "🐴", "color": "#cfd8dc" },
+    { "bossId": "e_baldr", "name": "巴德尔", "title": "不朽终焉", "icon": "🕯️", "color": "#ffd54f" }
+  ]
+}

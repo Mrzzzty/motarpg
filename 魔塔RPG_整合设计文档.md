@@ -1,0 +1,2096 @@
+# 魔塔RPG · 无尽之塔 —— 整合设计文档（含实现进度标注）
+
+> **整合来源：** `readme.md`（技术规格书）+ `待办v1.md`（种子/地图/2.5D/装备/其他问题）+ `想法.md`（战斗托管 + 光线追踪）
+> **整合日期：** 2026-09-08
+> **说明：** 本文件为唯一总文档，原三份文档内容全部并入并保持原有数值规范；每个章节标题后用状态徽标标注**当前代码的实际完成情况**。
+> **代码落点：** `src/`（TypeScript + Vite + Canvas 2D），数据配置在 `src/data/*.json`。
+
+---
+
+## 0. 阅读说明
+
+### 0.1 状态徽标含义
+
+| 徽标 | 含义 | 说明 |
+| :--- | :--- | :--- |
+| ✅ 已完成 | 代码已实现并可运行 | 有对应源文件 / 配置项 |
+| ⚠️ 部分完成 | 主体已实现，细节或数值与文档有差异 | 见章节内"实现差异"备注 |
+| ❌ 未完成 | 文档已定稿但代码未实现 | 见文末《未完成清单》 |
+| ⏸ 暂缓 | 已设计但明确不在当前开发范围 | 需美术/后续阶段 |
+| ⏭ 已取代 | 原方案作废，被更新的方案替代 | 见替代章节 |
+
+### 0.2 三份源文档的优先级关系（重要）
+
+后续开发中若发现规范冲突，**按以下优先级执行**（这也是当前代码的取值依据）：
+
+| 优先级 | 文档 | 适用内容 |
+| :--- | :--- | :--- |
+| 1 | `待办v1.md` | 地图房间、2.5D光影、装备与药水、存档/摄像机/悬浮窗/占位美术（**v2 现行版本**） |
+| 2 | `readme.md` | 世界模型、战斗公式、任务/图鉴/事件/商人/藏品/难度/无尽/存档结构（**v1 规格书**） |
+| 3 | `想法.md` | 战斗托管与微操（未实现）；**光影/光线追踪方案已被 §15《Canvas 2D → PixiJS 迁移文档 v2.0》取代** |
+
+> **已知冲突并已裁决的项**（代码已按裁决结果实现）：
+> - 装备品质档数：`待办v1` 为 **7 档（含"破烂"）**，`readme` 为 6 档 → ✅ **采用 7 档**
+> - 装备槽位：`待办v1` 为 **2 槽（武器/胸甲）**，`readme` 为 7 槽 → ✅ **采用 2 槽**
+> - 装备等级公式：`待办v1` = `等级×0.5 + 楼层×1.0 + rand(-2,3)`，`readme` = `等级×0.5 + 楼层×1.4 + 深度×0.6 + rand(-3,4)` → ✅ **采用待办v1 公式**（深度未接入）
+> - 存档频率：`待办v1` 简化为"仅到达新层自动存档" → ✅ **采用简化版**（覆盖 readme 的 30 秒自动存档）
+> - 光影观感：`待办v1` 要求"始终明亮、暗角 ≤30%" → ✅ **采用**（覆盖想法.md 光线追踪的硬阴影/暗区方案）
+
+---
+
+## 1. 完成度总览（一屏看懂）
+
+### 1.1 基础设施 ✅
+
+| 模块 | 状态 | 代码落点 |
+| :--- | :--- | :--- |
+| 技术栈（TS + Vite + Canvas2D + 原生HTML/CSS） | ✅ | `package.json`、`vite.config.ts`、`src/main.ts` |
+| 数据驱动（11 个 JSON 配置） | ✅ | `src/data/*.json` + `core/DataManager.ts` |
+| 事件总线 EventBus | ✅ | `core/EventBus.ts`、`types/GameEventMap` |
+| 单例管理器 | ✅ | 各 `getInstance()` |
+| 主循环 / 输入 / 全局状态 | ✅ | `core/GameLoop.ts`、`core/InputManager.ts`、`core/GameState.ts` |
+| 无头自测脚本 | ✅ | `scripts/run-headless.mjs`、`src/test/*` |
+
+### 1.2 地图与楼层 ✅
+
+| 模块 | 状态 | 代码落点 |
+| :--- | :--- | :--- |
+| 五层生成器架构（楼层→路径→房间→走廊→内容） | ✅ | `map/FloorGenerator.ts`、`PathGenerator.ts`、`RoomGenerator.ts`、`CorridorGenerator.ts`、`ContentFiller.ts` |
+| 地图装配 + 校验 | ✅ | `map/MapGenerator.ts`、`map/MapValidator.ts` |
+| 运气平衡器 Tension | ✅ | `FloorGenerator.allocateByTension()` |
+| 双主干路径 A/B + 侧室挂载 | ✅ | `PathGenerator.ts` |
+| 房间规格 / 排列约束 / 走廊与额外通道 | ✅ | `RoomGenerator.ts`、`CorridorGenerator.ts` |
+| 怪物 / 宝箱 / 装饰填充 | ✅ | `ContentFiller.ts` |
+| 手工预制地图（字符图例） | ✅ | `map/PrefabMap.ts`（超出原文档，新增能力） |
+| **房间深度影响战斗数值** | ❌ | `StatCalculator.monsterStats()` 仅按楼层插值，未接深度倍率 |
+| **多组楼梯 + 跨层三维对应** | ❌ | 仅单组上/下楼（`MapEntity.targetFloor`） |
+| **种子系统** | ⏸ | `utils/MathUtils.ts` 注释明确"种子系统暂不实现" |
+
+### 1.3 渲染与视觉 ✅
+
+| 模块 | 状态 | 代码落点 |
+| :--- | :--- | :--- |
+| 坐标映射与 tileSize | ✅ | `render/Projection.ts`（3D 下作工具用；屏幕→格子已改用 Raycaster） |
+| ~~等距渲染器 + screenY 排序~~ | ⏭ | `IsometricRenderer.ts` 已删除，由 `ThreeRenderer` + 深度测试取代 |
+| 物体高度表 | ✅ | `gameConfig.json → heights`（含 wallByRoom） |
+| ~~光影系统（地面光/墙壁光/6光源）~~ | ⏭ | `LightSystem.ts` 已删除，改为 Three 原生光照（环境光 + 方向光 + 点光源） |
+| ~~影子系统（静态缓存/动态投影）~~ | ⏭ | `ShadowSystem.ts` 已删除，改为 Three `PCFSoftShadowMap` |
+| 占位美术（方块+标签+立体感） | ✅ | `render/PlaceholderArt.ts` → 由 `TextureGenerator` 烘焙为纹理 |
+| 纹理生成（地砖/实体/玩家/光晕/光锥） | ✅ | `render/TextureGenerator.ts` + `effects/ThreeTextures.ts` |
+| 墙面砖缝贴图 | ✅ | `ThreeTextures.brickTexture()` |
+| 粒子系统（飘字/爆点/光环） | ✅ | `effects/ParticleSystem.ts` + `ThreeParticleSystem.ts`（GPU Sprite） |
+| **后期处理（辉光 Bloom / 暗角≤0.3 / 颜色校正）** | ✅ | `effects/PostProcessing.ts`（EffectComposer 管线） |
+| **氛围点光源（宝箱金/Boss红/楼梯蓝）+ 自发光脉动** | ✅ | `ThreeRenderer.addGlowLight()` / `addGlow()` |
+| **丁达尔光锥 + 光锥飘尘** | ✅ | `ThreeRenderer`（复用 `coneTex()`） |
+| **屏幕震动** | ✅ | `ThreeRenderer.shake()` / `applyShake()` |
+| 摄像机（整房显示 > 安全区跟随） | ✅ | `ThreeRenderer.render()` 内自算注视点（3D） |
+| 小地图 | ✅ | `ui/MiniMap.ts`（超出原文档） |
+| ~~光线投射 / 硬阴影光线追踪~~ | ⏭ | 原 CPU 射线方案作废，由 Three 原生阴影 + Bloom 取代 |
+| **渲染引擎：Three.js（3渲2）** | ✅ | `three@0.185.1`；`ThreeRenderer` 场景 / 固定视角相机 / 原生光照阴影 / Raycaster 拾取；详见 **§16** |
+| **正式美术资源替换** | ⏸ | 全部为占位符，替换计划见 §11.5 |
+
+### 1.4 战斗与成长 ⚠️
+
+| 模块 | 状态 | 代码落点 |
+| :--- | :--- | :--- |
+| 玩家属性 / 成长 / 升级 | ✅ | `entities/Player.ts`、`utils/StatCalculator.ts` |
+| 自动回合制战斗 + 暴击/闪避/伤害浮动 | ✅ | `systems/BattleSystem.ts` |
+| 词条效果接入战斗（业火/嗜血/屠龙） | ✅ | `BattleSystem.ts` + `Player.stats()` |
+| 血量<30% 自动喝药 | ✅ | `BattleSystem.ts` |
+| 战斗预测（悬浮窗能否获胜） | ✅ | `BattleSystem.forecast()` |
+| 死亡复活（起点复活 + 金币惩罚） | ✅ | `core/GameController.handleDeath()` |
+| 精英怪（数值/金币/经验倍率） | ✅ | `monsters.json → eliteStatMultiplier` 等 |
+| **托管 / 微操战斗选项**（想法.md） | ❌ | 目前是"战前确认 + 全自动结算" |
+| **状态效果系统**（模块A：中毒/狂暴/护盾/冰冻/灼烧/急速…） | ❌ | 无 `StatusEffectManager` |
+| **Boss 词缀系统**（模块J.2，12 种） | ❌ | 无 `bossAffixes.json` |
+| **Boss 战力检测（防速通）** | ❌ | 无综合战力计算 |
+| **Boss 分层命名**（耶利哥/别西卜…） | ❌ | 仅 `ancient_dragon` 一种 Boss |
+
+### 1.5 装备 / 经济 / 道具 ✅
+
+| 模块 | 状态 | 代码落点 |
+| :--- | :--- | :--- |
+| 7 档品质 + 按楼层概率表 | ✅ | `data/equipmentTables.json`、`EquipmentGenerator.rollQuality()` |
+| 12 种词条 + 分档数值 + 品质下限 | ✅ | `equipmentTables.json → affixes`、`rollAffixes()` |
+| 装备等级公式（待办v1 版） | ✅ | `rollEquipLevel()` |
+| 命名规则 `[前缀][基础名][·词条…]` | ✅ | `buildName()` |
+| 回收价 / 购买价 | ✅ | `EquipmentGenerator.generate()` |
+| 装备对比 UI（绿升红降 + 词条增减） | ✅ | `ui/Panels.ts` 背包详情 |
+| 穿戴 / 卸下 / 收藏 / 拖拽绑快捷栏 | ✅ | `ui/Panels.ts`、`ui/GameUI.ts` |
+| 药水 5 档（劣质→圣药，百分比回复） | ✅ | `data/potions.json`、`Player.usePotion()` |
+| 金币经济（掉落/售卖/购买） | ✅ | `gameConfig.json`、`MerchantSystem.ts` |
+| 钥匙（商人购买） | ✅ | `MerchantSystem.ts`、`Player.state.keys` |
+| **魂晶（第二货币）** | ❌ | 代码中无 `soul` 字段 |
+
+### 1.6 系统模块 ⚠️
+
+| 模块 | 状态 | 代码落点 |
+| :--- | :--- | :--- |
+| 任务系统（主线链 + 目标追踪 + 奖励） | ✅ | `systems/QuestManager.ts`、`data/quests.json`（5 个引导任务） |
+| 图鉴系统（击杀计数 + 解锁） | ✅ | `systems/BestiaryManager.ts` + 图鉴面板 |
+| 宝箱系统（档次 + 奖励生成） | ✅ | `systems/ChestSystem.ts` |
+| 商人系统（库存 Roll + 双栏 UI） | ✅ | `systems/MerchantSystem.ts`、`ui/ShopPanel.ts` |
+| 动态事件系统（进入触发 + 选项分支） | ✅ | `ui/EventPanel.ts`、`data/events.json` |
+| NPC 对话 | ✅ | `ui/DialogPanel.ts`、`data/npcs.json` |
+| 引导系统（首装/首死/教学欢迎） | ✅ | `systems/GuidanceSystem.ts` |
+| 存档（到新层自动 + S 手动 + 设置开关） | ✅ | `systems/SaveManager.ts` |
+| **成就系统**（模块B） | ❌ | 无 `AchievementManager` |
+| **藏品系统**（模块H，20+ 种） | ❌ | 无 `CollectibleManager` / `collectibles.json` |
+| **难度系统**（模块I，7 档） | ❌ | 无 `DifficultySystem` |
+| **无尽模式**（第五部分） | ❌ | 无门控三选一 / 无尽层数 |
+| 存档导出 / 导入 | ❌ | `SaveManager` 仅 localStorage |
+
+### 1.7 UI ✅
+
+| 模块 | 状态 | 代码落点 |
+| :--- | :--- | :--- |
+| 左中右三栏布局 + 底部栏 | ✅ | `ui/GameUI.build()` |
+| 左栏（HP/经验/属性/装备） | ✅ | `#left-panel` |
+| 右栏（任务追踪 + 当前位置） | ✅ | `#right-panel` |
+| 底部 5 槽快捷栏（数字键 1-5） | ✅ | `GameUI.bindHotbarEvents()` |
+| 背包 / 角色 / 任务 / 图鉴 / 设置面板 | ✅ | `ui/Panels.ts` |
+| 商店 / 事件 / 对话 / 确认 / 标题屏 | ✅ | 对应 `ui/*.ts` |
+| 悬浮窗（200ms 显示 / 300ms 消失 / 12px 偏移） | ✅ | `ui/Tooltip.ts`、`gameConfig.hover` |
+| 通知 / Boss 警告 | ✅ | `ui/Notification.ts`、`GameUI.showBossWarning()` |
+| 点击 BFS 自动寻路 | ✅ | `core/GameController.moveTo()`（超出原文档） |
+| **藏品面板（H 键）** | ❌ | — |
+| **成就面板** | ❌ | — |
+| **难度切换 UI** | ❌ | — |
+
+---
+
+# 第一部分：项目概述与技术选型 ✅
+
+## 1.1 游戏概念
+
+玩家控制英雄进入"无尽之塔"，塔内每层由若干房间组成；通过战斗、交易、收集不断强化自己，持续前往更深楼层。
+
+**核心目标：不断向下探索更深楼层，挑战更强敌人，获得更好装备，循环往复。**
+
+## 1.2 技术栈 ✅
+
+| 项目 | 选型 | 状态 |
+| :--- | :--- | :--- |
+| 平台 | Web（PC / 移动端浏览器） | ✅ |
+| 语言 | TypeScript | ✅ |
+| 渲染 | HTML5 Canvas 2D | ✅ |
+| UI 框架 | 原生 HTML + CSS | ✅ |
+| 构建工具 | Vite | ✅ |
+| 数据格式 | JSON | ✅ |
+
+## 1.3 核心设计原则 ✅
+
+- **数据驱动**：数值存放于 `src/data/*.json`，代码只处理逻辑。
+- **模块化**：每个系统独立文件，通过 `EventBus` 通信。
+- **单例模式**：核心管理器全局唯一。
+- **Roguelike 属性**：楼层布局、怪物、宝箱、事件、商人库存均随机（⚠️ 无种子，不可复现）。
+
+---
+
+# 第二部分：核心架构 ⚠️（主体完成，深度/楼梯/难度未接入）
+
+## 2.1 世界与地图系统 ✅
+
+### 2.1.1 楼层、房间与连接网络 ⚠️
+
+采用"世界-房间-楼层"三层模型；房间连接为非线性网络（多路径、分支、汇合）。
+
+**房间深度定义**：起点深度 0，每经过一条连接深度 +1。
+
+**深度与难度/收益关系**（❌ **代码中深度未参与战斗数值计算**，仅用于房间名/小地图/UI 展示）：
+
+| 深度 | 怪物强度 | 金币 | 经验 | 装备品质下限 | 藏品掉落 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 0（起点） | 0.7× | 0.5× | 0.6× | 普通 | 0.5× |
+| 1 | 1.0× | 1.0× | 1.0× | 普通 | 1.0× |
+| 2 | 1.3× | 1.5× | 1.4× | 优秀 | 1.3× |
+| 3 | 1.7× | 2.2× | 1.9× | 稀有 | 1.7× |
+| 4 | 2.2× | 3.2× | 2.5× | 稀有 | 2.2× |
+| 5+ | 2.8×+(d-5)×0.4 | 4.5×+(d-5)×0.8 | 3.2×+(d-5)×0.5 | 史诗 | 2.8×+(d-5)×0.3 |
+
+**实现差异**：`StatCalculator.monsterStats(def, floorId, isElite)` 只接收楼层与精英标记，深度倍率未接入；`RoomData.depth` 已正确计算并存档。
+
+### 2.1.2 Boss 楼层特殊设计 ⚠️
+
+- 每 **5 层** 出现 Boss 楼层（第 5/10/15… 层），不可绕过 ✅
+- Boss 层固定 3 房：休整 → Boss → 终点奖励 ✅（`FloorGenerator.allocate()`）
+- 休整房含商人 + 首次进入回血 30% ✅
+- 终点奖励房含大宝箱（grand）+ 楼梯 ✅
+
+**Boss 数值检测（防速通）** ❌
+
+```
+综合战力 = 攻击×1.5 + 防御×1.2 + 最大生命/10 + 装备品质修正 + 藏品修正
+装备品质修正 = (优秀×1 + 稀有×2 + 史诗×4 + 传说×8) × 装备等级 / 5
+藏品修正   = 持有藏品数×3 + 传说藏品数×10
+```
+
+| 战力区间 | 结果 |
+| :--- | :--- |
+| < 建议战力 70% | Boss 获得"势不可挡"：攻击+50% 防御+30% 生命+40% |
+| 70%~100% | 标准属性 |
+| > 120% | "以弱制强"：防御+20%，至少 3 回合 |
+
+**Boss 属性公式**（⚠️ 代码改用锚点插值，Boss 仅加 `bossStatBonus`，当前为 0）
+
+```
+Boss攻击 = 常规怪物攻击 × (2.0 + 楼层/20) × 难度系数
+Boss防御 = 常规怪物防御 × (1.5 + 楼层/30) × 难度系数
+Boss生命 = 常规怪物生命 × (4.0 + 楼层/10) × 难度系数
+Boss经验 = 常规怪物经验 × 10
+Boss金币 = 常规怪物金币 × 15
+```
+
+**Boss 击败奖励**：大量经验/金币、魂晶 3~8、必掉稀有以上装备、100% 掉藏品（**⚠️ 掉落装备已实现，魂晶与藏品未实现**）。
+
+### 2.1.3 教学层（第 1 层）⚠️
+
+设计：2 个房间（起点 + 终点），含史莱姆、药水、引导 NPC、铁剑、楼梯。
+
+**实现情况**：第 1 层为 `initial` 层（start → end）✅；引导改由 **5 条任务链 + NPC 对话 + 引导通知** 完成 ✅（`data/quests.json`、`npcs.json`、`GuidanceSystem`）；⚠️ 未按文档逐字实现"2 只史莱姆 + 生锈铁剑"的固定摆放（改为程序化生成 + 教学装备 `tutorialWeapon()`）。
+
+### 2.1.4 / 2.1.5 世界与房间数据格式 ⚠️
+
+**实现差异**：未使用文档中的 `world.json` / `room_xxx.json` 静态文件，改为**全程序化生成**（`map/*`）+ `mapGeneration.json` 参数配置；另有 `PrefabMap.ts` 支持字符图例的手工地图（见 §13）。地形编码简化为 `-1 虚空 / 0 空地 / 1 墙 / 2 装饰`，**无悬崖（4）**❌。
+
+### 2.1.6 楼梯系统 ❌（部分）
+
+- 楼梯实体与交互（确认弹窗 → 切层）✅
+- **多组楼梯数量规则**（`1 + floor((房间数-4)/2)`）❌
+- **跨层三维对应（误差 ≤ 2 格）** ❌
+- **多楼梯组均匀分布** ❌
+- 视觉标识（▲金 / ▼蓝）与悬停提示 ✅
+
+### 2.1.7 摄像机系统 ✅（按待办v1 修正版）
+
+- 房间投影 ≤ 视口 → 固定显示整个房间，玩家在画面内自由移动 ✅
+- 房间 > 视口 → 跟随玩家，边界锁定在房间边缘（每轴独立判定）✅
+- 房间切换 / 楼层切换 ✅
+- **震屏（shake）** ❌ 未实现
+
+## 2.2 玩家系统 ✅（数值已按代码调整）
+
+### 2.2.1 初始属性
+
+| 属性 | 文档值 | 代码值（`gameConfig.playerBase`） | 状态 |
+| :--- | :--- | :--- | :--- |
+| 生命值 | 1000 | 1000 | ✅ |
+| 攻击力 | 8 | **30** | ⚠️ 已调整 |
+| 防御力 | 2 | **15** | ⚠️ 已调整 |
+| 暴击率 | 5% | 5% | ✅ |
+| 闪避率 | 5% | **3%** | ⚠️ 已调整 |
+| 等级 / 经验 / 金币 | 1 / 0 / 0 | 1 / 0 / 0 | ✅ |
+| 魂晶 | 0 | — | ❌ 未实现 |
+
+### 2.2.2 成长曲线 ⚠️
+
+- 升级经验：文档 `level×120 + level^1.5×15`；代码 `expFormula = { base: 20, power: 1.5 }`（锚点调过）⚠️
+- 成长改为**每 5 级一段的成长表** ✅（`gameConfig.growthTable`，含 hp/attack/defense）
+
+## 2.3 战斗系统 ✅
+
+### 2.3.1 战斗公式（实现版）
+
+```
+基础伤害 = max(1, (攻击 − 防御) × (1 ± damageJitter))   // jitter = 0.1
+暴击：伤害 × 1.8                                        // 文档为 ×2，代码为 1.8 ⚠️
+闪避：伤害 = 0
+业火：额外附加固定火焰伤害
+屠龙：对 Boss 伤害 ×(1 + bossDamage%)
+嗜血：按造成伤害回复生命
+```
+
+### 2.3.2 敌人数值振幅 ⚠️
+
+文档为"基础值 × 楼层系数 × 深度倍率 × 难度系数"；代码改为**楼层锚点线性插值**（`gameConfig.floorAnchors`：1/5/10/15/…/50 层给出 hp/atk/def/exp/gold，超出按 overflow 线性外推），**难度系数未接入**❌、**深度倍率未接入**❌。
+
+楼层锚点（代码现值）：
+
+| 楼层 | HP | 攻击 | 防御 | 经验 | 金币 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | 165 | 40 | 7 | 15 | 20 |
+| 5 | 310 | 75 | 14 | 40 | 20 |
+| 10 | 485 | 120 | 21 | 100 | 45 |
+| 20 | 900 | 280 | 40 | 280 | 90 |
+| 30 | 1500 | 420 | 66 | 550 | 160 |
+| 40 | 2400 | 680 | 106 | 900 | 275 |
+| 50 | 4150 | 1300 | 183 | 1350 | 425 |
+
+怪物基础（8 种，`data/monsters.json`）✅：史莱姆 / 蝙蝠 / 骷髅兵 / 石像鬼 / 暗影狼 / 地狱犬 / 暗黑骑士 / 远古巨龙(Boss)；精英倍率：属性 ×1.25、金币 ×2.0、经验 ×2.5。
+
+### 2.3.3 战斗流程 ✅
+
+玩家回合 → 怪物回合 → 自动喝药判定 → 循环至一方归零或 `maxTurns=60`（超时按血量比判胜）→ 发 `monsterDefeated` / `bossDefeated` / `playerDied`。
+
+**⚠️ 差异**：战斗为**一次性自动结算 + 战斗日志面板**，无逐回合手动操作；无状态效果回合结算。
+
+---
+
+# 第三部分：扩展模块 ⚠️
+
+## 模块 A：状态效果系统 ❌
+
+**未实现。** 无 `StatusEffectManager`、无 `statusEffects.json`。
+
+| effectId | 名称 | 类型 | 持续 | 效果 |
+| :--- | :--- | :--- | :--- | :--- |
+| `poison` | 中毒 | debuff | 3 回合 | 每回合损失最大生命 5%，可叠 3 层 |
+| `rage` | 狂暴 | buff | 3 回合 | 攻击+30%，防御−20% |
+| `shield` | 护盾 | buff | 直到击破 | 吸收下一次伤害 = 防御×2 |
+| `freeze` | 冰冻 | debuff | 1 回合 | 无法行动 |
+| `burn` | 灼烧 | debuff | 2 回合 | 每回合 10+等级×2 固定伤害，可叠 5 层 |
+| `haste` | 急速 | buff | 5 回合 | 闪避+15% |
+| `bless` | 祝福 | buff | 3 回合 | 伤害加成+10% |
+| `curse` | 诅咒 | debuff | 3 回合 | 攻击−15%，不可叠加 |
+
+**接口要求**：`applyStatus / removeStatus / processTurnStart / processTurnEnd / getActiveEffects`，钩子 `onTurnStart / onTurnEnd / onDamageDealt / onDamageReceived / onApply / onRemove`。
+
+## 模块 B：任务与成就系统 ⚠️
+
+### B.1 任务 ✅
+- `QuestManager`（单例）+ `data/quests.json` ✅
+- 现有 5 条引导任务链：初来乍到 → 初试锋芒 / 开箱有喜 → 披挂上阵 / 更下一层 ✅
+- 目标类型已实现：`talk_npc` / `defeat_monster` / `open_chest` / `equip_item` / `reach_floor` ✅
+- 追踪显示于右栏 ✅；奖励类型：`gold` / `potion` / `equipment` ✅
+- ⚠️ 未实现的目标类型：`defeat_boss` / `collect_item` / `explore_room` / `level_up` / `collect_collectible`
+- ⚠️ 未实现的奖励类型：`exp`（升级由战斗直接给）、`soul`、`attribute`、`title`、`collectible`
+
+### B.2 成就 ❌
+无 `AchievementManager`、无 `achievements.json`、无成就面板。条件类型见 §原规格（level / total_gold / reach_floor / defeat_boss / equip_legendary / collect_collectibles / play_time 等）。
+
+## 模块 C：图鉴与收集系统 ⚠️
+
+### C.1 图鉴 ✅
+`BestiaryManager` 记录击杀计数、解锁阈值、图鉴面板（G 键）✅；弱点/掉落展示 ❌（无 `bestiary.json`）。
+
+### C.2 收集品（Collectible）❌
+无 `CollectibleManager`、无 `collectibles.json`、无藏品面板（H 键）。藏品 20+ 种与系列奖励设计见 §原规格（力量印记 / 守护印记 / 精准之眼 / 血之契约 / 贪婪之手 / 命运之币 / 屠龙者之印 …）。
+
+## 模块 D：动态事件系统 ✅
+
+- `ui/EventPanel.ts` + `data/events.json` ✅
+- 触发类型：已实现 `on_enter`（进入房间概率触发）✅；`on_step` / `on_interact` / `on_defeat_all` ❌
+- 效果类型已实现：`damage` / `heal` / `add_item` / `add_status` / `show_dialog` / `add_exp` / `add_gold` 等常用项 ✅；`spawn_monster` / `teleport` / `give_quest` / `add_collectible` ❌
+- 触发后暂停游戏 + 选项面板 + `once` 标记 ✅
+
+## 模块 E：宝箱系统 ✅
+
+- `systems/ChestSystem.ts` ✅
+- 奖励：金币（按楼层 band）、装备（60%）、药水（15%）✅
+- 宝箱档次：代码为 `normal` / `grand`（Boss 奖励房大宝箱）✅；文档的 5 档（木质/铁质/黄金/暗金/传说）❌ 已简化
+- 魂晶掉落 ❌、藏品掉落 ❌、钥匙锁宝箱 ❌
+
+## 模块 F：装备与品质系统 ✅（按待办v1 实现）
+
+- 7 档品质 ✅（破烂/普通/优秀/稀有/史诗/传说/神话）
+- 2 个装备槽（武器 / 胸甲）✅
+- 12 种词条 ✅（锋利/坚固/活力/精准/灵巧/强攻/铁壁/嗜血/业火/贪婪/博学/屠龙）
+- 装备等级 = `floor(玩家等级×0.5 + 楼层×1.0 + rand(-2,3))`，clamp 1–50 ✅
+- 词条数量：按品质基础数 + 等级加成（稀有≥20 / 史诗≥15 / 传说≥10 各 +1）✅；神话固定 4 条 ✅
+- 命名 `[品质前缀][基础名][·词条…]` ✅
+- 回收价 = `基础价(品质) × (1+等级×0.05) × (1+词条数×0.15)` ✅
+- 防具数值约为武器的 50–60% ✅；神话 = 传说 × 1.43 ✅
+- **7 槽位（副手/头/脚/饰品）** ❌ 采用待办v1 的 2 槽方案
+
+详细品质/词条/数值表见 **§11（装备与药水机制，来自待办v1）**，两份文档冲突时以 §11 为准。
+
+## 模块 G：商人系统 ✅
+
+- `systems/MerchantSystem.ts` + `ui/ShopPanel.ts`（双栏：库存 vs 背包）✅
+- 库存：药水（2–4 瓶）、钥匙（1–3 把）、装备（1–2 件，按楼层 Roll 品质）✅
+- 回收价：装备 `sellPrice` ✅
+- **魂晶商品 / 藏品（魂晶购买）** ❌ 无魂晶
+
+## 模块 H：藏品系统 ❌
+
+见 §模块 C.2；完整 20+ 种藏品表见原规格，代码未实现任何部分。
+
+## 模块 I：难度系统 ❌
+
+**完全未实现**（无 `DifficultySystem`、无 `difficultyConfig.json`、无切换 UI）。
+
+| 难度ID | 名称 | 解锁 | 怪物 | 经验 | 金币 | 品质修正 | 藏品率 | Boss |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `lullaby` | 摇篮曲 | 默认 | 0.4× | 1.5× | 1.5× | +2级 | 1.5× | 0.7× |
+| `normal` | 普通 | 默认 | 1.0× | 1.0× | 1.0× | 0 | 1.0× | 1.0× |
+| `hard` | 困难 | 默认 | 1.3× | 1.3× | 1.4× | +2级 | 1.3× | 1.15× |
+| `nightmare` | 噩梦 | 15 层 | 1.7× | 1.6× | 1.8× | +3级 | 1.7× | 1.3× |
+| `hell` | 地狱 | 20 层 | 2.2× | 2.0× | 2.2× | +4级 | 2.2× | 1.5× |
+| `purgatory` | 炼狱 | 30 层 | 3.0× | 2.5× | 3.0× | +5级 | 3.0× | 1.8× |
+| `haven` | 天堂 | 100 层 | 5× | 3.5× | 3.5× | +10级 | 4.5× | 2.5× |
+
+补充规则：摇篮曲跳过 Boss 战力检测；天堂难度 Boss 必带 2 个词缀、唯一产出神话品质。
+
+## 模块 J：Roguelike 属性系统 ⚠️
+
+| 随机元素 | 状态 |
+| :--- | :--- |
+| 房间布局 / 房间数 / 大小 | ✅ |
+| 怪物配置（按楼层权重筛选） | ✅ |
+| 怪物属性浮动 | ⚠️ 战斗伤害有 ±10% jitter，但怪物基础属性无 ±10% 随机 |
+| 宝箱品质 | ✅（简化为 normal/grand） |
+| 商人库存 | ✅ |
+| 事件触发 | ✅ |
+| **Boss 词缀 0–2 个** | ❌ |
+| **藏品掉落** | ❌ |
+| **地板效果（毒雾/治愈/加速）** | ❌ |
+| **种子可复现** | ⏸ |
+
+Boss 词缀（12 种，均 ❌）：狂暴 / 护盾 / 荆棘 / 剧毒 / 敏捷 / 巨人 / 诅咒 / 传奇 / 吸血鬼 / 冰霜 / 狂战 / 不朽。
+
+## 模块 K：房间连接生成算法 ✅
+
+`map/` 下五层生成器已实现 BFS 深度分级、双主干、环路捷径（额外通道 25% 概率、最多 2 条）、连通性校验；✅ 详见 §10。
+
+## 模块 L：视觉体验增强 ⚠️
+
+- 粒子系统（飘字/爆点/光环/胜利/藏品/升级）✅ `effects/ParticleSystem.ts`
+- 单次上限 50（`gameConfig.render.maxParticles`）✅
+- **屏幕震动** ✅ `ThreeRenderer.shake()`：叠加在 3D 相机位置上，线性衰减
+- 触发条件：受大伤害（>最大生命 30%）✅ / Boss 被击败 ✅ / 玩家阵亡 ✅；Boss 技能与爆炸陷阱 ⏸（战斗为自动结算，暂无逐回合技能）
+
+---
+
+# 第五部分：无尽模式 ❌
+
+**完全未实现。** 保留设计：通关主线第 10 层后出现传送门；单层"门控式三选一"（战斗/宝藏/前进）；每 5 层 Boss、每 10 层商人；无尽层数缩放 `攻击×(1+层数×0.018)`、`防御×(1+层数×0.015)`、`生命×(1+层数×0.025)`；实际难度 `= 全局难度 ×(1+层数×0.005)`；进度与主线同档独立记录。
+
+# 第六部分：数据存储与存档 ✅（按待办v1 简化版）
+
+## 6.1 当前存档结构 ✅
+
+```typescript
+interface SaveData {
+  version: string;            // "2.0.0"
+  lastSaved: string;
+  player: PlayerState;        // 含 hp/level/exp/gold/keys/potions/bag/weaponId/armorId/hotbar
+  quests: ...;                // QuestManager.exportStates()
+  bestiary: ...;              // BestiaryManager.export()
+  floor: FloorMap;            // 整个楼层地图序列化（因无种子系统）
+  entityStates: ...;          // WorldManager.exportEntityStates()
+  guidance: ...;              // 引导标记
+  settings: { autoSave, ... };
+  stats: { totalMonstersDefeated, totalBossesDefeated, totalChestsOpened, steps };
+}
+```
+
+## 6.2 存档操作 ✅ / ❌
+
+| 操作 | 状态 | 说明 |
+| :--- | :--- | :--- |
+| 自动存档 | ✅ | 仅 `floorChanged` 且目标层 > 第 1 层时触发 |
+| 手动存档 | ✅ | K 键（或 Ctrl+S）/ 底部"💾 存档"按钮 |
+| 设置中关闭自动存档 | ✅ | `gameState.settings.autoSave` |
+| 读档 | ✅ | 标题屏"继续游戏" |
+| 存储位置 | ✅ | `localStorage`，键名 `motarpg_v2_save` |
+| **导出 / 导入存档** | ❌ | 未实现 |
+| **存档校验 `isSaveValid`** | ⚠️ | 仅版本号比对提示，无结构校验 |
+
+# 第七部分：编码规范与约束 ✅
+
+- 目录结构：代码采用 `core / map / entities / systems / render / effects / ui / utils / types / data` ✅（与原规格 v1 结构不同，为现行结构）
+- 命名：类/接口 PascalCase、方法变量 camelCase、常量 UPPER_SNAKE、枚举值全小写 ✅
+- 单例：`getInstance()` ✅；实体类非单例（Player 为单例）⚠️
+- 事件通信：`EventBus` + `types/GameEventMap` 强类型 ✅
+- 错误处理：`utils/Logger` 分级日志 ✅（自定义 `GameError` 未实现 ❌）
+- 性能约束：最大光源 6、最大粒子 50、最大动态影子 20 ✅；60 FPS 目标 ✅
+
+# 第八部分：AI 开发指令（Phase 回顾）
+
+| Phase | 内容 | 状态 |
+| :--- | :--- | :--- |
+| 1 | 核心架构（类型/EventBus/世界/楼层/相机/玩家/战斗/难度） | ✅（难度除外） |
+| 2 | 状态效果系统 | ❌ |
+| 3 | 任务与成就系统 | ⚠️（任务 ✅ / 成就 ❌） |
+| 4 | 图鉴与收集系统 | ⚠️（图鉴 ✅ / 藏品 ❌） |
+| 5 | 动态事件系统 | ✅（部分触发类型） |
+| 6 | 宝箱与装备品质 | ✅ |
+| 7 | 藏品系统 | ❌ |
+| 8 | Boss 系统（结构/词缀/检测/UI） | ⚠️（仅 Boss 层结构与掉落） |
+| 9 | Roguelike 系统 | ⚠️（布局/怪物/宝箱/商人/事件已随机；词缀/地板效果/种子 ❌） |
+| 10 | 商人系统 | ✅ |
+| 11 | 难度系统 | ❌ |
+| 12 | 无尽模式 | ❌ |
+| 13 | UI 系统 | ✅（缺藏品/成就/难度面板） |
+| 14 | 粒子与震动 | ⚠️（粒子 ✅ / 震动 ❌） |
+| 15 | 数据驱动完善 | ⚠️（11 个 JSON；缺 achievements/collectibles/bossAffixes/difficultyConfig/statusEffects） |
+
+# 第九部分：用词点缀原则 ⏸（内容层，待美术/文案阶段）
+
+- **系统层（80%）**：属性/品质/难度/货币名称保持 RPG 直白术语 → ✅ 代码已遵守
+- **内容层（20%）**：Boss 名称、藏品名称、装备词缀别名、成就称号、场景 UI 文案植入神秘学词汇 → ❌ 未应用（当前 Boss 仅"远古巨龙"，无藏品/成就/词缀别名）
+- 待完成功能代码后统一更新：`bossAffixes.json`、`collectibles.json`、`achievements.json`、`itemTemplates.json` 的显示名与描述
+
+---
+
+# 第十部分：地图与房间系统（来自待办v1）✅
+
+## 10.1 五层生成器架构 ✅
+
+```
+第1层 楼层生成器 → 第2层 路径生成器 → 第3层 房间生成器 → 第4层 走廊生成器 → 第5层 内容填充器
+```
+
+## 10.2 楼层生成器 ✅
+
+**特殊楼层**：初始层（第 1 层，起点→终点）、Boss 层（`楼层 % 5 === 0`，休整→Boss→终点）不参与随机分配。
+
+**普通楼层房间数** ✅
+
+| 楼层 | 房间数 |
+| :--- | :--- |
+| 2–5 | 4–6 |
+| 6–10 | 4–8 |
+| 11–20 | 6–8 |
+| 20+ | 6–12（上限 12） |
+
+**房间类型**：起点 / 终点 / 战斗 / 精英 / 宝箱 / 商人（+ Boss / 休整）✅
+
+**运气平衡器（Tension）** ✅
+
+| 类型 | 权重 | 分类 |
+| :--- | :--- | :--- |
+| 战斗 | +1 | 负面 |
+| 精英 | +3 | 负面 |
+| 宝箱 | −1 | 正面 |
+| 商人 | −2 | 正面 |
+
+```
+每层 Tension = 0
+每房间：正面概率 = 1/(1+e^(-Tension)) → 判定 → 选类型 → Tension += 权重
+强制干预：Tension ≥ 4 强制正面；Tension ≤ −3 强制负面
+约束：起点/终点固定；初始层与 Boss 层固定；商人数量（≤7 房最多 1，8–12 房 1–2）
+```
+
+| Tension | 正面概率 |
+| :--- | :--- |
+| −3 | ≈5% |
+| −2 | ≈12% |
+| −1 | ≈27% |
+| 0 | 50% |
+| 1 | ≈73% |
+| 2 | ≈88% |
+| 3 | ≈95% |
+| ≥4 | 100% |
+
+## 10.3 路径生成器 ✅
+
+战斗/精英 → 主干候选；宝箱 → 灵活分配；商人 → 侧室挂载；路径 A（更多精英，高风险高收益）/ 路径 B（更多普通战斗）；两路长度差 ≤ 2。
+
+## 10.4 房间生成器 ✅
+
+**房间规格（格）**
+
+| 类型 | 宽 | 高 |
+| :--- | :--- | :--- |
+| 起点 | 5 | 5 |
+| 战斗 | 6–7 | 5–6 |
+| 精英 | 7–8 | 6–7 |
+| 宝箱 | 5 | 5 |
+| 商人 | 6 | 6 |
+| Boss | 9–10 | 7–8 |
+| 休整 | 5 | 5 |
+| 终点 | 6 | 5 |
+
+**排列约束（优先级）**：禁止重合 → 与起点距离 ≤ 2√2 → 禁止折返 → 连续 2 次同向后第 3 次必须转弯 → 边界限制（预留 2 格）；极端情况回退。
+
+**输出**：类型、生成顺序、坐标、宽高、中心、来源方向、深度 ✅
+
+## 10.5 走廊生成器 ✅
+
+- 固定通道：按生成顺序 `room_0 ↔ room_1 ↔ …` ✅
+- 额外通道：相邻（曼哈顿 ≤ 1）以 25% 概率打通，最多 2 条 ✅
+
+## 10.6 内容填充器 ✅
+
+| 内容 | 规则 |
+| :--- | :--- |
+| 怪物 | 距入口 ≥ 3 格；小型≤2 / 中型≤3 / 大型≤4；精英只出现在精英房 |
+| 宝箱 | 房间角落或岔路尽头；宝箱房 2–3 个，其他 0–1 个 |
+| 装饰 | 火把（入口两侧、走廊每 4 格）/ 柱子（宽≥7 时四角）/ 地毯（宝箱或 Boss 下方） |
+
+## 10.7 验证规则 ✅（`map/MapValidator.ts`）
+
+房间连通、≥2 条起点→终点路径、路径长度差 ≤ 2、主干至少 1 个战斗房、无孤立房间。
+
+---
+
+# 第十一部分：2.5D 视角与光影系统（来自待办v1）✅（渲染层将按 §15 迁移到 PixiJS）
+
+> **⚠️ 迁移提示：** 本章描述的是**当前 Canvas 2D 实现**的既定规范（坐标变换、高度表、光源参数、亮度原则）。这些**设计约束在迁移到 PixiJS 后继续有效**；只有实现载体（Canvas 2D API → WebGL/着色器）会变。迁移计划见 **§15**。
+
+## 11.1 核心原则 ✅
+
+逻辑层（`(row, col)` 俯视二维数组、格子碰撞）与渲染层（等距投影）完全分离；游戏逻辑不知道"视角"存在。
+
+## 11.2 亮度原则 ✅
+
+场景始终清晰可见：暗角 ≤ 30%（`vignetteMax: 0.3`）；火把/Boss 光仅做氛围，不制造黑暗区域；所有交互元素始终可辨识。
+
+## 11.3 坐标变换 ✅
+
+```
+screenX = (col − row) × tileWidth  / 2     // tileWidth = 64
+screenY = (col + row) × tileHeight / 2 − z // tileHeight = 32
+```
+
+## 11.4 物体高度（代码现值，`gameConfig.heights`）✅
+
+| 物体 | 高度 | 物体 | 高度 |
+| :--- | :--- | :--- | :--- |
+| 玩家 | 45 | 普通怪 | 38 |
+| 精英怪 | 52 | Boss | 70 |
+| 宝箱 | 18 | 火把 | 55 |
+| 柱子 | 70 | NPC | 42 |
+| 楼梯 | 10 | 地毯 | 4 |
+
+**按房间类型的墙高**：起点 60 / 战斗 65 / 精英 75 / 宝箱 55 / 商人 55 / Boss 90 / 休整 55 / 终点 60；走廊墙 75。
+
+## 11.5 光影系统 ✅（现行 Canvas 2D 实现，待按 §15 重写）
+
+> **状态：** ✅ 已按本规范实现（`render/LightSystem.ts` + `render/ShadowSystem.ts`）；🔄 后续将按 **§15 Phase 3** 重写为 GPU 着色器方案，届时**光源类型、半径、颜色、优先级、亮度原则全部沿用本表**。
+
+**分层**：环境光暗角 → 地面光 → 动态物体 → 墙壁光 → 高光强调。
+
+| 光源类型 | 地面光半径 | 墙壁光 | 颜色 | 动态行为 |
+| :--- | :--- | :--- | :--- | :--- |
+| 玩家火炬 | 120–140px | 无 | 暖黄 `#ffcc44` | 轻微晃动 |
+| 壁挂火把 | 60–80px | 60–80px | 橙黄 `#ff8833` | 火焰闪烁 |
+| Boss | 160–200px | 80–100px | 暗红 `#ff2244` | 缓慢脉动 |
+| 宝箱 | 40–50px | 无 | 金色 `#ffdd44` | 急促闪烁 |
+| 传送门 | 60–80px | 60–80px | 蓝紫 `#8844ff` | 旋转脉动 |
+| 终点楼梯 | 50–60px | 无 | 蓝白 `#44ddff` | 稳定呼吸 |
+
+**叠加与性能**：`'lighter'` 叠加；优先级 玩家1 > Boss2 > 传送门/楼梯3 > 火把4 > 宝箱5；**最多 6 个光源**（文档为 8，代码 `maxLights: 6` ⚠️）；视野外剔除 ✅。
+
+**地面光形状**：⚠️ 等距投影下应为椭圆（垂直半径 = 水平 × 0.5），代码 `LightSystem` 注释标注为"俯视图适配 → 正圆光晕"，实际按 `radiusX` 绘制。
+
+## 11.6 渲染顺序 ✅
+
+环境光 → 地面光 → 地面 → 地面装饰 → 墙壁（下半）→ 动态物体 → 墙壁光 → 高光 → 前景 → UI（按 `screenY` 由远到近排序）。
+
+## 11.7 视觉占位符 ⏸（待美术）
+
+| 物体 | 占位形式 |
+| :--- | :--- |
+| Boss | 彩色方块 + 名字标签 |
+| 玩家 | 蓝色方块 + 名字标签 |
+| 怪物 | 红色方块 + 名字标签（深浅区分） |
+| 宝箱 | 金色方块（开启后变暗） |
+| NPC | 绿色方块 + 名字标签 |
+| 物品 | 彩色小圆点 |
+
+**替换计划**：预留素材 ID，正式素材完成后只替换绘制函数；优先级 P1 玩家/常见怪 → P2 药水/宝箱/楼梯/金币/装备图标 → P3 Boss/背景 → P4 UI 细节。命名规范 `类型_名称_状态.png`（如 `monster_slime_idle.png`）。
+
+---
+
+# 第十二部分：装备与药水机制（来自待办v1）✅
+
+## 12.1 装备槽位与品质 ✅
+
+2 个槽位：武器（攻击）/ 胸甲（防御）。防具数值约为武器的 50–60%。
+
+| 品质 | 颜色 | 属性倍率 | 词条数 | 回收价倍率 | 基础价 | 前缀 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 破烂 | 灰色 | 0.6× | 0 | 0.2× | 5 | 破旧的 |
+| 普通 | 白色 | 1.0× | 0 | 1.0× | 10 | （无） |
+| 优秀 | 蓝色 | 1.4× | 1 | 2.0× | 30 | 精良的 |
+| 稀有 | 紫色 | 1.9× | 2（≥20级+1） | 4.0× | 80 | 优质的 |
+| 史诗 | 金色 | 2.5× | 3（≥15级+1） | 8.0× | 200 | 精制的 |
+| 传说 | 橙红 | 3.5× | 4（≥10级+1） | 16.0× | 500 | 完美的 |
+| 神话 | 彩虹 | 5.0× | 固定 4 | 35.0× | 1200 | 无双的 |
+
+**品质出现概率（按楼层权重）** ✅（41–50 层起神话 0.5%，51+ 为 2%）
+
+| 楼层 | 破烂 | 普通 | 优秀 | 稀有 | 史诗 | 传说 | 神话 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1–5 | 45% | 40% | 12% | 3% | 0 | 0 | 0 |
+| 6–10 | 10% | 50% | 28% | 10% | 2% | 0 | 0 |
+| 11–20 | 1% | 35% | 35% | 20% | 8% | 1% | 0 |
+| 21–30 | 1% | 15% | 31% | 30% | 18% | 5% | 0 |
+| 31–40 | 0 | 5% | 20% | 30% | 30% | 15% | 0 |
+| 41–50 | 0 | 0 | 10% | 25% | 35% | 29.5% | 0.5% |
+| 51+ | 0 | 0 | 8% | 22% | 33% | 35% | 2% |
+
+## 12.2 词条系统 ✅（12 种）
+
+| 词条 | 效果 | 品质下限 | 等级1–10 | 11–25 | 26–40 | 41–50 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 锋利 | 攻击 +X | 优秀 | 3–8 | 8–20 | 20–40 | 40–70 |
+| 坚固 | 防御 +X | 优秀 | 2–5 | 5–12 | 12–25 | 25–45 |
+| 活力 | 生命 +X | 优秀 | 15–40 | 40–100 | 100–200 | 200–350 |
+| 精准 | 暴击 +X% | 稀有 | 1–3 | 3–5 | 5–7 | 7–10 |
+| 灵巧 | 闪避 +X% | 稀有 | 1–2 | 2–4 | 4–6 | 6–8 |
+| 强攻 | 攻击 +X% | 稀有 | 2–4 | 4–7 | 7–10 | 10–15 |
+| 铁壁 | 防御 +X% | 稀有 | 1–3 | 3–5 | 5–8 | 8–12 |
+| 嗜血 | 攻击回血 X% | 史诗 | 1–2 | 2–3 | 3–4 | 4–6 |
+| 业火 | 附加火焰 X | 稀有 | 3–8 | 8–18 | 18–35 | 35–60 |
+| 贪婪 | 金币 +X% | 稀有 | 5–10 | 10–15 | 15–20 | 20–30 |
+| 博学 | 经验 +X% | 稀有 | 5–10 | 10–15 | 15–20 | 20–30 |
+| 屠龙 | 对Boss +X% | 史诗 | 5–10 | 10–15 | 15–20 | 20–30 |
+
+## 12.3 装备等级与数值 ✅
+
+```
+装备等级 = floor(玩家等级 × 0.5 + 当前楼层 × 1.0 + rand(-2, 3))，clamp 1–50
+回收价    = 基础价(品质) × (1 + 等级 × 0.05) × (1 + 词条数 × 0.15)
+```
+
+数值表（武器攻击 / 防具防御）在 `equipmentTables.json`（`weaponTable` / `armorTable`，按等级段 × 品质取随机范围，缺失品质向低档回退）。
+
+## 12.4 命名 ✅
+
+`[品质前缀][基础名][·词条1][·词条2]…`，例：`精良的铁剑·锋利`、`优质铁剑·锋利·业火`。
+
+## 12.5 药水系统 ✅
+
+| 品质 | 颜色 | 回复 | 出现楼层 | 售价 |
+| :--- | :--- | :--- | :--- | :--- |
+| 劣质药水 | 浅红 | 20% 最大生命 | 1–5 | 20 |
+| 普通药水 | 红色 | 30% | 3–15 | 40 |
+| 优质药水 | 深红 | 45% | 10–30 | 100 |
+| 强效药水 | 深红（光效） | 60% | 25–40 | 250 |
+| 圣药 | 金色 | 80% | 40+ | 600 |
+
+获取：商人购买（主要）✅ / 宝箱 ✅ / 怪物掉落（低 1–2 档）✅ / 任务奖励 ✅。
+
+## 12.6 经济系统 ✅（金币单货币）
+
+- 击败怪物 / 开启宝箱获取金币 ✅（`gameConfig.chestRewards`、`floorAnchors.gold`）
+- 消耗：药水 / 钥匙（`50 + 楼层/10 × 30`）/ 装备 ✅
+- **魂晶**：❌ 未实现（原规格中的第二货币）
+
+## 12.7 装备对比 UI ✅
+
+数值变化绿升红降、词条新增/缺失标注、品质变化着色、显示回收价。
+
+---
+
+# 第十三部分：其他问题补充（来自待办v1）✅
+
+## 13.1 存档机制（简化版）✅
+
+- 自动存档：**仅到达新楼层时**（第 1 层不触发）✅
+- 手动存档：K 键（或 Ctrl+S）/ 菜单按钮，始终可用 ✅
+- 设置中"自动存档"开关，默认开启 ✅
+
+## 13.2 摄像机视野控制 ✅
+
+| 情况 | 处理 |
+| :--- | :--- |
+| 房间 ≤ 屏幕 | 固定显示整个房间，玩家在画面内自由移动 |
+| 房间 > 屏幕 | 跟随玩家，边界不超出房间边缘（每轴独立） |
+| 单边超出 | 仅超出轴跟随，另一轴固定 |
+
+（2.5D 适配：按投影后的房间屏幕尺寸判断 ✅）
+
+## 13.3 鼠标悬浮显示 ✅
+
+| 鼠标位置 | 显示 |
+| :--- | :--- |
+| 敌人 / 物品 / NPC / 楼梯 / 宝箱 | ✅ 显示（含操作提示） |
+| 空地 / 墙壁 / 悬崖 / 装饰 | ❌ 不显示 |
+
+- 延迟 200ms 显示，离开 300ms 后消失，偏移 (12, 12) ✅（`gameConfig.hover`）
+- 内容：敌人（名称/HP/攻防/掉落 + 战斗预测）、物品、NPC、宝箱状态、楼梯目标层 ✅
+
+## 13.4 视觉特征强化 ✅（占位阶段）
+
+- 地形：空地网格线、墙壁砖缝、装饰分色；**悬崖（锯齿边缘 + 阴影渐变）** ❌（无悬崖地形）
+- 实体：边框 2px 区分类型、标签 ≥12px、按类型配色、重要物品外发光、敌人按强度分大小、交互物脉动 ✅
+- 配色表：玩家 `#4488ff` / 普通敌 `#ff4444` / 精英 `#ff8800` / Boss `#ff0044` / 药水 `#ff2244` / 装备 `#4488ff` / 金币 `#ffdd00` / 钥匙 `#ffaa00` / NPC `#44dd66` / 宝箱未开 `#ffcc00` / 已开 `#888888` / 上楼 `#ffdd00` / 下楼 `#44ddff` ✅
+
+## 13.5 反馈与引导 ✅
+
+教学引导（任务链 + NPC）✅、首次获得装备说明 ✅、首次死亡提示 ✅、悬浮信息 ✅。
+
+## 13.6 性能优化 ✅
+
+视口外不绘制 ✅、粒子 ≤50 ✅、光源 ≤6 ✅、静态影子离屏缓存 ✅。
+
+---
+
+# 第十四部分：战斗选项（来自想法.md）❌
+
+> **原始需求：**
+> 1. 为玩家设置一个战斗选项；
+> 2. 可以像选择这样**全程托管**；
+> 3. 在超高难度的情况下**允许玩家微操**。
+
+**当前状态：❌ 未实现。**
+
+现状：战斗为"撞怪/点击 → 确认弹窗 → 全自动结算 → 战斗日志面板"，**没有托管/微操开关**。
+
+**待实现方案（建议）**：
+
+| 模式 | 行为 | 适用 |
+| :--- | :--- | :--- |
+| 托管（默认） | 当前行为：自动打完，血量 <30% 自动喝药 | 常规楼层 |
+| 微操 | 逐回合手动：攻击 / 用药水 / 撤退；显示敌我血条与回合日志 | 高难度、Boss 战 |
+
+需要在 `types` 中增加战斗模式枚举、`BattleSystem` 支持回合挂起（等待输入）、`ConfirmDialog`/战斗面板增加模式切换开关，并设置项持久化。
+
+---
+
+# 第十五部分：渲染引擎迁移 —— Canvas 2D → PixiJS (WebGL) ⏭（技术路线已变更：改为 §16 Three.js）
+
+> **来源：** 《技术路线迁移文档 v2.0》（**取代**原 `想法.md` 的 CPU 光线追踪方案）
+> **状态：** 已确定，纳入开发范围；**代码实现 ❌ 未开始**
+> **迁移目标：** 渲染引擎从原生 Canvas 2D 替换为 PixiJS (WebGL)
+> **预期效果：** 性能提升 10–100 倍，像素级光照精度，支持后期特效
+
+### 15.0 与现行代码的对照（整合补充）
+
+| 项 | 现状 |
+| :--- | :--- |
+| 依赖 | ❌ `package.json` **未安装** `pixi.js` 及任何 `@pixi/*` 插件 |
+| 渲染入口 | `ui/GameUI.ts` 创建 `<canvas id="game-canvas">`，`render/IsometricRenderer.attach()` 挂载 |
+| 主循环 | `core/GameLoop.ts`（✅ 按文档保留） |
+| 逻辑层 | `core/WorldManager` / `FloorManager` / `entities/` / `systems/` / `data/` / `ui/` / `utils/` / `types/`（✅ 按文档保留） |
+
+**⚠️ 文档中的模块路径需按下表校正后再执行：**
+
+| 文档写法 | 实际路径 |
+| :--- | :--- |
+| `effects/Renderer.ts` | `render/IsometricRenderer.ts` |
+| `effects/LightSystem.ts` | `render/LightSystem.ts` |
+| `effects/ShadowSystem.ts` | `render/ShadowSystem.ts` |
+| `effects/ParticleSystem.ts` | `effects/ParticleSystem.ts` ✅ 一致 |
+
+**⚠️ 冲突裁决（必须遵守）：** §11.2「亮度原则」在迁移后**继续有效** —— 场景始终明亮、暗角 ≤30%、不得制造不可见区域。因此 §15.5 着色器中 `blocked → alpha 0.6` 的硬阴影在落地时必须**调低为氛围级**（建议 ≤0.25），否则与已确定的视觉规范冲突。
+
+---
+
+## 15.1 为什么必须迁移
+
+### 15.1.1 当前 Canvas 2D 方案的致命问题
+
+| 问题 | 表现 | 根因 |
+| :--- | :--- | :--- |
+| 光照精度受限 | 72 条射线，边缘锯齿明显 | CPU 串行计算，无法增加射线数 |
+| 帧率不稳 | 复杂场景掉帧至 30–40 FPS | CPU 渲染，无法利用 GPU 并行能力 |
+| 粒子数量受限 | 超过 50 个粒子开始卡顿 | 每帧 CPU 更新 + 绘制 |
+| 无后期特效 | 无法实现辉光、模糊、颜色校正 | Canvas 2D 不支持着色器 |
+| 无法扩展 | 未来无法支持复杂视觉效果 | 已到达 Canvas 2D 性能天花板 |
+
+> **代码现状佐证：** `gameConfig.render.maxParticles = 50`、`maxLights = 6`；`ShadowSystem` 靠离屏 Canvas 缓存静态影子维持帧率；`LightSystem` 注释已注明"俯视图适配 → 正圆光晕"（椭圆未做）。
+
+### 15.1.2 PixiJS 方案的核心优势
+
+| 特性 | PixiJS 实现 | 性能提升 |
+| :--- | :--- | :--- |
+| 光照计算 | GPU 像素着色器并行计算 | 100 倍+ |
+| 粒子系统 | GPU 加速粒子，支持数千粒子 | 20 倍+ |
+| 后期特效 | 内置滤镜（辉光/模糊/颜色校正） | 原生支持 |
+| 渲染吞吐 | WebGL 批量绘制 | 10 倍+ |
+| 纹理管理 | GPU 纹理缓存 | 即时 |
+| 开发效率 | 声明式 API，组件化 | 显著提升 |
+
+## 15.2 技术选型 ❌（依赖未安装）
+
+### 15.2.1 核心引擎
+
+| 组件 | 选型 | 版本 | 说明 |
+| :--- | :--- | :--- | :--- |
+| 渲染引擎 | PixiJS | v8.x | 最新 WebGL 2.0 渲染引擎 |
+| 语言 | TypeScript | 5.x | 保持不变 ✅（当前 `^5.5.4`） |
+| 构建工具 | Vite | 5.x | 保持不变 ✅（当前 `^5.4.8`） |
+| UI 框架 | 原生 HTML + CSS | — | 保持不变（覆盖层） ✅ |
+
+### 15.2.2 插件依赖
+
+| 插件 | 用途 | 说明 |
+| :--- | :--- | :--- |
+| `@pixi/particle-emitter` | 粒子系统 | 替代手动粒子绘制 |
+| `@pixi/filter-glow` | 辉光特效 | 光照增强、自发光 |
+| `@pixi/filter-blur` | 模糊效果 | 阴影柔化、景深 |
+| `@pixi/filter-adjustment` | 颜色校正 | 整体色调控制 |
+
+## 15.3 架构变更 ❌
+
+### 15.3.1 渲染架构对比
+
+**原架构（Canvas 2D）：**
+
+```
+Game Loop
+    ↓
+Canvas 2D Context (CPU)
+    ↓
+绘制命令队列
+    ↓
+逐个执行绘制 (串行)
+    ↓
+输出到屏幕
+```
+
+**新架构（PixiJS WebGL）：**
+
+```
+Game Loop
+    ↓
+PixiJS Application (WebGL 2.0)
+    ↓
+场景图 (Scene Graph)
+    ├── Container (地图)
+    │   ├── Sprite (地面)
+    │   ├── Sprite (墙壁)
+    │   └── Sprite (装饰)
+    ├── Container (实体)
+    │   ├── Sprite (玩家)
+    │   ├── Sprite (怪物)
+    │   └── Sprite (物品)
+    ├── Container (光照)
+    │   ├── RenderTexture (光照贴图)
+    │   └── Sprite (光晕)
+    └── Filters (后期处理)
+         ├── GlowFilter
+         └── BlurFilter
+    ↓
+GPU 并行渲染
+    ↓
+输出到屏幕
+```
+
+### 15.3.2 数据流变更
+
+**原方案：**
+
+```
+数据变化 → 清空 Canvas → 重绘所有内容 → 输出
+```
+
+**新方案：**
+
+```
+数据变化 → 更新场景图 (只更新变化部分) → GPU 自动渲染 → 输出
+```
+
+## 15.4 迁移范围
+
+### 15.4.1 保留不变的模块（约 70% 代码）✅
+
+| 模块 | 说明 | 状态 |
+| :--- | :--- | :--- |
+| `core/GameLoop.ts` | 游戏循环 | ✅ 保留 |
+| `core/EventBus.ts` | 事件系统 | ✅ 保留 |
+| `core/WorldManager.ts` | 世界管理（逻辑层） | ✅ 保留 |
+| `core/FloorManager.ts` | 楼层管理 | ✅ 保留 |
+| `entities/` | 所有实体类 | ✅ 保留 |
+| `systems/` | 所有系统逻辑 | ✅ 保留 |
+| `data/` | 所有数据配置 | ✅ 保留 |
+| `ui/` | UI 覆盖层 | ✅ 保留 |
+| `utils/` | 工具函数 | ✅ 保留 |
+| `types/` | 类型定义 | ✅ 保留（可能小幅扩展） |
+
+### 15.4.2 需要替换的模块（约 30% 代码）❌
+
+| 原模块 | 新模块 | 状态 |
+| :--- | :--- | :--- |
+| `render/IsometricRenderer.ts` | `effects/PixiRenderer.ts` | 🔄 重写（PixiJS API） |
+| `render/LightSystem.ts` | `effects/PixiLightSystem.ts` | 🔄 完全重写（着色器方案） |
+| `render/ShadowSystem.ts` | 合并到 LightSystem | 🔄 重写 |
+| `effects/ParticleSystem.ts` | `effects/PixiParticleSystem.ts` | 🔄 重写（PixiJS 粒子插件） |
+| `core/CameraController.ts` | 适配 PixiJS 视口 | ⚠️ 小幅适配 |
+| `main.ts` | 初始化 PixiJS Application | ⚠️ 小幅重写 |
+
+> **附加影响（文档未列，迁移时需注意）：** `render/Projection.ts` 的 `worldToScreen/screenToWorld` 被 `InputManager`（鼠标拾取）、`CameraController`、`LightSystem`、`ShadowSystem`、`MiniMap` 依赖；`render/PlaceholderArt.ts` 的绘制逻辑需改为纹理生成（见 §15.5.4）。
+
+## 15.5 详细实现规范 ❌
+
+### 15.5.1 PixiJS 应用初始化
+
+```typescript
+// main.ts (新)
+
+import { Application } from 'pixi.js';
+import { PixiRenderer } from './effects/PixiRenderer';
+
+const app = new Application({
+  width: window.innerWidth - 240,  // 左右栏预留
+  height: window.innerHeight - 64, // 底栏预留
+  backgroundColor: 0x0f0e17,
+  antialias: true,
+  resolution: window.devicePixelRatio || 1,
+  autoDensity: true,
+});
+
+document.getElementById('game-container')!.appendChild(app.view as any);
+
+const renderer = new PixiRenderer(app);
+renderer.start();
+```
+
+### 15.5.2 场景图结构
+
+```typescript
+// effects/PixiRenderer.ts
+
+export class PixiRenderer {
+  private app: Application;
+  private stage: Container;
+  
+  // 各层容器（按绘制顺序）
+  private backgroundLayer: Container;
+  private groundLayer: Container;
+  private wallLayer: Container;
+  private entityLayer: Container;
+  private lightLayer: Container;
+  private effectLayer: Container;
+  private uiLayer: Container;
+
+  constructor(app: Application) {
+    this.app = app;
+    this.stage = app.stage;
+    this.setupLayers();
+  }
+
+  private setupLayers() {
+    // 从下到上
+    this.backgroundLayer = new Container();
+    this.groundLayer = new Container();
+    this.wallLayer = new Container();
+    this.entityLayer = new Container();
+    this.lightLayer = new Container();
+    this.effectLayer = new Container();
+    this.uiLayer = new Container();
+
+    this.stage.addChild(this.backgroundLayer);
+    this.stage.addChild(this.groundLayer);
+    this.stage.addChild(this.wallLayer);
+    this.stage.addChild(this.entityLayer);
+    this.stage.addChild(this.lightLayer);
+    this.stage.addChild(this.effectLayer);
+    this.stage.addChild(this.uiLayer);
+  }
+
+  // 每帧更新
+  public update(deltaTime: number) {
+    // 更新实体位置
+    // 更新光源
+    // 更新粒子
+  }
+}
+```
+
+> **等距视角适配提醒：** 现行渲染按 `screenY` 排序做前后遮挡（§11.6）。PixiJS 场景图同样可用 `sortableChildren = true` + `zIndex = screenY` 实现，迁移时不要丢失这一层。
+
+### 15.5.3 地形渲染
+
+**原方案：**
+
+```typescript
+// Canvas 2D
+ctx.fillStyle = '#3a3a4a';
+ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+```
+
+**新方案（PixiJS）：**
+
+```typescript
+// 方案A：使用 Graphics（适用于动态生成）
+const g = new Graphics();
+g.rect(0, 0, tileSize, tileSize);
+g.fill({ color: 0x3a3a4a });
+g.x = col * tileSize;
+g.y = row * tileSize;
+
+// 方案B：使用 Sprite + 纹理（高性能，推荐）
+// 预生成纹理
+const texture = generateTileTexture(tileType);
+const sprite = new Sprite(texture);
+sprite.x = col * tileSize;
+sprite.y = row * tileSize;
+```
+
+### 15.5.4 纹理生成
+
+```typescript
+// utils/TextureGenerator.ts
+
+export function generateTileTexture(type: TileType): Texture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d')!;
+
+  // 用 Canvas 2D 绘制纹理内容
+  // （可以沿用现有的绘制逻辑，只是输出到纹理而非直接上屏）
+
+  return Texture.from(canvas);
+}
+```
+
+**关键点：** 纹理生成逻辑可以复用现有的 Canvas 2D 绘制代码，只是绘制目标从屏幕变成了纹理。（对应复用 `render/PlaceholderArt.ts` 的现有绘制函数。）
+
+### 15.5.5 光照系统（核心变更）
+
+**原方案：** CPU 光线投射（72 条射线步进检测）
+**新方案：** GPU 着色器（像素级并行计算）
+
+#### 着色器实现
+
+```glsl
+// shaders/light.frag
+
+uniform vec2 u_lightPosition;
+uniform vec3 u_lightColor;
+uniform float u_maxDistance;
+uniform sampler2D u_wallTexture;
+uniform vec2 u_textureSize;
+
+varying vec2 v_uv;
+
+void main() {
+    vec2 pixelPos = v_uv * u_textureSize;
+    vec2 dir = pixelPos - u_lightPosition;
+    float dist = length(dir);
+    vec2 dirNorm = dir / dist;
+    
+    // 步进检测
+    float stepSize = 2.0;
+    float currentDist = 0.0;
+    bool blocked = false;
+    
+    for (float d = 0.0; d < u_maxDistance; d += stepSize) {
+        vec2 samplePos = u_lightPosition + dirNorm * d;
+        vec4 wallSample = texture2D(u_wallTexture, samplePos / u_textureSize);
+        if (wallSample.a > 0.5) {
+            blocked = true;
+            break;
+        }
+    }
+    
+    if (blocked) {
+        // 阴影区域
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 0.6);
+    } else {
+        // 光照区域
+        float intensity = 1.0 / (1.0 + (dist / u_maxDistance) * (dist / u_maxDistance) * 8.0);
+        gl_FragColor = vec4(u_lightColor * intensity, intensity * 0.8);
+    }
+}
+```
+
+> ⚠️ **落地时必须修改：** 阴影 `alpha 0.6` 与 §11.2「始终明亮、暗角 ≤30%」冲突，应下调为氛围级（建议 ≤0.25）并保留光源补色倾向，不得制造不可辨认的黑暗区域。
+
+#### PixiJS 集成
+
+```typescript
+// effects/PixiLightSystem.ts
+
+import { RenderTexture, Sprite, Filter, Application } from 'pixi.js';
+import lightShader from './shaders/light.frag?raw';
+
+export class PixiLightSystem {
+  private app: Application;
+  private lightTextures: Map<string, RenderTexture> = new Map();
+  private lightSprites: Map<string, Sprite> = new Map();
+
+  constructor(app: Application) {
+    this.app = app;
+  }
+
+  // 为每个光源创建光照纹理
+  renderLight(light: LightSource) {
+    const filter = new Filter(undefined, lightShader, {
+      u_lightPosition: [light.x, light.y],
+      u_lightColor: [light.color.r / 255, light.color.g / 255, light.color.b / 255],
+      u_maxDistance: light.radius,
+      u_wallTexture: this.wallTexture,
+      u_textureSize: [this.app.screen.width, this.app.screen.height]
+    });
+
+    const texture = RenderTexture.create({
+      width: this.app.screen.width,
+      height: this.app.screen.height,
+    });
+
+    // 应用滤镜到纹理
+    // ...
+  }
+}
+```
+
+**迁移后需沿用现行光源配置**（§11.5 表 + `gameConfig.json`）：玩家火炬 / 壁挂火把 / Boss / 宝箱 / 传送门 / 终点楼梯的半径、颜色与动态行为；优先级 玩家1 > Boss2 > 传送门楼梯3 > 火把4 > 宝箱5（迁移后可放宽到 ≥20 光源）。
+
+### 15.5.6 粒子系统
+
+**原方案：** 手动维护粒子数组，每帧更新位置 + 绘制
+**新方案：** 使用 PixiJS Particle Emitter
+
+```typescript
+// effects/PixiParticleSystem.ts
+
+import { Container } from 'pixi.js';
+import { Emitter, UpgradeSystem } from '@pixi/particle-emitter';
+
+export class PixiParticleSystem {
+  private emitter: Emitter;
+  private container: Container;
+  private elapsed = 0;
+
+  constructor(container: Container) {
+    this.container = container;
+    this.emitter = new Emitter(container, {
+      frequency: 0.1,
+      emitterLifetime: -1,
+      maxParticles: 500,
+      pos: { x: 0, y: 0 },
+      particles: [
+        {
+          life: { min: 0.5, max: 1.5 },
+          speed: { min: 10, max: 30 },
+          scale: { start: 0.5, end: 0.1 },
+          color: { start: '#ffcc88', end: '#ff8833' },
+        }
+      ]
+    });
+  }
+
+  update(deltaTime: number) {
+    this.elapsed += deltaTime;
+    this.emitter.update(this.elapsed);
+    this.elapsed = 0;
+  }
+
+  emit(x: number, y: number, config: Partial<EmitterConfig>) {
+    this.emitter.pos.x = x;
+    this.emitter.pos.y = y;
+    this.emitter.emit = true;
+  }
+}
+```
+
+**需保持的接口契约**（现有调用方 `GameController` / `ChestSystem` 等）：`floatText(x, y, text, color)`、`emitBurst`、`emitLevelUp`、`emitVictory`、`emitCollectible`、`update(dt)`、`render()`、`clear()`。
+
+### 15.5.7 后期特效
+
+```typescript
+// effects/PixiPostProcessing.ts
+
+import { GlowFilter } from '@pixi/filter-glow';
+import { BlurFilter } from '@pixi/filter-blur';
+import { AdjustmentFilter } from '@pixi/filter-adjustment';
+
+export function setupPostProcessing(lightLayer: Container) {
+  // 辉光效果（光源发光）
+  const glow = new GlowFilter({
+    distance: 15,
+    outerStrength: 2,
+    innerStrength: 1,
+    color: 0xffaa44,
+  });
+  
+  // 模糊效果（阴影柔化）
+  const blur = new BlurFilter({
+    strength: 4,
+    quality: 4,
+  });
+  
+  // 颜色校正（整体氛围）
+  const adjustment = new AdjustmentFilter({
+    gamma: 1.1,
+    contrast: 1.05,
+    brightness: 1.0,
+  });
+
+  lightLayer.filters = [glow, blur, adjustment];
+}
+```
+
+## 15.6 迁移步骤（按优先级）❌ 全部未开始
+
+### Phase 1：基础搭建（P0 - 必须最先完成）
+
+| # | 步骤 | 任务 | 产出 | 时间 | 状态 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1.1 | 安装 PixiJS 及插件依赖 | `npm i pixi.js @pixi/particle-emitter @pixi/filter-glow @pixi/filter-blur @pixi/filter-adjustment` | `package.json` 更新 | 0.5天 | ❌ |
+| 1.2 | 创建 PixiJS Application，替换 Canvas | — | 游戏画面出现 | 1天 | ❌ |
+| 1.3 | 实现纹理生成器（地面/墙壁/实体占位符） | 复用 `PlaceholderArt` | 纹理可复用 | 1天 | ❌ |
+| 1.4 | 实现场景图层结构 | — | 渲染管线建立 | 0.5天 | ❌ |
+
+### Phase 2：核心渲染（P1）
+
+| # | 步骤 | 任务 | 产出 | 时间 | 状态 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 2.1 | 地形渲染（地面 + 墙壁） | — | 地图可见 | 1.5天 | ❌ |
+| 2.2 | 实体渲染（玩家 + 怪物 + 物品） | — | 所有物体可见 | 1.5天 | ❌ |
+| 2.3 | 摄像机适配（视口跟随玩家） | 保留"整房显示"逻辑 | 房间滚动正确 | 1天 | ❌ |
+
+### Phase 3：光照系统（P1 - 核心价值）
+
+| # | 步骤 | 任务 | 产出 | 时间 | 状态 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 3.1 | 编写光源着色器 | — | 基础光照可见 | 2天 | ❌ |
+| 3.2 | 实现光源管理（多光源支持） | 沿用 §11.5 光源表 | 所有光源生效 | 1天 | ❌ |
+| 3.3 | 实现阴影（着色器步进检测） | 阴影 alpha 需按 §15.0 裁决下调 | 墙壁遮挡阴影 | 2天 | ❌ |
+| 3.4 | 软阴影 + 光晕优化 | 地面光恢复椭圆（垂直 ×0.5） | 视觉效果达标 | 1天 | ❌ |
+
+### Phase 4：特效系统（P2）
+
+| # | 步骤 | 任务 | 产出 | 时间 | 状态 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 4.1 | 粒子系统（PixiJS Particle Emitter） | 保持 `floatText` 等接口 | 粒子特效正常 | 1天 | ❌ |
+| 4.2 | 后期特效（辉光/模糊/颜色校正） | — | 整体氛围提升 | 1天 | ❌ |
+| 4.3 | 丁达尔效应（光柱） | 现有 `ShadowSystem` 已有实现 | 视觉效果完整 | 0.5天 | ❌ |
+
+### Phase 5：集成与优化（P3）
+
+| # | 步骤 | 任务 | 产出 | 时间 | 状态 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 5.1 | UI 整合（HTML 覆盖层适配） | Tooltip / 输入拾取需改用 Pixi 视口坐标 | 交互正常 | 1天 | ❌ |
+| 5.2 | 性能优化（帧率稳定 60 FPS） | — | 性能达标 | 1天 | ❌ |
+| 5.3 | 旧代码清理（删除 `render/*` Canvas 2D 版本） | — | 代码库整洁 | 0.5天 | ❌ |
+
+**合计约 17 人天。**
+
+## 15.7 验收标准 ❌（待执行）
+
+### 15.7.1 功能验收
+
+| 验收项 | 标准 |
+| :--- | :--- |
+| 地图渲染 | 地面、墙壁、装饰正确显示 |
+| 实体渲染 | 玩家、怪物、物品正确显示，位置正确 |
+| 玩家移动 | 平滑移动，摄像机跟随 |
+| 光照 | 光源正确照亮周围，墙壁遮挡产生阴影 |
+| 粒子 | 粒子特效正常运行，性能良好 |
+| UI | 所有覆盖层交互正常，快捷键正常 |
+
+### 15.7.2 性能验收
+
+| 指标 | 目标值 |
+| :--- | :--- |
+| 帧率（空闲） | ≥ 60 FPS |
+| 帧率（6 光源 + 粒子） | ≥ 55 FPS |
+| 帧率（极限场景） | ≥ 45 FPS |
+| 内存占用 | ≤ 200MB |
+| 加载时间 | ≤ 1s |
+
+### 15.7.3 视觉验收
+
+| 验收项 | 标准 |
+| :--- | :--- |
+| 光照平滑度 | 无明显锯齿（像素级平滑） |
+| 阴影清晰度 | 阴影边界清晰，位置正确 |
+| 颜色准确度 | 暖光源偏黄，冷光源偏蓝 |
+| 整体氛围 | 暗角 + 辉光 + 颜色校正共同营造地下城氛围 |
+| **可读性**（补充） | 仍满足 §11.2：暗角 ≤30%，所有交互元素始终可辨识 |
+
+## 15.8 新旧方案对比
+
+| 对比项 | Canvas 2D（旧 / 当前） | PixiJS WebGL（新 / 目标） |
+| :--- | :--- | :--- |
+| 光照精度 | 72 条射线，锯齿明显 | 像素级平滑 |
+| 光源数量 | ≤6 | ≥20 |
+| 粒子数量 | ≤50 | ≥1000 |
+| 后期特效 | 不支持 | 辉光/模糊/颜色校正 |
+| 帧率 | 不稳（30–60） | 稳定（60） |
+| 开发效率 | 高（初期） | 中（初期），高（后期） |
+| 扩展性 | 差 | 好 |
+| 最终效果 | 一般 | 优秀 |
+
+## 15.9 给 AI Agent 的指令
+
+> **请按以下要求将项目渲染引擎从 Canvas 2D 替换为 PixiJS (WebGL)：**
+>
+> **1. 安装依赖：**
+> ```bash
+> npm install pixi.js
+> npm install @pixi/particle-emitter
+> npm install @pixi/filter-glow @pixi/filter-blur @pixi/filter-adjustment
+> ```
+>
+> **2. 迁移范围（路径以 §15.0 校正表为准）：**
+> - 将 `render/IsometricRenderer.ts` 替换为 `effects/PixiRenderer.ts`
+> - 将 `render/LightSystem.ts` 替换为 `effects/PixiLightSystem.ts`（使用着色器）
+> - 将 `render/ShadowSystem.ts` 合并进新的 LightSystem
+> - 将 `effects/ParticleSystem.ts` 替换为 `effects/PixiParticleSystem.ts`
+> - 将 `core/CameraController.ts` 适配 PixiJS 视口
+> - 更新 `main.ts` 使用 PixiJS Application
+> - 更新 `index.html` 添加游戏容器
+>
+> **3. 保留不变：**
+> - 所有游戏逻辑（移动、战斗、AI、地图生成、背包、装备）
+> - 所有数据层（JSON 配置、存档、事件）
+> - 所有 UI 覆盖层（HTML + CSS）
+> - 快捷键系统
+> - 等距投影公式 `screenX=(col−row)×64/2`、`screenY=(col+row)×32/2−z`（§11.3）
+> - `screenY` 排序的前后遮挡（§11.6）
+>
+> **4. 验证标准：**
+> - 地图渲染正确
+> - 实体渲染正确
+> - 光照效果像素级平滑
+> - 帧率稳定 ≥ 55 FPS
+> - 所有快捷键和交互正常
+> - **暗角 ≤30%，不产生不可见区域**（§11.2）
+>
+> **5. 调试支持：**
+> - 保留开发环境热更新
+> - 添加性能监控（FPS 显示）
+> - 保留 `__motaDebug` 调试钩子（现有：`player`/`world`/`camera`/`battle`/`loadPrefab` 等）
+>
+> **6. 代码规范：**
+> - 所有新代码使用 TypeScript
+> - 遵循现有命名规范（§第七部分）
+> - 添加必要的注释
+
+## 15.10 风险与应对
+
+| 风险 | 概率 | 影响 | 应对 |
+| :--- | :--- | :--- | :--- |
+| 学习曲线 | 中 | 开发周期延长 | 参考 PixiJS 官方示例和文档 |
+| 兼容性问题 | 低 | 部分设备无法运行 | 降级方案：检测 WebGL 支持，否则显示提示 |
+| 着色器调试困难 | 中 | 光照效果不如预期 | 使用 Chrome 开发者工具 + Spector.js 调试 WebGL |
+| 迁移时间超预期 | 中 | 项目延期 | 分阶段交付，每阶段可独立验证 |
+| **等距投影 + 深度排序丢失**（补充） | 中 | 遮挡关系错乱 | 用 `zIndex = screenY` + `sortableChildren` 复刻 §11.6 顺序 |
+| **存档/地图生成耦合**（补充） | 低 | 换层闪烁 | 楼层数据（`FloorMap`）与渲染层解耦，逻辑层不改动 |
+
+---
+
+# 附录 A：预制地图格式（开发中，超出原文档）✅
+
+手工设计固定地图用，字符图例（每字符一格）：
+
+| 字符 | 含义 |
+| :--- | :--- |
+| `0` / 空格 | 空地（可通行） |
+| `1` | 墙壁 |
+| `2` | 敌人（按楼层权重随机普通怪） |
+| `3` | 精英怪 |
+| `4` | 宝箱 |
+| `5` | 商人 |
+| `S` | 玩家入口（可省略） |
+| `B` | Boss |
+| `D` | 通往下一层的楼梯 |
+| 其他 | 按墙壁处理（附警告） |
+
+要点：房间用 `PrefabRoomDef` 矩形标注；**只有被空地实际连通的房间才生成连接**（连通性由网格 BFS 实测）。实现见 `src/map/PrefabMap.ts`；控制台 `__motaDebug.loadPrefab(def)` 载入试玩；示例 `node scripts/run-headless.mjs src/test/prefabTest.ts`。
+
+# 附录 B：快捷键速查表 ✅
+
+| 按键 | 功能 |
+| :--- | :--- |
+| 方向键 / WASD | 移动角色（S / ↓ 均可向下，WASD 完整可用） |
+| 鼠标左键 | 点击寻路 / 交互（怪物/宝箱/NPC/楼梯） |
+| ↑ / ↓（在楼梯上） | 上/下楼（当前实现：楼梯弹窗确认） |
+| B | 背包 |
+| C | 角色面板 |
+| J | 任务面板 |
+| G | 图鉴面板 |
+| K | 快速存档（Ctrl+S 亦可） |
+| 1–5 | 使用快捷栏对应药水 |
+| Esc | 关闭面板 / 打开设置 |
+| **H** | ❌ 藏品面板（未实现） |
+| **P** | ❌ 暂停（未实现；设置面板代替） |
+
+# 附录 C：未完成清单（按建议优先级）
+
+## P0 —— 架构迁移（已确定，需最先排期）
+
+| # | 事项 | 涉及文档 |
+| :--- | :--- | :--- |
+| 0 | ~~渲染引擎迁移 Canvas 2D → PixiJS (WebGL)~~ → **已改为 Three.js（3渲2）**：`three` 依赖已装、`PixiRenderer`/`PixiLightSystem`/`PixiParticleSystem` 已删除、`ThreeRenderer` 已实现（场景/光照/阴影/Raycaster/粒子）；详见 **§16** | §16 |
+
+> ⚠️ 该迁移会重写 `render/IsometricRenderer.ts`、`render/LightSystem.ts`、`render/ShadowSystem.ts`、`effects/ParticleSystem.ts`，并小幅适配 `CameraController` 与 `main.ts`；完成后 §附录 C.P3 中的第 15/16 项将随之解决。
+
+## P1 —— 影响核心玩法闭环
+
+| # | 事项 | 涉及文档 |
+| :--- | :--- | :--- |
+| 1 | **战斗托管 / 微操选项** | 想法.md |
+| 2 | **藏品系统**（数据 + 管理器 + 面板 + 掉落渠道） | readme 模块 C.2 / H |
+| 3 | **成就系统**（数据 + 管理器 + 弹窗） | readme 模块 B |
+| 4 | **Boss 词缀系统**（12 种 + 天堂必带 2 个） | readme J.2 / Phase 8 |
+| 5 | **Boss 分层命名与战力检测（防速通）** | readme 2.1.2 / 第十部分 |
+| 6 | **魂晶货币**（Boss 掉落 + 商人魂晶商品） | readme 2.2.1 / G.1 |
+
+## P2 —— 影响长期可玩性
+
+| # | 事项 | 涉及文档 |
+| :--- | :--- | :--- |
+| 7 | **难度系统**（7 档 + 切换 UI + 系数接入战斗/掉落） | readme 模块 I |
+| 8 | **无尽模式**（门控三选一 + 层数缩放 + 独立存档） | readme 第五部分 |
+| 9 | **状态效果系统**（8 种 + 回合钩子 + UI） | readme 模块 A |
+| 10 | **房间深度接入战斗数值**（深度倍率表） | readme 2.1.1 |
+| 11 | **多组楼梯 + 跨层三维对应** | readme 2.1.6 |
+| 12 | **宝箱 5 档品质 + 钥匙锁** | readme 模块 E |
+| 13 | **存档导出 / 导入 + 结构校验** | readme 6.2 |
+
+## P3 —— 表现力与打磨
+
+| # | 事项 | 涉及文档 |
+| :--- | :--- | :--- |
+| 14 | ~~屏幕震动~~ ✅ 已实现（大伤害 / Boss 被击败 / 玩家阵亡）；Boss 技能与爆炸陷阱触发待补 | readme L.2 |
+| 15 | ~~光线追踪 / 体积光~~ → 由 P0 迁移的 **GPU 着色器光照** 统一实现（阴影 alpha 需按 §15.0 裁决下调） | §15（原 想法.md 已取代） |
+| 16 | 地面光改为椭圆（垂直半径 ×0.5） | 待办v1 五·5.3（可在 §15 Phase 3.4 一并解决） |
+| 17 | 事件触发类型扩展（`on_step` / `on_interact` / `on_defeat_all`） | readme 模块 D |
+| 18 | 悬崖地形（编码 4，锯齿边缘 + 渐变阴影） | readme 2.1.5 |
+| 19 | 用词点缀（Boss 名 / 藏品名 / 词缀别名 / 成就称号 / 场景文案） | readme 第十部分 |
+| 20 | 正式美术资源替换（P1→P4 优先级） | 待办v1 五·5.3 |
+
+## ⏸ 明确暂缓
+
+| 事项 | 原因 |
+| :--- | :--- |
+| 种子系统（10 位数字种子 / 楼层-房间派生） | 待办v1 标注"目前不考虑完成"，代码已改用整层序列化存档 |
+| 联机模式 | 超出当前范围 |
+| 角色/怪物动画 | 待美术资源 |
+| 7 装备槽位扩展 | 已裁决采用待办v1 的 2 槽方案 |
+| 光线追踪（CPU 射线版：72 条射线 + 阴影楔形 + 5 级性能档） | ⏭ 已被 §15 的 GPU 着色器方案取代，不再单独实现 |
+
+---
+
+**文档结束**
+
+
+---
+
+# 第十六部分：3D渲染2D风格输出（Three.js）—— 技术路线已切换 ✅（已实施）
+
+> **版本：** v1.0
+> **状态：** 已确定，纳入开发范围
+> **核心目标：** 将游戏渲染引擎从 PixiJS（2D）切换为 Three.js（3D），利用 3D 引擎的原生光照与阴影能力，输出固定视角的 2.5D 风格画面。游戏逻辑层（地图数据、战斗系统、事件系统）保持完全不变。
+
+> **📌 纸片人补充决议（优先级高于下方同名字段）：**
+> 所有**动态实体**（玩家、怪物、NPC）使用 `Sprite`（始终面向摄像机的图片），而非 3D 模型；
+> 所有**静态物体**（墙壁、地板、宝箱、楼梯、火把、装饰物）使用 `Mesh`（3D 几何体）。
+> 详见 §3.3、§5.1、§5.4、§5.5。
+
+
+## 一、术语定义
+
+| 术语 | 定义 |
+| :--- | :--- |
+| **3渲2** | 使用 3D 引擎（Three.js）进行渲染计算，但输出画面为固定视角的 2.5D 风格。光照和阴影由 3D 引擎原生支持，画面呈现为等距或俯视角风格。 |
+| **游戏逻辑层** | 管理地图数据、玩家状态、战斗计算、事件触发等非渲染逻辑的代码模块。 |
+| **渲染层** | 负责将游戏数据可视化为屏幕图像的代码模块。本次迁移仅替换渲染层。 |
+| **几何体（Geometry）** | 3D 场景中物体的形状定义。本次迁移使用 Three.js 内置几何体（BoxGeometry、PlaneGeometry 等），不依赖外部模型文件。 |
+| **材质（Material）** | 定义物体表面外观的属性集合（颜色、贴图、粗糙度、金属度等）。 |
+| **光源（Light）** | Three.js 中模拟光照的对象。本次使用 AmbientLight（环境光）、DirectionalLight（方向光）、PointLight（点光源）。 |
+| **阴影（Shadow）** | Three.js 通过 Shadow Map 技术实时计算投射阴影。 |
+| **固定视角摄像机** | 摄像机位置和朝向固定，跟随玩家平移但不旋转。本次使用 PerspectiveCamera 并固定其角度。 |
+
+
+## 二、架构变更总览
+
+### 2.1 修改范围
+
+| 模块 | 操作 | 说明 |
+| :--- | :--- | :--- |
+| 游戏逻辑层 | **保持不变** | 地图生成、战斗系统、玩家属性、事件系统、存档系统 — 全部原样保留 |
+| 数据层 | **保持不变** | 二维数组 `grid[row][col]`、实体位置 `(x, y)`、物品数据 — 全部原样保留 |
+| 渲染层 | **完全替换** | PixiJS 相关代码移除，替换为 Three.js 实现 |
+| 输入层 | **小幅适配** | 鼠标点击坐标从屏幕坐标转换为 3D 场景坐标（Raycaster） |
+
+### 2.2 数据流向
+
+```
+游戏逻辑层（不变）
+    │
+    ▼
+数据层：grid[row][col] = 0/1/4，实体位置 (x, y)（不变）
+    │
+    ▼
+渲染层（替换）
+    │
+    ├── 地板数据 → PlaneGeometry 或 BoxGeometry(扁平) → Mesh → scene.add()
+    ├── 墙壁数据 → BoxGeometry(1, 3, 1) → Mesh → scene.add()
+    ├── 实体数据 → 组合几何体或 Sprite → Mesh → scene.add()
+    ├── 光源数据 → PointLight → scene.add()
+    └── 阴影 → renderer.shadowMap → 自动投射
+    │
+    ▼
+Three.js 渲染管线
+    │
+    ▼
+固定视角摄像机输出到屏幕
+```
+
+
+## 三、数据到 3D 场景的映射规则
+
+### 3.1 坐标系映射
+
+| 2D 坐标系 | 3D 坐标系 (Three.js) | 说明 |
+| :--- | :--- | :--- |
+| `row`（行索引） | `Z` 轴（前后方向） | 2D 行向下增加，3D 中对应 Z 负方向；渲染时取反以保持视觉方向一致 |
+| `col`（列索引） | `X` 轴（左右方向） | 1:1 映射，无变化 |
+| 无（2D 无高度） | `Y` 轴（向上方向） | 新增维度，用于表示物体高度 |
+| 格单位 (1, 1) | 世界单位 (1, 1) | 1 格 = 1 个 Three.js 世界单位 |
+
+**映射公式：**
+
+```
+3D 坐标 = (col, y, row)
+其中 y = 0 为地面基准面
+```
+
+> **实现补充：** `CameraController` 输出的是投影像素坐标，除以 `projection.tileSize` 即得世界单位；
+> 格子 `(row, col)` 的**中心**对应世界坐标 `(col + 0.5, y, row + 0.5)`。
+
+### 3.2 地图数据映射
+
+| 2D 数值 | 含义 | 3D 映射 | 几何体 | 尺寸 (宽×高×深) |
+| :--- | :--- | :--- | :--- | :--- |
+| `0` | 地板 | 扁平长方体（或平面） | `BoxGeometry` | `1 × 0.1 × 1` |
+| `1` | 墙壁 | 直立长方体 | `BoxGeometry` | `1 × 3 × 1` |
+| `2` | 装饰（柱子） | 直立长方体（窄） | `BoxGeometry` | `0.4 × 2.5 × 0.4` |
+| `4` | 悬崖 | 地板 + 下方深色面 | `BoxGeometry` + 颜色变化 | `1 × 0.1 × 1`（颜色不同） |
+| 玩家 | 游戏实体 | **Sprite（纸片人）** | 见 3.3 | — |
+| 怪物 | 游戏实体 | **Sprite（纸片人）** | 见 3.3 | — |
+| 宝箱 | 游戏实体 | 组合几何体 | 见 3.3 | — |
+| 火把 | 光源 + 几何体 | `PointLight` + 小几何体 | `BoxGeometry(0.1, 0.5, 0.1)` | — |
+
+### 3.3 实体到 3D 的映射（纸片人方案 · 优先级最高）
+
+| 实体类型 | 3D 表现方式 | Three.js 实现 | 高度（Y轴） | 朝向 |
+| :--- | :--- | :--- | :--- | :--- |
+| 玩家 | **Sprite（始终面向摄像机）** | `Sprite` + `SpriteMaterial` | 1.8 单位 | 始终面向摄像机 |
+| 怪物 | **Sprite（始终面向摄像机）** | `Sprite` + `SpriteMaterial` | 1.0-1.8 单位 | 始终面向摄像机 |
+| NPC | **Sprite（始终面向摄像机）** | `Sprite` + `SpriteMaterial` | 1.6 单位 | 始终面向摄像机 |
+| 宝箱 | 3D 几何体（静态物体） | `BoxGeometry` 组合 | 0.5 单位 | 无需朝向 |
+| 火把 | 3D 几何体 + 点光源（静态物体） | `BoxGeometry` + `PointLight` | 1.0 单位 | 无需朝向 |
+| 楼梯 | 3D 几何体（静态物体） | 多个 `BoxGeometry` 堆叠 | 逐级升高 | 无需朝向 |
+| 装饰物 | 3D 几何体（静态物体） | `BoxGeometry` / `CylinderGeometry` | 按需 | 无需朝向 |
+
+> **实现补充：** 纸片人高度 = `heights[kind] / tileSize`（沿用 §11.4 高度表），并 clamp 到 `[1.0, 2.2]`；
+> 宽度按纹理宽高比推导，避免拉伸。
+
+### 3.4 摄像机映射
+
+| 参数 | 值 | 说明 |
+| :--- | :--- | :--- |
+| 摄像机类型 | `PerspectiveCamera` | 透视摄像机，产生立体感 |
+| 视野角（FOV） | 45 度 | 适中等距视角 |
+| 位置 | `(x, height, z + distance)` | 正对房间南面，仅沿 +Z 后退并抬高，斜向下观察（非 45° 对角） |
+| 注视点 | 玩家位置 | `camera.lookAt(player.x, 0, player.y)` |
+| 近平面 | 0.1 | — |
+| 远平面 | 100 | — |
+
+> **实现补充：** 远平面放宽到 200；偏移取 `(0, 15, +9)`（仅沿 Z 后退 9、抬高 15，俯角约 59°），
+> 以保证大房间与墙顶完整入画，且画面为正面 2.5D 而非对角等距。
+
+
+## 四、光照系统
+
+### 4.1 光照方案对比
+
+| 效果 | PixiJS（旧） | Three.js（新） | Three.js 实现代码 |
+| :--- | :--- | :--- | :--- |
+| 环境光 | 手动写着色器 | 引擎原生 | `new AmbientLight(color, intensity)` |
+| 主光源（方向光） | 无 | 引擎原生 | `new DirectionalLight(color, intensity)` |
+| 玩家火炬 | 手动写着色器 | 引擎原生 | `new PointLight(color, intensity, distance)` |
+| 墙壁火把 | 手动写着色器 | 引擎原生 | `new PointLight(color, intensity, distance)` |
+| 光照衰减 | 手动计算 | 引擎原生 | `PointLight.decay` 参数 |
+| 阴影 | 手动实现（光线投射） | 引擎原生 | `light.castShadow = true` |
+| 多光源叠加 | 手动管理 | 引擎原生 | 多个 PointLight 自动叠加 |
+
+### 4.2 Three.js 光照实现
+
+**环境光（保证画面可读性）：**
+
+```typescript
+const ambientLight = new THREE.AmbientLight(0x404060, 0.6);
+scene.add(ambientLight);
+```
+
+**方向光（模拟主光源，产生立体感）：**
+
+```typescript
+const dirLight = new THREE.DirectionalLight(0xffeedd, 0.8);
+dirLight.position.set(10, 20, 5);
+dirLight.castShadow = true;
+scene.add(dirLight);
+```
+
+**点光源（玩家火炬）：**
+
+```typescript
+const torchLight = new THREE.PointLight(0xffcc66, 1.5, 10);
+torchLight.position.set(playerX, 1.5, playerY);
+torchLight.castShadow = true;
+scene.add(torchLight);
+```
+
+**点光源（墙壁火把）：**
+
+```typescript
+const torchLight = new THREE.PointLight(0xff8844, 1.0, 8);
+torchLight.position.set(torchX, 1.8, torchY);
+torchLight.castShadow = true;
+scene.add(torchLight);
+```
+
+### 4.3 阴影配置
+
+```typescript
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 软阴影
+```
+
+> **性能约束（实现补充）：** 点光源阴影为 6 面立方体贴图，开销大。
+> 因此限制：玩家火炬 1 个 + 墙壁火把最多 4 个投射阴影，场景中点光源总数上限 12；
+> 方向光阴影相机范围随视口移动，保证可见区域始终有阴影。
+
+
+## 五、几何体生成方案（无建模）
+
+### 5.1 核心原则
+
+**所有 3D 物体由 Three.js 内置几何体组合生成，不依赖外部模型文件（.glb/.fbx）。**
+
+**动态实体（玩家、怪物、NPC）使用 Sprite（始终面向摄像机的图片），由 TextureGenerator 程序化生成纹理。**
+
+**静态物体（墙壁、地板、宝箱、楼梯、火把、装饰物）使用 Three.js 几何体（BoxGeometry、CylinderGeometry 等）。**
+
+**Sprite 与 3D Mesh 的区别：**
+- `Sprite`：始终面向摄像机，适合角色、敌人、NPC，视觉风格为 2D 纸片人
+- `Mesh`：固定朝向，适合墙壁、地板、宝箱、楼梯等静态物体
+
+| 几何体 | Three.js 类 | 用途 |
+| :--- | :--- | :--- |
+| 长方体 | `BoxGeometry(width, height, depth)` | 墙壁、地板、身体、宝箱 |
+| 球体 | `SphereGeometry(radius)` | 头部、装饰、火焰 |
+| 圆柱体 | `CylinderGeometry(radiusTop, radiusBottom, height)` | 柱子、树干 |
+| 平面 | `PlaneGeometry(width, height)` | 地面（不推荐，因无厚度） |
+| 环形 | `RingGeometry(innerRadius, outerRadius)` | 装饰、悬浮高亮 |
+
+### 5.2 材质方案
+
+```typescript
+// 方案 A：纯色材质（无需贴图）
+const wallMaterial = new THREE.MeshStandardMaterial({
+  color: 0x8a7a6a,
+  roughness: 0.7,
+  metalness: 0.1,
+});
+
+// 方案 B：程序化生成纹理（无需外部图片）
+const brickTexture = generateBrickTexture(); // Canvas → Texture
+const wallMaterial = new THREE.MeshStandardMaterial({
+  map: brickTexture,
+  roughness: 0.7,
+  metalness: 0.1,
+});
+
+// 方案 C：外部图片（正式美术资源）
+const textureLoader = new THREE.TextureLoader();
+const wallMaterial = new THREE.MeshStandardMaterial({
+  map: textureLoader.load('assets/wall_brick.png'),
+});
+```
+
+### 5.3 程序化纹理生成示例
+
+```typescript
+function generateBrickTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+  
+  // 底色
+  ctx.fillStyle = '#8a7a6a';
+  ctx.fillRect(0, 0, 128, 128);
+  
+  // 砖缝
+  ctx.strokeStyle = '#6a5a4a';
+  ctx.lineWidth = 2;
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const x = col * 16 + (row % 2) * 8;
+      ctx.strokeRect(x, row * 16, 16, 16);
+    }
+  }
+  
+  return new THREE.CanvasTexture(canvas);
+}
+```
+
+### 5.4 实体纹理生成（纸片人）
+
+所有动态实体的纹理由 `TextureGenerator` 程序化生成，与当前 `PlaceholderArt` 逻辑一致：
+
+| 实体 | 纹理生成方式 | 尺寸（像素） |
+| :--- | :--- | :--- |
+| 玩家 | Canvas 绘制（蓝色身体 + 头部） | 64×96 |
+| 史莱姆 | Canvas 绘制（绿色圆形） | 48×48 |
+| 骷髅兵 | Canvas 绘制（白色身体 + 深色轮廓） | 48×64 |
+| 精英怪物 | Canvas 绘制（金色边框 + 对应颜色） | 56×72 |
+| Boss | Canvas 绘制（红色身体 + 发光边框） | 80×96 |
+| NPC | Canvas 绘制（绿色身体 + 对话气泡） | 48×64 |
+
+**纹理生成示例：**
+
+```typescript
+// 玩家纹理生成（程序化绘制）
+function generatePlayerTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 96;
+  const ctx = canvas.getContext('2d')!;
+  
+  // 透明背景
+  ctx.clearRect(0, 0, 64, 96);
+  
+  // 身体（蓝色方块）
+  ctx.fillStyle = '#4488ff';
+  ctx.fillRect(16, 32, 32, 40);
+  
+  // 头部（圆形）
+  ctx.beginPath();
+  ctx.arc(32, 22, 14, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // 腿部（两个小方块）
+  ctx.fillRect(18, 72, 10, 16);
+  ctx.fillRect(36, 72, 10, 16);
+  
+  return new THREE.CanvasTexture(canvas);
+}
+```
+
+> **实现说明：** 项目沿用既有 `textureGen.player()` / `textureGen.entity()` 的 Canvas 绘制结果
+> （含标签与脚下椭圆阴影），由 `ThreeTextures.canvasTexture()` 包装为 `CanvasTexture`，
+> 视觉风格与原 2D 完全一致，无需重新绘制。
+
+### 5.5 Sprite 实现规范
+
+```typescript
+// 创建玩家 Sprite
+const texture = generatePlayerTexture();
+const material = new THREE.SpriteMaterial({
+  map: texture,
+  transparent: true,
+  depthTest: true,
+  depthWrite: false,
+});
+const playerSprite = new THREE.Sprite(material);
+playerSprite.position.set(player.x, 0.9, player.y);  // 高度 = 纹理高度的一半
+playerSprite.scale.set(0.8, 1.2, 1);  // 宽高比匹配纹理
+scene.add(playerSprite);
+```
+
+**关键参数说明：**
+
+| 参数 | 值 | 说明 |
+| :--- | :--- | :--- |
+| `material.transparent` | `true` | 启用透明背景 |
+| `material.depthTest` | `true` | 参与深度测试，与其他物体正确遮挡 |
+| `material.depthWrite` | `false` | 不写入深度，避免半透明排序问题 |
+| `sprite.scale` | 按纹理比例设置 | 保持宽高比，避免拉伸 |
+
+### 5.6 渲染顺序
+
+Sprite 与 3D Mesh 混合渲染时，需确保正确的遮挡关系：
+
+```typescript
+// 所有 Sprite 和 Mesh 在同一个场景中，Three.js 自动处理深度排序
+// 但半透明 Sprite 需要特殊处理：调整 renderOrder
+
+// 对于需要保证遮挡的 Sprite：
+playerSprite.renderOrder = 1;  // 在普通物体之后渲染
+wallMesh.renderOrder = 0;      // 普通物体
+```
+
+> **实现补充：** 粒子/飘字 `renderOrder = 3~4`，悬浮高亮 `renderOrder = 2`，
+> 保证特效始终显示在场景之上。
+
+### 5.7 纸片人方案的优势
+
+| 对比项 | 3D 模型方案 | 纸片人（Sprite）方案 |
+| :--- | :--- | :--- |
+| 是否需要建模 | ✅ 需要 | ❌ 不需要 |
+| 美术资源需求 | 高（需要 3D 模型文件） | 低（2D 图片/程序化生成） |
+| 朝向摄像机 | 需要额外逻辑 | ✅ 自动（Sprite 默认行为） |
+| 光照响应 | 自动接收 3D 光照 | 不受光照影响（贴图自带明暗） |
+| 与 3D 场景融合 | 自然 | 需调色匹配 |
+| 开发速度 | 慢 | 快 |
+| 风格 | 3D 真实感 | 2.5D 风格化 |
+
+
+## 六、执行清单
+
+### Phase 1：环境搭建 ✅ 已完成
+
+- [x] 卸载 PixiJS 相关依赖：`npm uninstall pixi.js pixi-filters`
+- [x] 安装 Three.js：`npm install three @types/three`（three@0.185.1 / @types/three@0.185.4）
+- [x] 确认 Three.js 版本（最新稳定版）
+- [x] 在 `index.html` 中确保 `#game-container` 元素存在
+
+### Phase 2：场景构建 ✅ 已完成
+
+- [x] 创建 `ThreeRenderer` 类（`src/effects/ThreeRenderer.ts`），替代原 `PixiRenderer`
+- [x] 初始化 `Scene`、`PerspectiveCamera`、`WebGLRenderer`
+- [x] 将地图数据 `grid` 映射为 3D 场景（地板 + 墙壁）
+- [x] 将实体（玩家、怪物、物品）映射为 3D 物体
+- [x] 实现摄像机跟随玩家（固定角度，平移跟随）
+
+> **性能实现：** 地板按「房间配色 + 棋盘格」分组、墙按高度分组，
+> 各组使用一个 `InstancedMesh`，避免上千 draw call。
+
+### Phase 3：光照系统 ✅ 已完成
+
+- [x] 添加环境光 `AmbientLight(0x404060, 0.6)`
+- [x] 添加方向光 `DirectionalLight(0xffeedd, 0.8)`（跟随视口，投射阴影）
+- [x] 实现玩家火炬 `PointLight(0xffcc66, 1.5, 10)`（跟随玩家，投射阴影）
+- [x] 实现墙壁火把 `PointLight(0xff8844, 1.0, 8)`（固定位置）
+- [x] 启用阴影 `renderer.shadowMap.enabled = true`
+- [x] 配置阴影参数（`PCFSoftShadowMap`、贴图大小、阴影相机范围）
+
+### Phase 4：交互适配 ✅ 已完成
+
+- [x] 鼠标点击：使用 `Raycaster` 将屏幕坐标转换为 3D 场景点击（`ThreeRenderer.screenToTile`）
+- [x] 鼠标悬停：`Raycaster` 结果写入 `ThreeRenderer.hoverTile`，渲染悬浮高亮
+- [x] 保留键盘输入（方向键/WASD），逻辑不变
+
+### Phase 5：粒子与特效 ✅ 已完成
+
+- [x] 粒子系统：飘字用 Canvas 文本贴图 `Sprite`，爆发粒子用共享圆点贴图 `Sprite`
+- [x] 保留现有粒子 API（`floatText`、`sparkle`、`burst`），内部实现改为 Three.js
+- [x] 丁达尔效果：**由 Three 原生 PointLight 光晕替代**，不再单独模拟光柱
+
+### Phase 6：测试与优化 ⏳ 进行中
+
+- [ ] 验证所有游戏功能正常（移动、战斗、拾取、存档）
+- [ ] 验证光照效果（火把照明、阴影投射）
+- [ ] 性能测试（帧率稳定 ≥ 55 FPS）
+- [x] 清理旧代码（移除 `PixiRenderer` / `PixiLightSystem` / `PixiParticleSystem`）
+
+### 已完成的文件变更
+
+| 文件 | 变更 |
+| :--- | :--- |
+| `src/effects/ThreeRenderer.ts` | 新增，主渲染器（场景/相机/光照/拾取） |
+| `src/effects/ThreeTextures.ts` | 新增，Canvas → CanvasTexture 工厂 |
+| `src/effects/ThreeParticleSystem.ts` | 新增，替代 `PixiParticleSystem` |
+| `src/effects/ParticleSystem.ts` | 重写，飘字改 Three Sprite |
+| `src/render/TextureGenerator.ts` | 改造，`bake()` 返回 `HTMLCanvasElement`（绘制逻辑复用） |
+| `src/core/GameLoop.ts` | `PixiRenderer` → `ThreeRenderer` |
+| `src/core/InputManager.ts` | 点击/悬停改 Raycaster + `ThreeRenderer.hoverTile` |
+| `src/ui/GameUI.ts` | 初始化 `ThreeRenderer` |
+| `package.json` | 移除 `pixi.js` / `pixi-filters`，加入 `three` / `@types/three` |
+
+
+## 七、验收标准
+
+### 7.1 功能验收
+
+| 验收项 | 标准 |
+| :--- | :--- |
+| 地图渲染 | 地板和墙壁正确显示，颜色/纹理符合预期 |
+| 实体渲染 | 玩家、怪物、物品正确显示在对应位置 |
+| 玩家移动 | 方向键/WASD 控制玩家移动，摄像机跟随 |
+| 光照 | 火把发出暖色光，照亮周围区域 |
+| 阴影 | 墙壁背后有阴影，玩家/怪物投射阴影 |
+| 交互 | 鼠标点击移动、攻击正常，悬浮显示正常 |
+| 粒子 | 攻击特效、拾取特效正常显示 |
+| 存档 | 存档/读档功能正常 |
+| 性能 | 帧率稳定 ≥ 55 FPS |
+
+### 7.2 视觉验收
+
+| 验收项 | 标准 |
+| :--- | :--- |
+| 视角 | 固定等距视角，画面稳定无抖动 |
+| 颜色 | 场景颜色鲜明，符合魔塔风格 |
+| 光照 | 暖色光（火把）和冷色光（环境）区分明显 |
+| 阴影 | 阴影位置正确，边缘柔和（PCFSoftShadowMap） |
+| 风格一致性 | 整体风格统一，无穿帮 |
+
+
+## 八、给 AI Agent 的完整指令
+
+> **请将游戏渲染引擎从 PixiJS 切换为 Three.js，实现 3D 渲染 2D 风格输出。**
+>
+> **一、保留不变的模块：**
+> - 所有游戏逻辑：地图生成、战斗系统、玩家属性、事件系统、存档系统 — **完全不变，禁止修改**
+> - 所有数据层：二维数组 `grid[row][col]`、实体位置 `(x, y)` — **完全不变，禁止修改**
+> - 所有 UI 覆盖层：HTML + CSS 面板 — **完全不变**
+> - 所有快捷键：方向键/WASD、B/C/J/G/H/S/Esc — **完全不变**
+>
+> **二、替换的模块：**
+> - 渲染层：移除 PixiJS 相关代码，实现 Three.js 渲染
+> - 光照系统：移除手动着色器，使用 Three.js 原生光源
+> - 粒子系统：改用 Three.js 粒子实现，保留 API 接口
+> - 摄像机：实现固定等距视角，跟随玩家
+>
+> **三、几何体生成规则（不需要建模）：**
+> - 地板 → `BoxGeometry(1, 0.1, 1)` 或 `PlaneGeometry(1, 1)`
+> - 墙壁 → `BoxGeometry(1, 3, 1)`
+> - 玩家 → **Sprite 纸片人**（`SpriteMaterial` + 程序化纹理）
+> - 怪物 → **Sprite 纸片人**（不同颜色纹理）
+> - 宝箱 → `BoxGeometry` + 弧面
+> - 所有静态几何体使用 `MeshStandardMaterial` 材质
+>
+> **四、光照配置：**
+> - 环境光：`AmbientLight(0x404060, 0.6)`
+> - 方向光：`DirectionalLight(0xffeedd, 0.8)`，位置 `(10, 20, 5)`，投射阴影
+> - 玩家火炬：`PointLight(0xffcc66, 1.5, 10)`，跟随玩家位置，投射阴影
+> - 墙壁火把：`PointLight(0xff8844, 1.0, 8)`，固定位置，投射阴影
+>
+> **五、阴影配置：**
+> - `renderer.shadowMap.enabled = true`
+> - `renderer.shadowMap.type = THREE.PCFSoftShadowMap`
+>
+> **六、摄像机配置：**
+> - 类型：`PerspectiveCamera`
+> - 视野角：45 度
+> - 位置：`(x, height, z + distance)`，正对房间南面，固定角度
+> - 注视点：玩家位置 `(player.x, 0, player.y)`
+>
+> **七、验收标准：**
+> - 地图正常显示，地板和墙壁可见
+> - 玩家和怪物正常显示
+> - 火把有暖色光照
+> - 墙壁背后有阴影
+> - 帧率稳定 ≥ 55 FPS
+> - 所有交互和快捷键正常
+>
+> **八、约束：**
+> - 不依赖外部 3D 模型文件（.glb/.fbx）
+> - 不依赖建模软件（Blender/Maya）
+> - 所有几何体用 Three.js 代码生成
+> - 纹理优先使用程序化生成（Canvas→Texture）
+> - 游戏逻辑层与渲染层完全分离
+>
+> **九、纸片人约束（Sprite）：**
+> - 所有动态实体（玩家、怪物、NPC）必须使用 `Three.Sprite`（始终面向摄像机），不得使用 3D 网格模型
+> - 纹理由 `TextureGenerator` 程序化生成（Canvas 2D 绘制），使用 `SpriteMaterial` 材质
+> - Sprite 的 `transparent` 属性必须为 `true`
+> - Sprite 的尺寸应与纹理宽高比匹配，避免拉伸
+> - 静态物体（墙壁、地板、宝箱、楼梯、火把）使用 `Mesh`（3D 几何体），不使用 Sprite
+> - 确保 Sprite 与 Mesh 的遮挡关系正确（深度测试 `depthTest: true`）
+
+
+## 九、附录：关键 API 速查
+
+| 操作 | Three.js API |
+| :--- | :--- |
+| 创建场景 | `new THREE.Scene()` |
+| 创建摄像机 | `new THREE.PerspectiveCamera(fov, aspect, near, far)` |
+| 创建渲染器 | `new THREE.WebGLRenderer({ antialias: true })` |
+| 启用阴影 | `renderer.shadowMap.enabled = true` |
+| 添加物体 | `scene.add(mesh)` |
+| 创建长方体 | `new THREE.BoxGeometry(width, height, depth)` |
+| 创建球体 | `new THREE.SphereGeometry(radius)` |
+| 创建材质 | `new THREE.MeshStandardMaterial({ color, roughness, metalness })` |
+| 创建网格 | `new THREE.Mesh(geometry, material)` |
+| 投射阴影 | `mesh.castShadow = true` |
+| 接收阴影 | `mesh.receiveShadow = true` |
+| 创建环境光 | `new THREE.AmbientLight(color, intensity)` |
+| 创建方向光 | `new THREE.DirectionalLight(color, intensity)` |
+| 创建点光源 | `new THREE.PointLight(color, intensity, distance)` |
+| 光源投射阴影 | `light.castShadow = true` |
+| 渲染循环 | `renderer.render(scene, camera)` |
+| 更新光源位置 | `light.position.set(x, y, z)` |
+| 创建纸片人 | `new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true }))` |
+| 屏幕拾取 | `raycaster.setFromCamera(ndc, camera)` + `ray.intersectPlane(plane, target)` |
+| 批量同类物体 | `new THREE.InstancedMesh(geometry, material, count)` + `setMatrixAt()` |
+
+
+**文档结束**
+

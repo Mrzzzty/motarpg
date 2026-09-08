@@ -1,0 +1,55 @@
+{
+  "monsters": [
+    {
+      "id": "slime", "name": "史莱姆", "shape": "circle", "color": "#44cc44",
+      "category": "normal", "floorMin": 1, "floorMax": 5, "weight": 30,
+      "hpMul": 1.0, "atkMul": 0.9, "defMul": 0.8, "goldMul": 1.0, "expMul": 1.0,
+      "height": 32, "description": "最弱小的魔物，柔软无骨。"
+    },
+    {
+      "id": "bat", "name": "蝙蝠", "shape": "circle", "color": "#9955cc",
+      "category": "normal", "floorMin": 1, "floorMax": 10, "weight": 25,
+      "hpMul": 0.7, "atkMul": 1.1, "defMul": 0.5, "goldMul": 1.0, "expMul": 1.0,
+      "height": 30, "description": "盘旋的暗影，攻击刁钻。"
+    },
+    {
+      "id": "skeleton", "name": "骷髅兵", "shape": "square", "color": "#dddddd",
+      "category": "normal", "floorMin": 3, "floorMax": 15, "weight": 25,
+      "hpMul": 1.2, "atkMul": 1.0, "defMul": 1.2, "goldMul": 1.1, "expMul": 1.1,
+      "height": 36, "description": "不朽的卫兵，骨头拼成的战躯。"
+    },
+    {
+      "id": "gargoyle", "name": "石像鬼", "shape": "square", "color": "#888899",
+      "category": "normal", "floorMin": 8, "floorMax": 25, "weight": 22,
+      "hpMul": 1.5, "atkMul": 0.9, "defMul": 1.3, "goldMul": 1.2, "expMul": 1.2,
+      "height": 42, "description": "石化的守卫，皮糙肉厚。"
+    },
+    {
+      "id": "shadow_wolf", "name": "暗影狼", "shape": "square", "color": "#3344aa",
+      "category": "normal", "floorMin": 12, "floorMax": 35, "weight": 22,
+      "hpMul": 1.1, "atkMul": 1.4, "defMul": 0.8, "goldMul": 1.2, "expMul": 1.2,
+      "height": 40, "description": "影中疾行的猎手，撕咬致命。"
+    },
+    {
+      "id": "hellhound", "name": "地狱犬", "shape": "square", "color": "#ff6622",
+      "category": "normal", "floorMin": 18, "floorMax": 45, "weight": 20,
+      "hpMul": 1.3, "atkMul": 1.5, "defMul": 1.0, "goldMul": 1.3, "expMul": 1.3,
+      "height": 44, "description": "燃烧的恶犬，吐息灼人。"
+    },
+    {
+      "id": "dark_knight", "name": "暗黑骑士", "shape": "square", "color": "#aa1133",
+      "category": "normal", "floorMin": 25, "floorMax": 9999, "weight": 20,
+      "hpMul": 1.8, "atkMul": 1.2, "defMul": 1.4, "goldMul": 1.4, "expMul": 1.4,
+      "height": 48, "description": "堕落的骑士，攻防兼备。"
+    },
+    {
+      "id": "ancient_dragon", "name": "远古巨龙", "shape": "big_square", "color": "#cc1122",
+      "category": "boss", "floorMin": 5, "floorMax": 9999, "weight": 0,
+      "hpMul": 5.0, "atkMul": 0.95, "defMul": 1.2, "goldMul": 5.0, "expMul": 8.0,
+      "height": 70, "description": "沉眠于塔底的灾厄，翼影蔽日。"
+    }
+  ],
+  "eliteStatMultiplier": 1.25,
+  "eliteGoldMultiplier": 2.0,
+  "eliteExpMultiplier": 2.5
+}

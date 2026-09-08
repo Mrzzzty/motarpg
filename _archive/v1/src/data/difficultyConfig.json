@@ -1,0 +1,46 @@
+{
+  "difficulties": [
+    {
+      "id": "lullaby", "name": "摇篮曲", "description": "超级低难度，怪物在摸鱼，适合新手",
+      "monsterMultiplier": 0.4, "expMultiplier": 1.5, "goldMultiplier": 1.5,
+      "qualityBonus": 2, "collectibleDropRate": 1.5, "bossMultiplier": 0.7,
+      "unlockFloor": 0, "icon": "🌙", "color": "#b39ddb", "isEndgame": false
+    },
+    {
+      "id": "normal", "name": "普通", "description": "标准的塔中试炼",
+      "monsterMultiplier": 1.0, "expMultiplier": 1.0, "goldMultiplier": 1.0,
+      "qualityBonus": 0, "collectibleDropRate": 1.0, "bossMultiplier": 1.0,
+      "unlockFloor": 0, "icon": "⭐", "color": "#cfd8dc", "isEndgame": false
+    },
+    {
+      "id": "hard", "name": "困难", "description": "有挑战性，奖励更丰富",
+      "monsterMultiplier": 1.3, "expMultiplier": 1.3, "goldMultiplier": 1.4,
+      "qualityBonus": 2, "collectibleDropRate": 1.3, "bossMultiplier": 1.15,
+      "unlockFloor": 0, "icon": "🔥", "color": "#ff7043", "isEndgame": false
+    },
+    {
+      "id": "nightmare", "name": "噩梦", "description": "极具挑战，高风险高回报（15层解锁）",
+      "monsterMultiplier": 1.7, "expMultiplier": 1.6, "goldMultiplier": 1.8,
+      "qualityBonus": 3, "collectibleDropRate": 1.7, "bossMultiplier": 1.3,
+      "unlockFloor": 15, "icon": "💀", "color": "#7e57c2", "isEndgame": false
+    },
+    {
+      "id": "hell", "name": "地狱", "description": "只有强者才能生存（20层解锁）",
+      "monsterMultiplier": 2.2, "expMultiplier": 2.0, "goldMultiplier": 2.2,
+      "qualityBonus": 4, "collectibleDropRate": 2.2, "bossMultiplier": 1.5,
+      "unlockFloor": 20, "icon": "👿", "color": "#ef5350", "isEndgame": false
+    },
+    {
+      "id": "purgatory", "name": "炼狱", "description": "非人哉（30层解锁）",
+      "monsterMultiplier": 3.0, "expMultiplier": 2.5, "goldMultiplier": 3.0,
+      "qualityBonus": 5, "collectibleDropRate": 3.0, "bossMultiplier": 1.8,
+      "unlockFloor": 30, "icon": "⚔️", "color": "#ff6f00", "isEndgame": false
+    },
+    {
+      "id": "haven", "name": "天堂", "description": "终极试炼——圣座之巅（100层解锁），Boss必定携带2个词缀",
+      "monsterMultiplier": 5.0, "expMultiplier": 3.5, "goldMultiplier": 3.5,
+      "qualityBonus": 10, "collectibleDropRate": 4.5, "bossMultiplier": 2.5,
+      "unlockFloor": 100, "icon": "🕊️", "color": "#fff176", "isEndgame": true
+    }
+  ]
+}

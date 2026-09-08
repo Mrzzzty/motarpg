@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260908T030541480Z-85556-6d229b504267",
+  "runId": "20260908T030541480Z-85556-6d229b504267",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": null,
+  "diffHash": "efee2e9b44bbb2b10c67e2ce83bce33896c4d2badeba0f5f6beaed7abe56b3aa",
+  "rulesVersion": "unavailable",
+  "sessionHash": "7a57003a349a222ba2b85ba26f3c094e0ae9bb9e5ec36af6a06ef04cecb7875c",
+  "reportRef": ".mimosa/reports/task-review-sess_6300ef42-b8f2-410e-a6ba-746025f65202-20260908T030541480Z-85556-6d229b504267.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "src/types/index.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/map/RoomGenerator.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/render/Projection.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/render/PlaceholderArt.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/render/IsometricRenderer.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/core/CameraController.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/render/LightSystem.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-09-08T03:05:41.848Z"
+}

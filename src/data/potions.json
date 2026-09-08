@@ -1,0 +1,9 @@
+{
+  "potions": [
+    { "tier": "crude",   "name": "劣质药水", "healPct": 0.20, "price": 20,  "color": "#dd6688", "minFloor": 1,  "maxFloor": 5,   "icon": "🧪" },
+    { "tier": "normal",  "name": "普通药水", "healPct": 0.30, "price": 40,  "color": "#ee3344", "minFloor": 3,  "maxFloor": 15,  "icon": "🧪" },
+    { "tier": "quality", "name": "优质药水", "healPct": 0.45, "price": 100, "color": "#bb1133", "minFloor": 10, "maxFloor": 30,  "icon": "🧪" },
+    { "tier": "strong",  "name": "强效药水", "healPct": 0.60, "price": 250, "color": "#990033", "minFloor": 25, "maxFloor": 40,  "icon": "⚗️" },
+    { "tier": "holy",    "name": "圣药",     "healPct": 0.80, "price": 600, "color": "#ffdd44", "minFloor": 40, "maxFloor": 9999, "icon": "⚗️" }
+  ]
+}

@@ -1,0 +1,531 @@
+{
+  "collectibles": [
+    {
+      "id": "collect_atk_1",
+      "name": "力量印记",
+      "description": "攻击力+5。",
+      "lore": "传说中，此物曾属于某位朝圣者，他在深渊的边缘窥见了真理的一角。",
+      "icon": "🔖",
+      "type": "attribute",
+      "rarity": "common",
+      "effect": {
+        "type": "attack_bonus",
+        "value": 5,
+        "description": "攻击力+5"
+      },
+      "isUnique": true,
+      "series": "series_atk",
+      "acquisitionHint": "常见于木质宝箱"
+    },
+    {
+      "id": "collect_atk_2",
+      "name": "力量徽章",
+      "description": "攻击力+15。",
+      "lore": "剑冢深处的回响凝成的徽记，握住它时能听见金铁之声。",
+      "icon": "🔖",
+      "type": "attribute",
+      "rarity": "uncommon",
+      "effect": {
+        "type": "attack_bonus",
+        "value": 15,
+        "description": "攻击力+15"
+      },
+      "isUnique": true,
+      "series": "series_atk",
+      "acquisitionHint": "铁质宝箱与精英怪物"
+    },
+    {
+      "id": "collect_atk_3",
+      "name": "力量圣印",
+      "description": "攻击力+35。",
+      "lore": "受过祝福的圣印——它的光，只在斩击的瞬间亮起。",
+      "icon": "🔆",
+      "type": "attribute",
+      "rarity": "rare",
+      "effect": {
+        "type": "attack_bonus",
+        "value": 35,
+        "description": "攻击力+35"
+      },
+      "isUnique": true,
+      "series": "series_atk",
+      "acquisitionHint": "黄金宝箱或Boss"
+    },
+    {
+      "id": "collect_atk_4",
+      "name": "力量神印",
+      "description": "攻击力+70。",
+      "lore": "巨神陨落时，指尖触碰大地留下的印痕。",
+      "icon": "💥",
+      "type": "attribute",
+      "rarity": "epic",
+      "effect": {
+        "type": "attack_bonus",
+        "value": 70,
+        "description": "攻击力+70"
+      },
+      "isUnique": true,
+      "series": "series_atk",
+      "acquisitionHint": "暗金宝箱或Boss"
+    },
+    {
+      "id": "collect_def_1",
+      "name": "守护印记",
+      "description": "防御力+3。",
+      "lore": "无数祈祷者将恐惧刻进了这枚印记，于是它学会了抵挡。",
+      "icon": "🛡️",
+      "type": "attribute",
+      "rarity": "common",
+      "effect": {
+        "type": "defense_bonus",
+        "value": 3,
+        "description": "防御力+3"
+      },
+      "isUnique": true,
+      "series": "series_def",
+      "acquisitionHint": "常见于木质宝箱"
+    },
+    {
+      "id": "collect_def_2",
+      "name": "守护徽章",
+      "description": "防御力+10。",
+      "lore": "守城卫队长的遗物。箭痕犹在，城池已空。",
+      "icon": "🛡️",
+      "type": "attribute",
+      "rarity": "uncommon",
+      "effect": {
+        "type": "defense_bonus",
+        "value": 10,
+        "description": "防御力+10"
+      },
+      "isUnique": true,
+      "series": "series_def",
+      "acquisitionHint": "铁质宝箱与精英怪物"
+    },
+    {
+      "id": "collect_def_3",
+      "name": "守护圣印",
+      "description": "防御力+25。",
+      "lore": "圣殿骑士团最后一战的见证。盾未破，人未退。",
+      "icon": "🀄",
+      "type": "attribute",
+      "rarity": "rare",
+      "effect": {
+        "type": "defense_bonus",
+        "value": 25,
+        "description": "防御力+25"
+      },
+      "isUnique": true,
+      "series": "series_def",
+      "acquisitionHint": "黄金宝箱或Boss"
+    },
+    {
+      "id": "collect_def_4",
+      "name": "守护神印",
+      "description": "防御力+50。",
+      "lore": "据说它曾护佑过一整座城池——直到城池自己选择了终结。",
+      "icon": "🏰",
+      "type": "attribute",
+      "rarity": "epic",
+      "effect": {
+        "type": "defense_bonus",
+        "value": 50,
+        "description": "防御力+50"
+      },
+      "isUnique": true,
+      "series": "series_def",
+      "acquisitionHint": "暗金宝箱或Boss"
+    },
+    {
+      "id": "collect_hp_1",
+      "name": "生命印记",
+      "description": "生命上限+80。",
+      "lore": "刻着生命符文的石片，触之微温，如活的。",
+      "icon": "❤️",
+      "type": "attribute",
+      "rarity": "common",
+      "effect": {
+        "type": "hp_bonus",
+        "value": 80,
+        "description": "生命上限+80"
+      },
+      "isUnique": true,
+      "series": "series_hp",
+      "acquisitionHint": "常见于木质宝箱"
+    },
+    {
+      "id": "collect_hp_2",
+      "name": "生命徽章",
+      "description": "生命上限+200。",
+      "lore": "医者行会的秘传。他们相信，生命可以被「借」回来。",
+      "icon": "💗",
+      "type": "attribute",
+      "rarity": "uncommon",
+      "effect": {
+        "type": "hp_bonus",
+        "value": 200,
+        "description": "生命上限+200"
+      },
+      "isUnique": true,
+      "series": "series_hp",
+      "acquisitionHint": "铁质宝箱与精英怪物"
+    },
+    {
+      "id": "collect_hp_3",
+      "name": "生命圣印",
+      "description": "生命上限+500。",
+      "lore": "泉之圣女的祝福凝固于此。泉水干涸了，祝福没有。",
+      "icon": "💖",
+      "type": "attribute",
+      "rarity": "rare",
+      "effect": {
+        "type": "hp_bonus",
+        "value": 500,
+        "description": "生命上限+500"
+      },
+      "isUnique": true,
+      "series": "series_hp",
+      "acquisitionHint": "黄金宝箱或Boss"
+    },
+    {
+      "id": "collect_hp_4",
+      "name": "生命神印",
+      "description": "生命上限+1200。",
+      "lore": "世界树最后一片落叶压成的印记。脉搏与它同频。",
+      "icon": "🌳",
+      "type": "attribute",
+      "rarity": "epic",
+      "effect": {
+        "type": "hp_bonus",
+        "value": 1200,
+        "description": "生命上限+1200"
+      },
+      "isUnique": true,
+      "series": "series_hp",
+      "acquisitionHint": "暗金宝箱或Boss"
+    },
+    {
+      "id": "collect_crit",
+      "name": "精准之眼",
+      "description": "暴击率+5%。",
+      "lore": "凝视它太久，你会觉得有什么也在回望你——然后弱点便无所遁形。",
+      "icon": "👁️",
+      "type": "attribute",
+      "rarity": "rare",
+      "effect": {
+        "type": "crit_bonus",
+        "value": 5,
+        "description": "暴击率+5%"
+      },
+      "isUnique": true,
+      "acquisitionHint": "黄金宝箱或Boss"
+    },
+    {
+      "id": "collect_dodge",
+      "name": "风之轻语",
+      "description": "闪避率+5%。",
+      "lore": "风在低语。它只把攻击的落点，讲给被选中的人听。",
+      "icon": "🌬️",
+      "type": "attribute",
+      "rarity": "rare",
+      "effect": {
+        "type": "dodge_bonus",
+        "value": 5,
+        "description": "闪避率+5%"
+      },
+      "isUnique": true,
+      "acquisitionHint": "黄金宝箱或Boss"
+    },
+    {
+      "id": "collect_lifesteal",
+      "name": "血之契约",
+      "description": "攻击回复生命2%。",
+      "lore": "契约的墨迹未干，代价早已付清——由别人支付。",
+      "icon": "🩸",
+      "type": "combat",
+      "rarity": "epic",
+      "effect": {
+        "type": "lifesteal",
+        "value": 2,
+        "description": "攻击回复生命2%"
+      },
+      "isUnique": true,
+      "series": "series_relic",
+      "acquisitionHint": "Boss掉落"
+    },
+    {
+      "id": "collect_thorns",
+      "name": "荆棘之心",
+      "description": "反弹5%受到的伤害。",
+      "lore": "握紧它。痛楚会自己找到回去的路。",
+      "icon": "🌵",
+      "type": "combat",
+      "rarity": "rare",
+      "effect": {
+        "type": "thorns",
+        "value": 5,
+        "description": "反弹5%伤害"
+      },
+      "isUnique": true,
+      "acquisitionHint": "黄金宝箱或Boss"
+    },
+    {
+      "id": "collect_thorns_2",
+      "name": "荆棘之铠",
+      "description": "反弹12%受到的伤害。",
+      "lore": "以受难者之冠熔铸的铠甲之心。每一次反噬，都是一场弥撒。",
+      "icon": "🛡️",
+      "type": "combat",
+      "rarity": "legendary",
+      "effect": {
+        "type": "thorns",
+        "value": 12,
+        "description": "反弹12%伤害"
+      },
+      "isUnique": true,
+      "series": "series_relic",
+      "acquisitionHint": "传说宝箱或强力Boss"
+    },
+    {
+      "id": "collect_gold",
+      "name": "贪婪之手",
+      "description": "金币获取+15%。",
+      "lore": "它总是比你更快地捡起金币。没有人见过它的手。",
+      "icon": "🪙",
+      "type": "resource",
+      "rarity": "uncommon",
+      "effect": {
+        "type": "gold_bonus",
+        "value": 15,
+        "description": "金币获取+15%"
+      },
+      "isUnique": true,
+      "series": "series_trader",
+      "acquisitionHint": "任务奖励或铁质宝箱"
+    },
+    {
+      "id": "collect_exp",
+      "name": "智慧之书",
+      "description": "经验获取+10%。",
+      "lore": "每一页都写满了前人的教训——以及他们没能读完的明天。",
+      "icon": "📕",
+      "type": "resource",
+      "rarity": "uncommon",
+      "effect": {
+        "type": "exp_bonus",
+        "value": 10,
+        "description": "经验获取+10%"
+      },
+      "isUnique": true,
+      "series": "series_trader",
+      "acquisitionHint": "任务奖励或铁质宝箱"
+    },
+    {
+      "id": "collect_soul",
+      "name": "灵魂容器",
+      "description": "魂晶获取+20%。",
+      "lore": "容器里的低语声绵延不绝。仔细听，像是感谢。",
+      "icon": "🏺",
+      "type": "resource",
+      "rarity": "rare",
+      "effect": {
+        "type": "soul_bonus",
+        "value": 20,
+        "description": "魂晶获取+20%"
+      },
+      "isUnique": true,
+      "series": "series_trader",
+      "acquisitionHint": "黄金宝箱或Boss"
+    },
+    {
+      "id": "collect_regen",
+      "name": "生命源泉",
+      "description": "每走10步恢复2%生命。",
+      "lore": "干涸的泉眼仍记得涌流的滋味，并将这份记忆分给你。",
+      "icon": "⛲",
+      "type": "resource",
+      "rarity": "epic",
+      "effect": {
+        "type": "health_regen",
+        "value": 2,
+        "description": "每走10步恢复2%生命"
+      },
+      "isUnique": true,
+      "acquisitionHint": "暗金宝箱或Boss"
+    },
+    {
+      "id": "collect_poison_resist",
+      "name": "净化护符",
+      "description": "中毒抗性+50%。",
+      "lore": "蛇毒在它面前褪成清水。万毒之祖曾是它的仆从。",
+      "icon": "🌿",
+      "type": "special",
+      "rarity": "rare",
+      "effect": {
+        "type": "poison_resist",
+        "value": 50,
+        "description": "中毒抗性+50%"
+      },
+      "isUnique": true,
+      "acquisitionHint": "黄金宝箱或事件"
+    },
+    {
+      "id": "collect_fire_resist",
+      "name": "炎之屏障",
+      "description": "火焰抗性+50%。",
+      "lore": "在火中锻造，与火为友。烈焰抚过它，如同抚摸旧识。",
+      "icon": "🔥",
+      "type": "special",
+      "rarity": "rare",
+      "effect": {
+        "type": "fire_resist",
+        "value": 50,
+        "description": "火焰抗性+50%"
+      },
+      "isUnique": true,
+      "acquisitionHint": "黄金宝箱或事件"
+    },
+    {
+      "id": "collect_chest_up",
+      "name": "幸运币",
+      "description": "宝箱品质提升一级。",
+      "lore": "抛出它时，永远是你想要的那一面。命运偶尔也会作弊。",
+      "icon": "🪙",
+      "type": "special",
+      "rarity": "legendary",
+      "effect": {
+        "type": "chest_quality_up",
+        "value": 1,
+        "description": "宝箱品质提升一级"
+      },
+      "isUnique": true,
+      "acquisitionHint": "传说宝箱或强力Boss"
+    },
+    {
+      "id": "collect_discount",
+      "name": "商人之友",
+      "description": "商店价格-10%。",
+      "lore": "塔中的商人们都认识这枚旧戒指，并默契地少收一些。",
+      "icon": "🤝",
+      "type": "special",
+      "rarity": "rare",
+      "effect": {
+        "type": "merchant_discount",
+        "value": 10,
+        "description": "商店价格-10%"
+      },
+      "isUnique": true,
+      "series": "series_trader",
+      "acquisitionHint": "事件或黄金宝箱"
+    },
+    {
+      "id": "collect_boss_damage",
+      "name": "屠龙者之印",
+      "description": "对Boss伤害+15%。",
+      "lore": "初代屠龙者的遗印。它仍在渴求配得上它的敌人。",
+      "icon": "🐉",
+      "type": "combat",
+      "rarity": "legendary",
+      "effect": {
+        "type": "boss_damage",
+        "value": 15,
+        "description": "对Boss伤害+15%"
+      },
+      "isUnique": true,
+      "series": "series_relic",
+      "acquisitionHint": "传说宝箱或强力Boss"
+    },
+    {
+      "id": "collect_auto_heal",
+      "name": "愈合之心",
+      "description": "战斗外每2秒恢复1%生命。",
+      "lore": "伤口在它旁边会羞愧地合上。",
+      "icon": "💚",
+      "type": "special",
+      "rarity": "epic",
+      "effect": {
+        "type": "auto_heal",
+        "value": 1,
+        "description": "战斗外每2秒恢复1%生命"
+      },
+      "isUnique": true,
+      "acquisitionHint": "暗金宝箱或Boss"
+    }
+  ],
+  "series": [
+    {
+      "id": "series_atk",
+      "name": "力量圣印·四阶",
+      "description": "集齐力量印记系列（4件）。",
+      "reward": {
+        "type": "soul",
+        "value": 8
+      },
+      "memberIds": [
+        "collect_atk_1",
+        "collect_atk_2",
+        "collect_atk_3",
+        "collect_atk_4"
+      ]
+    },
+    {
+      "id": "series_def",
+      "name": "守护圣印·四阶",
+      "description": "集齐守护印记系列（4件）。",
+      "reward": {
+        "type": "soul",
+        "value": 8
+      },
+      "memberIds": [
+        "collect_def_1",
+        "collect_def_2",
+        "collect_def_3",
+        "collect_def_4"
+      ]
+    },
+    {
+      "id": "series_hp",
+      "name": "生命圣印·四阶",
+      "description": "集齐生命印记系列（4件）。",
+      "reward": {
+        "type": "soul",
+        "value": 8
+      },
+      "memberIds": [
+        "collect_hp_1",
+        "collect_hp_2",
+        "collect_hp_3",
+        "collect_hp_4"
+      ]
+    },
+    {
+      "id": "series_relic",
+      "name": "屠龙圣器",
+      "description": "集齐三件战斗圣器。",
+      "reward": {
+        "type": "gold",
+        "value": 3000
+      },
+      "memberIds": [
+        "collect_lifesteal",
+        "collect_thorns_2",
+        "collect_boss_damage"
+      ]
+    },
+    {
+      "id": "series_trader",
+      "name": "旅者之友",
+      "description": "集齐四件旅途藏品。",
+      "reward": {
+        "type": "soul",
+        "value": 10
+      },
+      "memberIds": [
+        "collect_gold",
+        "collect_exp",
+        "collect_soul",
+        "collect_discount"
+      ]
+    }
+  ]
+}

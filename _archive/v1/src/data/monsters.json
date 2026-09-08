@@ -1,0 +1,116 @@
+{
+  "monsters": [
+    {
+      "id": "slime_tutorial", "name": "史莱姆（教学）", "icon": "🟢",
+      "baseHp": 30, "baseAtk": 8, "baseDef": 1, "baseExp": 15, "baseGold": 3,
+      "weakness": [], "drops": [],
+      "spawnFloorMin": 1, "spawnFloorMax": 1, "weight": 10,
+      "unlockThreshold": 2,
+      "description": "塔底最弱的生物，几乎没有威胁。"
+    },
+    {
+      "id": "slime", "name": "史莱姆", "icon": "🟩",
+      "baseHp": 50, "baseAtk": 10, "baseDef": 2, "baseExp": 20, "baseGold": 5,
+      "weakness": ["火"], "drops": ["health_potion"],
+      "spawnFloorMin": 2, "spawnFloorMax": 6, "weight": 30,
+      "unlockThreshold": 5,
+      "description": "凝胶状的低等魔物，怕火。"
+    },
+    {
+      "id": "bat", "name": "蝙蝠", "icon": "🦇",
+      "baseHp": 40, "baseAtk": 12, "baseDef": 1, "baseExp": 25, "baseGold": 8,
+      "weakness": ["光"], "drops": [],
+      "spawnFloorMin": 2, "spawnFloorMax": 10, "weight": 25,
+      "unlockThreshold": 5,
+      "description": "成群出没于黑暗走廊，行动迅捷。"
+    },
+    {
+      "id": "skeleton", "name": "骷髅兵", "icon": "💀",
+      "baseHp": 70, "baseAtk": 15, "baseDef": 3, "baseExp": 40, "baseGold": 12,
+      "weakness": ["钝击"], "drops": ["health_potion"],
+      "spawnFloorMin": 4, "spawnFloorMax": 16, "weight": 28,
+      "unlockThreshold": 5,
+      "description": "由战死者骸骨驱动的亡灵士兵。"
+    },
+    {
+      "id": "gargoyle", "name": "石像鬼", "icon": "🗿",
+      "baseHp": 100, "baseAtk": 20, "baseDef": 6, "baseExp": 60, "baseGold": 20,
+      "weakness": ["雷"], "drops": ["key"],
+      "spawnFloorMin": 8, "spawnFloorMax": 24, "weight": 22,
+      "unlockThreshold": 5,
+      "description": "栖息在雕像间的守卫，皮糙肉厚。"
+    },
+    {
+      "id": "shadow_wolf", "name": "暗影狼", "icon": "🐺",
+      "baseHp": 120, "baseAtk": 25, "baseDef": 4, "baseExp": 80, "baseGold": 25,
+      "weakness": ["光", "火"], "drops": [],
+      "spawnFloorMin": 12, "spawnFloorMax": 32, "weight": 24,
+      "unlockThreshold": 5,
+      "description": "由阴影凝聚的狼群，攻击凌厉。"
+    },
+    {
+      "id": "hellhound", "name": "地狱犬", "icon": "🐕",
+      "baseHp": 150, "baseAtk": 30, "baseDef": 8, "baseExp": 100, "baseGold": 35,
+      "weakness": ["冰"], "drops": ["health_potion_l"],
+      "spawnFloorMin": 18, "spawnFloorMax": 42, "weight": 20,
+      "unlockThreshold": 5,
+      "description": "吐着硫磺气息的看门犬。"
+    },
+    {
+      "id": "dark_knight", "name": "暗黑骑士", "icon": "🛡️",
+      "baseHp": 200, "baseAtk": 40, "baseDef": 12, "baseExp": 150, "baseGold": 50,
+      "weakness": ["光"], "drops": ["key", "health_potion_l"],
+      "spawnFloorMin": 25, "spawnFloorMax": 60, "weight": 18,
+      "unlockThreshold": 5,
+      "description": "堕落的塔中原骑士，甲胄漆黑。"
+    },
+    {
+      "id": "lich", "name": "巫妖", "icon": "🎃",
+      "baseHp": 180, "baseAtk": 55, "baseDef": 10, "baseExp": 200, "baseGold": 80,
+      "weakness": ["火", "光"], "drops": ["health_potion_l"],
+      "spawnFloorMin": 35, "spawnFloorMax": 72, "weight": 15,
+      "unlockThreshold": 5,
+      "description": "钻研禁术的死灵法师。"
+    },
+    {
+      "id": "bone_dragon", "name": "骨龙", "icon": "🐉",
+      "baseHp": 350, "baseAtk": 50, "baseDef": 18, "baseExp": 300, "baseGold": 150,
+      "weakness": ["光"], "drops": ["health_potion_xl"],
+      "spawnFloorMin": 50, "spawnFloorMax": 100, "weight": 14,
+      "unlockThreshold": 5,
+      "description": "巨龙的骸骨被黑暗力量重新驱动。"
+    },
+    {
+      "id": "void_stalker", "name": "虚空潜行者", "icon": "👁️",
+      "baseHp": 300, "baseAtk": 70, "baseDef": 15, "baseExp": 260, "baseGold": 120,
+      "weakness": ["虚空"], "drops": ["health_potion_xl"],
+      "spawnFloorMin": 60, "spawnFloorMax": 130, "weight": 14,
+      "unlockThreshold": 5,
+      "description": "在现实夹缝中穿行的猎手。"
+    },
+    {
+      "id": "doom_herald", "name": "末日先驱", "icon": "☠️",
+      "baseHp": 450, "baseAtk": 85, "baseDef": 22, "baseExp": 400, "baseGold": 200,
+      "weakness": ["光", "神圣"], "drops": ["health_potion_xl"],
+      "spawnFloorMin": 80, "spawnFloorMax": 200, "weight": 12,
+      "unlockThreshold": 5,
+      "description": "宣告终末的使者，所过之处皆成灰烬。"
+    },
+    {
+      "id": "abyss_titan", "name": "深渊泰坦", "icon": "👹",
+      "baseHp": 600, "baseAtk": 100, "baseDef": 30, "baseExp": 500, "baseGold": 260,
+      "weakness": ["神圣"], "drops": ["health_potion_xl"],
+      "spawnFloorMin": 100, "spawnFloorMax": 300, "weight": 10,
+      "unlockThreshold": 3,
+      "description": "自深渊底层攀爬而上的巨物。"
+    },
+    {
+      "id": "boss_base", "name": "塔之主宰", "icon": "🐲",
+      "baseHp": 500, "baseAtk": 55, "baseDef": 20, "baseExp": 500, "baseGold": 200,
+      "weakness": [], "drops": [],
+      "spawnFloorMin": 5, "spawnFloorMax": 9999, "weight": 0,
+      "unlockThreshold": 1,
+      "description": "每五层镇守一方的塔之主宰。"
+    }
+  ]
+}

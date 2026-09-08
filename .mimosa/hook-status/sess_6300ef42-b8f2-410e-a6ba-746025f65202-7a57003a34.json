@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-09-08T03:25:18.436Z",
+  "sessionId": "sess_6300ef42-b8f2-410e-a6ba-746025f65202",
+  "event": "PostToolUse",
+  "toolName": "Edit",
+  "file": "C:/Users/Mrzzz/.zcode/cli/memories/projects/motarpg-78d2a17dd75a32bf/memory/motarpg-project-status.md",
+  "outcome": "clear",
+  "coverage": "complete",
+  "findingCount": 0,
+  "durationMs": 4,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

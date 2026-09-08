@@ -1,0 +1,49 @@
+{
+  "roomNames": {
+    "start": "起点大厅",
+    "end": "终点之间",
+    "combat": "战斗室",
+    "elite": "精英殿堂",
+    "chest": "宝藏间",
+    "merchant": "商人营地",
+    "witch": "女巫酿药间",
+    "boss": "Boss巢穴",
+    "rest": "休整营地"
+  },
+  "hints": {
+    "attack": "左键攻击",
+    "pickup": "左键拾取",
+    "talk": "左键对话",
+    "open": "左键打开",
+    "stair": "点击或走上楼梯",
+    "trade": "左键交易",
+    "heal": "左键治疗"
+  },
+  "titles": {
+    "gameTitle": "无尽之塔",
+    "floor": "第 {floor} 层",
+    "depth": "深度 {depth}",
+    "pathA": "路径A（高危）",
+    "pathB": "路径B（稳健）"
+  },
+  "guidance": {
+    "firstEquipment": "获得装备！按 B 打开背包查看，双击可穿戴。装备对比中绿色为提升。",
+    "firstDeath": "你倒下了……但塔给予你重来的机会：在本层起点复活，损失 20% 金币。",
+    "tutorialWelcome": "欢迎来到无尽之塔。跟随右侧任务指引开始冒险吧。"
+  },
+  "labels": {
+    "player": "勇者",
+    "merchant": "商人",
+    "guide": "引导者",
+    "chest": "宝箱",
+    "chestOpened": "空宝箱",
+    "stair": "通往第 {floor} 层",
+    "carpet": "地毯",
+    "pillar": "石柱",
+    "potion": "药水",
+    "torch": "火把",
+    "cauldron": "熬药大锅",
+    "shelf": "药架",
+    "fountain": "治疗泉"
+  }
+}

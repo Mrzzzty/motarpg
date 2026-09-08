@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260908T032537937Z-78744-8994c3a4bec6",
+  "runId": "20260908T032537937Z-78744-8994c3a4bec6",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": null,
+  "diffHash": "08197ce3f1dedaea44d1140a84c9e52778c732f6a2240f8d38e68bfe1653bfe7",
+  "rulesVersion": "unavailable",
+  "sessionHash": "7a57003a349a222ba2b85ba26f3c094e0ae9bb9e5ec36af6a06ef04cecb7875c",
+  "reportRef": ".mimosa/reports/task-review-sess_6300ef42-b8f2-410e-a6ba-746025f65202-20260908T032537937Z-78744-8994c3a4bec6.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "src/core/GameController.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/map/RoomGenerator.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/map/ContentFiller.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/types/index.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/entities/Player.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/systems/SaveManager.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/core/InputManager.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/ui/GameUI.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/ui/Panels.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/ui/TitleScreen.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-09-08T03:25:38.307Z"
+}

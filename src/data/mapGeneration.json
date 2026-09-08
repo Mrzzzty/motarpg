@@ -1,0 +1,70 @@
+{
+  "cellSpacingX": 13,
+  "cellSpacingY": 11,
+  "gridRadius": 2,
+  "floorRoomCounts": [
+    { "minFloor": 2, "maxFloor": 5, "min": 4, "max": 6 },
+    { "minFloor": 6, "maxFloor": 10, "min": 4, "max": 8 },
+    { "minFloor": 11, "maxFloor": 20, "min": 6, "max": 8 },
+    { "minFloor": 21, "maxFloor": 9999, "min": 6, "max": 12 }
+  ],
+  "maxRooms": 12,
+  "bossFloorInterval": 5,
+  "initialFloor": 1,
+  "roomSpecs": {
+    "start": { "width": 5, "height": 5 },
+    "end": { "width": 6, "height": 5 },
+    "combat": { "width": [6, 7], "height": [5, 6] },
+    "elite": { "width": [7, 8], "height": [6, 7] },
+    "chest": { "width": 5, "height": 5 },
+    "merchant": { "width": 6, "height": 6 },
+    "witch": { "width": [7, 8], "height": [6, 7] },
+    "boss": { "width": [9, 10], "height": [7, 8] },
+    "rest": { "width": 5, "height": 5 }
+  },
+  "minRoomWidth": 4,
+  "minRoomHeight": 4,
+  "tension": {
+    "weights": { "combat": 1, "elite": 3, "chest": -1, "merchant": -2, "witch": -3 },
+    "forcePositiveAt": 4,
+    "forceNegativeAt": -3
+  },
+  "merchantLimit": { "fewMaxRooms": 7, "fewCount": 1, "manyCount": 2 },
+  "witchLimit": { "minFloor": 6, "interval": 6 },
+  "path": { "maxLengthDiff": 2 },
+  "corridor": { "extraChance": 0.25, "extraMax": 2, "adjacentManhattan": 1 },
+  "content": {
+    "monsterMinDistFromEntry": 3,
+    "smallAreaMax": 30,
+    "mediumAreaMax": 42,
+    "density": { "small": 2, "medium": 3, "large": 4 },
+    "chestRoomMin": 2,
+    "chestRoomMax": 3,
+    "otherRoomChestChance": 0.35,
+    "eliteRoomEliteMin": 1,
+    "eliteRoomEliteMax": 2,
+    "bossRoomAddsMin": 0,
+    "bossRoomAddsMax": 2,
+    "combatByDepth": [
+      { "maxDepth": 1, "monsters": [1, 2], "elites": [0, 0], "chests": [0, 1], "potions": [0, 1] },
+      { "maxDepth": 2, "monsters": [2, 2], "elites": [0, 1], "chests": [0, 1], "potions": [1, 1] },
+      { "maxDepth": 9999, "monsters": [2, 3], "elites": [1, 1], "chests": [1, 1], "potions": [1, 1] }
+    ],
+    "eliteRoom": { "elites": [1, 1], "monsters": [1, 2], "chests": [1, 2], "potions": [1, 1] },
+    "treasureRoom": { "chests": [2, 3], "monsters": [1, 2], "potions": [1, 2] },
+    "merchantRoom": { "chests": [0, 1], "potions": [1, 2] },
+    "witchRoom": { "shelves": [2, 2] },
+    "bossRoom": { "elites": [0, 2], "chests": [2, 3], "potions": [2, 4] },
+    "exitRoom": { "guards": [0, 1], "chests": [0, 2], "potions": [1, 1] },
+    "startRoom": { "potions": [1, 1] },
+    "guard": { "chestRadius": 3, "stairRadius": 3 },
+    "barrier": { "fillWithPillars": true },
+    "roomTorches": { "start": [2, 4], "merchant": [4, 4], "witch": [4, 4], "boss": [6, 8], "end": [4, 4] }
+  },
+  "decor": {
+    "torchCorridorEvery": 4,
+    "pillarMinRoomWidth": 7,
+    "carpetRooms": ["chest", "boss"]
+  },
+  "generation": { "maxAttempts": 40 }
+}

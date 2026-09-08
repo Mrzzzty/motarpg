@@ -1,0 +1,320 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260908T032537937Z-78744-8994c3a4bec6",
+  "run_status": "completed",
+  "errors": [],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "complete",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 108,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 10
+    },
+    "change_tracking": {
+      "touched_observed": 10,
+      "touched_retained": 10,
+      "truncated": false,
+      "bash_mutation": false,
+      "bash_discovered": 0,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 10,
+      "selected_files": 10,
+      "limit": 20,
+      "truncated": false
+    },
+    "scanning": {
+      "required_files": 10,
+      "scanned_files": 10,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "project_checks_required": 0,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {},
+    "reasons": [],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-09-08T03:25:37.937Z",
+  "session_id": "sess_6300ef42-b8f2-410e-a6ba-746025f65202",
+  "target": ".",
+  "revision": null,
+  "rules_version": "unavailable",
+  "diff_hash": "08197ce3f1dedaea44d1140a84c9e52778c732f6a2240f8d38e68bfe1653bfe7",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 10,
+    "changed_files": [
+      {
+        "file": "src/core/GameController.ts",
+        "ranges": [
+          {
+            "start": 62,
+            "end": 65
+          },
+          {
+            "start": 72,
+            "end": 72
+          },
+          {
+            "start": 86,
+            "end": 86
+          },
+          {
+            "start": 88,
+            "end": 88
+          }
+        ],
+        "before_hash": "e03f62495fdd7dccc79184c75ebe949281eb63983749aa11404db24505248260",
+        "after_hash": "f4c2dd3f70c5c79db74effb9fed0015197ce6f28e6ca42fa6fe9967f19dfe6a4"
+      },
+      {
+        "file": "src/core/InputManager.ts",
+        "ranges": [
+          {
+            "start": 14,
+            "end": 14
+          },
+          {
+            "start": 63,
+            "end": 63
+          },
+          {
+            "start": 67,
+            "end": 68
+          }
+        ],
+        "before_hash": "c4c462ccfcfd329edd36806d6c5810a4e7eac70cabd5efd9941b0ef8c36e28ff",
+        "after_hash": "cf294201beb40139c8258b182b5c36ce1b227518bc37bfabcee884e91eae85c3"
+      },
+      {
+        "file": "src/entities/Player.ts",
+        "ranges": [
+          {
+            "start": 32,
+            "end": 32
+          },
+          {
+            "start": 181,
+            "end": 193
+          }
+        ],
+        "before_hash": "89a521f00945379d527de4f7e2ca9c9548b601f9cce126fed8d879aaba142719",
+        "after_hash": "36fb84e609450a73f816ff190136bd5e0e251f4ca2cb44394c7f080df2b054d1"
+      },
+      {
+        "file": "src/map/ContentFiller.ts",
+        "ranges": [
+          {
+            "start": 117,
+            "end": 118
+          }
+        ],
+        "before_hash": "b827bf9af72104d6f5ca2761371643662ebde26df9cd309f625e4c75fc2f2d12",
+        "after_hash": "cdfcdc996a97f5007f22d0ab648827162a079d4265eff2c0286f61daeb9d7792"
+      },
+      {
+        "file": "src/map/RoomGenerator.ts",
+        "ranges": [
+          {
+            "start": 223,
+            "end": 226
+          },
+          {
+            "start": 230,
+            "end": 232
+          },
+          {
+            "start": 241,
+            "end": 241
+          },
+          {
+            "start": 250,
+            "end": 250
+          }
+        ],
+        "before_hash": "d92ccc99f998de74f47ba61a441296b46fb0e72917e70f08a422791a78be34c2",
+        "after_hash": "77dbead87d45bc78a685c6987bb4faa44a71111dd665513cd43cf3de784bc651"
+      },
+      {
+        "file": "src/systems/SaveManager.ts",
+        "ranges": [
+          {
+            "start": 88,
+            "end": 91
+          }
+        ],
+        "before_hash": "8e314391c630166aae45373779a62732a16424a6263e502d81ea93b7762590fa",
+        "after_hash": "9f0978046ef300186556ba92f4bd603bb0ef67495f74f8b31429ea3109e3d12d"
+      },
+      {
+        "file": "src/types/index.ts",
+        "ranges": [
+          {
+            "start": 242,
+            "end": 243
+          }
+        ],
+        "before_hash": "12e56743c21fcae83bf19a0e084ba87ee16b10110c3052f36af93bd12088da87",
+        "after_hash": "093b48a73b201e227a3ba169745b48d8e90d741b863fa165c99c441e5aeb9a7a"
+      },
+      {
+        "file": "src/ui/GameUI.ts",
+        "ranges": [
+          {
+            "start": 16,
+            "end": 16
+          },
+          {
+            "start": 115,
+            "end": 123
+          },
+          {
+            "start": 200,
+            "end": 234
+          },
+          {
+            "start": 237,
+            "end": 237
+          },
+          {
+            "start": 239,
+            "end": 256
+          }
+        ],
+        "before_hash": "cd56b576a4448830e5ad5152da39c20f8bd6027e12cba2146c50be799684bda3",
+        "after_hash": "992788af00674986ec0aecd4aa194fd9e20d71024a931d523d6b928428412f66"
+      },
+      {
+        "file": "src/ui/Panels.ts",
+        "ranges": [
+          {
+            "start": 101,
+            "end": 103
+          },
+          {
+            "start": 107,
+            "end": 107
+          },
+          {
+            "start": 114,
+            "end": 115
+          },
+          {
+            "start": 125,
+            "end": 142
+          },
+          {
+            "start": 151,
+            "end": 171
+          },
+          {
+            "start": 173,
+            "end": 175
+          },
+          {
+            "start": 177,
+            "end": 178
+          },
+          {
+            "start": 182,
+            "end": 189
+          },
+          {
+            "start": 208,
+            "end": 208
+          },
+          {
+            "start": 215,
+            "end": 222
+          },
+          {
+            "start": 275,
+            "end": 275
+          },
+          {
+            "start": 405,
+            "end": 406
+          }
+        ],
+        "before_hash": "ca3e0869094ee06c3f94abcebf92e79b7206c591832e6fb4c2bae490bdd4eb7c",
+        "after_hash": "b187d1e5d0b28693d6f1f7dc8bb67085a6a95e50265206c44efcc9c9fe09f6b7"
+      },
+      {
+        "file": "src/ui/TitleScreen.ts",
+        "ranges": [
+          {
+            "start": 33,
+            "end": 34
+          }
+        ],
+        "before_hash": "fe0ded6d83cc80db6db2eb986b7729e1bc07f692daf28708639554fdeccac574",
+        "after_hash": "51deecb0d7d9199d406b48f24666bd214d3fbc73a85e3cb80e3b30c1d76514f7"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-09-08T03:25:36.480Z",
+    "completed_at": "2026-09-08T03:25:37.937Z",
+    "duration_ms": 1457,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "complete",
+    "latencyMs": 1457,
+    "peakMemoryBytes": 127746048,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 10,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_6300ef42-b8f2-410e-a6ba-746025f65202-20260908T032537937Z-78744-8994c3a4bec6.json",
+    "latest_report": ".mimosa/reports/task-review-sess_6300ef42-b8f2-410e-a6ba-746025f65202.json",
+    "history_summary": ".mimosa/history/run-20260908T032537937Z-78744-8994c3a4bec6.json"
+  }
+}

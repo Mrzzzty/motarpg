@@ -1,0 +1,173 @@
+{
+  "tileSize": 32,
+  "viewportWidth": 960,
+  "viewportHeight": 640,
+  "playerBase": {
+    "maxHp": 1000,
+    "attack": 8,
+    "defense": 2,
+    "critRate": 0.05,
+    "dodgeRate": 0.05,
+    "damageBonus": 0,
+    "level": 1,
+    "exp": 0,
+    "gold": 0,
+    "soul": 0
+  },
+  "expFormula": { "base": 0, "linear": 120, "power": 15, "powerExp": 1.5 },
+  "growthTable": [
+    { "minLevel": 1, "maxLevel": 10, "hp": 80, "attack": 3, "defense": 1 },
+    { "minLevel": 11, "maxLevel": 20, "hp": 60, "attack": 1, "defense": 1 },
+    { "minLevel": 21, "maxLevel": 30, "hp": 40, "attack": 0, "defense": 0 },
+    { "minLevel": 31, "maxLevel": 999, "hp": 30, "attack": 0, "defense": 0 }
+  ],
+  "depthTable": [
+    { "depth": 0, "monster": 0.7, "gold": 0.5, "exp": 0.6, "minQuality": "none", "collectible": 0.5 },
+    { "depth": 1, "monster": 1.0, "gold": 1.0, "exp": 1.0, "minQuality": "none", "collectible": 1.0 },
+    { "depth": 2, "monster": 1.3, "gold": 1.5, "exp": 1.4, "minQuality": "common", "collectible": 1.3 },
+    { "depth": 3, "monster": 1.7, "gold": 2.2, "exp": 1.9, "minQuality": "uncommon", "collectible": 1.7 },
+    { "depth": 4, "monster": 2.2, "gold": 3.2, "exp": 2.5, "minQuality": "uncommon", "collectible": 2.2 },
+    { "depth": 5, "monster": 2.8, "gold": 4.5, "exp": 3.2, "minQuality": "epic", "collectible": 2.8 }
+  ],
+  "depthOverflow": {
+    "monsterBase": 2.8, "monsterStep": 0.4,
+    "goldBase": 4.5, "goldStep": 0.8,
+    "expBase": 3.2, "expStep": 0.5,
+    "collectibleBase": 2.8, "collectibleStep": 0.3
+  },
+  "floorCoefficients": [
+    { "minFloor": 1, "maxFloor": 5, "atk": 1.0, "def": 1.0, "hp": 1.0, "exp": 1.0, "gold": 1.0 },
+    { "minFloor": 6, "maxFloor": 10, "atk": 1.4, "def": 1.3, "hp": 1.5, "exp": 1.3, "gold": 1.2 },
+    { "minFloor": 11, "maxFloor": 15, "atk": 1.9, "def": 1.7, "hp": 2.2, "exp": 1.7, "gold": 1.5 },
+    { "minFloor": 16, "maxFloor": 20, "atk": 2.5, "def": 2.2, "hp": 3.0, "exp": 2.2, "gold": 1.9 },
+    { "minFloor": 21, "maxFloor": 30, "atk": 3.5, "def": 3.0, "hp": 4.5, "exp": 3.0, "gold": 2.5 },
+    { "minFloor": 31, "maxFloor": 40, "atk": 5.0, "def": 4.0, "hp": 6.5, "exp": 4.0, "gold": 3.5 },
+    { "minFloor": 41, "maxFloor": 50, "atk": 7.0, "def": 5.5, "hp": 9.0, "exp": 5.5, "gold": 5.0 },
+    { "minFloor": 51, "maxFloor": 70, "atk": 10.0, "def": 7.5, "hp": 13.0, "exp": 7.5, "gold": 7.0 },
+    { "minFloor": 71, "maxFloor": 100, "atk": 15.0, "def": 11.0, "hp": 20.0, "exp": 11.0, "gold": 10.0 },
+    { "minFloor": 101, "maxFloor": 150, "atk": 22.0, "def": 16.0, "hp": 30.0, "exp": 16.0, "gold": 15.0 },
+    { "minFloor": 151, "maxFloor": 199, "atk": 35.0, "def": 25.0, "hp": 50.0, "exp": 25.0, "gold": 22.0 }
+  ],
+  "floorOverflowFactor": { "atk": 0.18, "def": 0.13, "hp": 0.25, "exp": 0.13, "gold": 0.12 },
+  "battle": {
+    "defenseMitigation": 0.5,
+    "critMultiplier": 2,
+    "maxTurns": 500,
+    "underpoweredThreshold": 0.7,
+    "overpoweredThreshold": 1.2,
+    "unstoppableAtk": 0.5,
+    "unstoppableDef": 0.3,
+    "unstoppableHp": 0.4,
+    "underdogDef": 0.2,
+    "underdogMinTurns": 3
+  },
+  "boss": {
+    "atkBase": 2.0,
+    "defBase": 1.5,
+    "hpBase": 4.0,
+    "expMultiplier": 10,
+    "goldMultiplier": 15,
+    "soulBase": 3,
+    "soulPerFloor": 0.2,
+    "affixMin": 0,
+    "affixMax": 2
+  },
+  "chest": [
+    { "tier": "wooden", "name": "木质宝箱", "probability": 50, "goldMultiplier": 1.0, "expMultiplier": 1.0, "minQuality": "common", "extraAffixes": 0, "collectibleMultiplier": 0.5, "color": "#a1887f", "icon": "📦" },
+    { "tier": "iron", "name": "铁质宝箱", "probability": 30, "goldMultiplier": 1.8, "expMultiplier": 1.5, "minQuality": "uncommon", "extraAffixes": 1, "collectibleMultiplier": 1.0, "color": "#90a4ae", "icon": "🧰" },
+    { "tier": "golden", "name": "黄金宝箱", "probability": 14, "goldMultiplier": 3.0, "expMultiplier": 2.5, "minQuality": "rare", "extraAffixes": 2, "collectibleMultiplier": 1.8, "color": "#ffd700", "icon": "🎁" },
+    { "tier": "dark_gold", "name": "暗金宝箱", "probability": 5, "goldMultiplier": 5.0, "expMultiplier": 4.0, "minQuality": "epic", "extraAffixes": 3, "collectibleMultiplier": 3.0, "color": "#ffab40", "icon": "🎰" },
+    { "tier": "legendary", "name": "传说宝箱", "probability": 1, "goldMultiplier": 10.0, "expMultiplier": 8.0, "minQuality": "legendary", "extraAffixes": 4, "collectibleMultiplier": 5.0, "color": "#ff6f00", "icon": "🏺" }
+  ],
+  "chestDrop": {
+    "goldBase": 5, "goldPerFloor": 5, "goldPerDepth": 8, "goldRandom": 20,
+    "expBase": 3, "expPerFloor": 3, "expPerDepth": 5, "expRandom": 15,
+    "equipBase": 15, "equipPerFloor": 0.5, "equipPerDepth": 2, "equipCap": 65,
+    "potionChance": 30, "potionMin": 1, "potionMax": 2,
+    "soulBase": 5, "soulPerFloor": 0.2, "soulCap": 25, "soulMin": 1, "soulMax": 3,
+    "collectibleBase": 5, "collectiblePerFloor": 0.3, "collectiblePerDepth": 1, "collectibleCap": 35,
+    "rareUpgradePer10Floors": 1.5
+  },
+  "monsterDrop": {
+    "equipBase": 8, "equipPerFloor": 0.15, "equipCap": 25,
+    "potionChance": 8,
+    "collectibleChance": 2,
+    "eliteCollectibleChance": 8,
+    "soulChance": 1,
+    "eliteSoulChance": 100
+  },
+  "merchant": {
+    "baseCount": 3, "perFloorDivisor": 4, "maxCount": 12,
+    "potionBase": 20, "potionPerFloor": 2, "potionQtyBase": 3,
+    "keyMinFloor": 3, "keyBase": 50, "keyPerFloor": 3,
+    "soulEquipMinFloor": 5, "soulEquipChance": 0.3, "soulPriceBase": 1, "soulPricePer10Floors": 1,
+    "collectibleMinFloor": 10, "collectibleChance": 0.15, "collectibleSoulBase": 2, "collectiblePer15Floors": 1,
+    "priceJitterMin": 0.8, "priceJitterMax": 1.2
+  },
+  "endless": {
+    "unlockAfterFloor": 10,
+    "monsterAtkPerFloor": 0.018,
+    "monsterDefPerFloor": 0.015,
+    "monsterHpPerFloor": 0.025,
+    "rareChestBase": 0.1, "rareChestPerFloor": 0.005, "rareChestCap": 0.6,
+    "legendaryChestBase": 0.005, "legendaryChestPerFloor": 0.0005, "legendaryChestCap": 0.1,
+    "bossAtkPerFloor": 0.025,
+    "bossDefPerFloor": 0.02,
+    "bossHpPerFloor": 0.035,
+    "rewardBonus": 0.5,
+    "legendaryEquipMinFloor": 30,
+    "guaranteedCollectibleMinFloor": 20,
+    "difficultyLinkPerFloor": 0.005,
+    "eliteStatMultiplier": 1.8
+  },
+  "quality": {
+    "common": { "name": "普通", "color": "#9e9e9e", "probability": 45, "affixCount": 0, "affixBonus": 0, "statMultiplier": 1.0, "sellMultiplier": 1.0, "buyMultiplier": 2.0 },
+    "uncommon": { "name": "优秀", "color": "#4fc3f7", "probability": 30, "affixCount": 1, "affixBonus": 0, "statMultiplier": 1.3, "sellMultiplier": 2.0, "buyMultiplier": 4.0 },
+    "rare": { "name": "稀有", "color": "#ab47bc", "probability": 16, "affixCount": 2, "affixBonus": 0, "statMultiplier": 1.7, "sellMultiplier": 4.0, "buyMultiplier": 8.0 },
+    "epic": { "name": "史诗", "color": "#ffd700", "probability": 6, "affixCount": 3, "affixBonus": 0, "statMultiplier": 2.3, "sellMultiplier": 8.0, "buyMultiplier": 16.0 },
+    "legendary": { "name": "传说", "color": "#ff6f00", "probability": 2.5, "affixCount": 4, "affixBonus": 1, "statMultiplier": 3.2, "sellMultiplier": 16.0, "buyMultiplier": 32.0 },
+    "mythic": { "name": "神话", "color": "#ff5252", "probability": 0.5, "affixCount": 5, "affixBonus": 2, "statMultiplier": 4.5, "sellMultiplier": 30.0, "buyMultiplier": 60.0 }
+  },
+  "qualityFloorFactor": {
+    "common": { "floor": 0, "depth": 0 },
+    "uncommon": { "floor": 0.0033, "depth": 0 },
+    "rare": { "floor": 0.005, "depth": 0.02 },
+    "epic": { "floor": 0.01, "depth": 0.033 },
+    "legendary": { "floor": 0.0167, "depth": 0.05 },
+    "mythic": { "floor": 0.033, "depth": 0.1 }
+  },
+  "affixCountBonus": {
+    "common": { "per15Levels": 0, "levelThreshold": 99999, "per3Depth": 0, "depthThreshold": 99999 },
+    "uncommon": { "per15Levels": 1, "levelThreshold": 99999, "per3Depth": 0, "depthThreshold": 99999 },
+    "rare": { "per15Levels": 1, "levelThreshold": 25, "per3Depth": 0, "depthThreshold": 99999 },
+    "epic": { "per15Levels": 1, "levelThreshold": 15, "per3Depth": 1, "depthThreshold": 2 },
+    "legendary": { "per15Levels": 1, "levelThreshold": 10, "per3Depth": 1, "depthThreshold": 1 },
+    "mythic": { "per15Levels": 1, "levelThreshold": 5, "per3Depth": 1, "depthThreshold": 1 }
+  },
+  "namePrefixes": {
+    "common": [],
+    "uncommon": ["精良的", "锋利的", "坚固的", "轻盈的"],
+    "rare": ["暗影", "烈焰", "冰霜", "雷霆", "毒蛇", "铁壁"],
+    "epic": ["龙息", "虚空", "永恒", "末日", "星辰", "深渊"],
+    "legendary": ["众神之", "灭世", "创世", "不朽", "天启"],
+    "mythic": ["原始", "混沌", "终焉", "起源"]
+  },
+  "floors": {
+    "roomCountMin": 4,
+    "roomCountMax": 7,
+    "roomCountMaxLate": 9,
+    "lateFloorThreshold": 20,
+    "tutorialRoomCount": 2,
+    "bossFloorInterval": 5
+  },
+  "regen": {
+    "regenCollectibleSteps": 10,
+    "autoHealIntervalMs": 2000
+  },
+  "camera": { "lerp": 0.18, "transitionMs": 500 },
+  "autosaveIntervalMs": 30000,
+  "saveKey": "tower_rpg_save",
+  "saveVersion": "1.0.0",
+  "stairPairTolerance": 2,
+  "maxInventorySlots": 60
+}

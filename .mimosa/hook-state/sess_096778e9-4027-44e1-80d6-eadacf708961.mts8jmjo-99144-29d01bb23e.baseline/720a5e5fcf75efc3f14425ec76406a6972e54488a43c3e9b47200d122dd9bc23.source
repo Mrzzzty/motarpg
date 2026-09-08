@@ -1,0 +1,263 @@
+/**
+ * 影子系统（光影文档 五/六/八）：
+ * - 静态影子：墙壁/柱子底部扁平矩形阴影（透明度 0.15-0.25，向下偏移 2-4px），
+ *   以视口锚定的离屏 Canvas 预计算缓存，相机移动超阈值或换层时重建。
+ * - 动态影子：玩家/怪物/宝箱/NPC 脚下椭圆阴影（透明度 0.2-0.35），
+ *   方向随最近主光源变化（光源反方向偏移），偏移量 ∝ 物体高度（高度/50）。
+ * - 丁达尔光柱：火把光源射出的可见光锥 + 5-10 个飘尘粒子。
+ * - 自发光：精英(红×1.8)/Boss(暗红×2.5)/未开宝箱(金×2) 脉动光晕。
+ * - 性能：动态影子 ≤20 个；视野外剔除；静态影子缓存。
+ */
+import type { FloorMap, MapEntity } from '../types';
+import type { RayLight } from './LightSystem';
+import { dataManager } from '../core/DataManager';
+import { projection } from './Projection';
+
+/** 动态影子描述（渲染器收集） */
+export interface DynamicShadowItem {
+  /** 格子坐标 */
+  x: number;
+  y: number;
+  /** 物体高度（px，决定偏移长度） */
+  height: number;
+  /** 影子椭圆半径（px，相机空间） */
+  radius: number;
+  /** 中心透明度 */
+  alpha: number;
+  /** 飞行单位无阴影 */
+  flying?: boolean;
+}
+
+interface DustParticle {
+  /** 光锥内的相对位置（0-1 沿光锥长度） */
+  t: number;
+  /** 横向扩散（-1..1） */
+  spread: number;
+  speed: number;
+  size: number;
+  phase: number;
+}
+
+export class ShadowSystem {
+  private static instance: ShadowSystem;
+  private constructor() {}
+  static getInstance(): ShadowSystem {
+    if (!ShadowSystem.instance) ShadowSystem.instance = new ShadowSystem();
+    return ShadowSystem.instance;
+  }
+
+  // ============ 静态影子（离屏缓存） ============
+
+  private cache: HTMLCanvasElement | null = null;
+  private cacheCtx: CanvasRenderingContext2D | null = null;
+  private cacheFloorId = -1;
+  private cacheCam = { x: NaN, y: NaN };
+
+  /** 绘制静态影子（相机空间 ctx）。缓存锚定视口，相机移动 >128px 或换层时重建 */
+  drawStatic(
+    ctx: CanvasRenderingContext2D, floor: FloorMap,
+    view: { left: number; right: number; top: number; bottom: number },
+    cam: { x: number; y: number }, cssW: number, cssH: number,
+  ): void {
+    const cfg = dataManager.config.shadow;
+    const margin = 160;
+    const needRebuild =
+      !this.cache || this.cacheFloorId !== floor.floorId ||
+      Math.abs(cam.x - this.cacheCam.x) > 128 || Math.abs(cam.y - this.cacheCam.y) > 128;
+    if (needRebuild) {
+      this.rebuildCache(floor, cam, cssW + margin * 2, cssH + margin * 2, cfg);
+    }
+    if (!this.cache || !this.cacheCtx) return;
+    // 缓存以 cacheCam 为中心：相机空间原点 = 缓存中心 - 相机差
+    const originX = cssW / 2 - (cam.x - this.cacheCam.x) - this.cache.width / 2 / (window.devicePixelRatio || 1);
+    const originY = cssH / 2 - (cam.y - this.cacheCam.y) - this.cache.height / 2 / (window.devicePixelRatio || 1);
+    ctx.drawImage(this.cache, originX, originY,
+      this.cache.width / (window.devicePixelRatio || 1), this.cache.height / (window.devicePixelRatio || 1));
+    void view;
+  }
+
+  private rebuildCache(
+    floor: FloorMap, cam: { x: number; y: number }, w: number, h: number,
+    cfg: { staticAlpha: number; staticOffset: number },
+  ): void {
+    const dpr = window.devicePixelRatio || 1;
+    if (!this.cache) {
+      this.cache = document.createElement('canvas');
+      this.cacheCtx = this.cache.getContext('2d');
+    }
+    const canvas = this.cache;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    this.cacheCam = { x: cam.x, y: cam.y };
+    this.cacheFloorId = floor.floorId;
+    const c = this.cacheCtx;
+    if (!c) return;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, w, h);
+
+    // 缓存画布的相机空间原点：中心对准 cacheCam
+    const originX = w / 2 - cam.x;
+    const originY = h / 2 - cam.y;
+    c.translate(originX, originY);
+
+    const half = projection.tileSize / 2;
+    const viewLeft = cam.x - w / 2;
+    const viewRight = cam.x + w / 2;
+    const viewTop = cam.y - h / 2;
+    const viewBottom = cam.y + h / 2;
+
+    for (let row = 0; row < floor.height; row++) {
+      for (let col = 0; col < floor.width; col++) {
+        const tile = floor.grid[row][col];
+        if (tile !== 1 && tile !== 2) continue; // 墙/柱
+        const center = projection.tileCenter(row, col);
+        if (center.x < viewLeft || center.x > viewRight || center.y < viewTop || center.y > viewBottom) continue;
+        // 底部扁平阴影：向下偏移 2-4px，柱子透明度略高
+        const alpha = tile === 2 ? cfg.staticAlpha + 0.05 : cfg.staticAlpha;
+        const off = cfg.staticOffset + (tile === 2 ? 1 : 0);
+        c.fillStyle = `rgba(0,0,0,${alpha.toFixed(2)})`;
+        c.fillRect(center.x - half, center.y + half - 2 + off, half * 2, 5);
+      }
+    }
+  }
+
+  // ============ 动态影子 ============
+
+  /** 主光源方向：返回物体相对最近光源的单位方向（无光源则纯向下） */
+  private shadowOffset(item: DynamicShadowItem, lights: RayLight[]): { dx: number; dy: number } {
+    const cfg = dataManager.config.shadow;
+    const mag = cfg.baseOffset * Math.min(2, item.height / 50); // 阴影偏移 = 基础 × (高度/50)
+    let nearest: RayLight | null = null;
+    let best = Infinity;
+    for (const l of lights) {
+      const d = (l.x - item.x) ** 2 + (l.y - item.y) ** 2;
+      if (d < best) { best = d; nearest = l; }
+    }
+    if (!nearest) return { dx: 0, dy: mag };
+    const vx = item.x - nearest.x;
+    const vy = item.y - nearest.y;
+    const d = Math.sqrt(vx * vx + vy * vy) || 1;
+    return { dx: (vx / d) * mag, dy: (vy / d) * mag + 2 }; // 恒有轻微向下偏置
+  }
+
+  /** 绘制动态影子（相机空间）：椭圆径向渐变，最多 20 个 */
+  drawDynamic(ctx: CanvasRenderingContext2D, items: DynamicShadowItem[], lights: RayLight[]): void {
+    const max = dataManager.config.shadow.maxDynamic;
+    ctx.save();
+    for (const item of items.slice(0, max)) {
+      if (item.flying) continue;
+      const off = this.shadowOffset(item, lights);
+      const sx = projection.tileCenter(item.y, item.x).x + off.dx;
+      const sy = projection.tileCenter(item.y, item.x).y + off.dy;
+      const rx = item.radius;
+      const ry = rx * 0.5;
+      const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, rx);
+      grad.addColorStop(0, `rgba(0,0,0,${item.alpha.toFixed(2)})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ============ 丁达尔光柱（火把） ============
+
+  private dust = new Map<string, DustParticle[]>();
+
+  /** 火把光锥 + 飘尘（相机空间）。方向固定斜向下，稳定光柱 */
+  drawTyndall(ctx: CanvasRenderingContext2D, lights: RayLight[], timeMs: number): void {
+    const cfg = dataManager.config.shadow.tyndall;
+    ctx.save();
+    for (const light of lights) {
+      if (light.type !== 'torch') continue;
+      const center = projection.tileCenter(light.y, light.x);
+      const len = cfg.length;
+      const halfW = cfg.width / 2;
+
+      // 光锥（梯形渐变）
+      const grad = ctx.createLinearGradient(center.x, center.y, center.x + len * 0.4, center.y + len);
+      grad.addColorStop(0, `rgba(255,221,136,${cfg.alpha})`);
+      grad.addColorStop(1, 'rgba(255,221,136,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(center.x - 6, center.y);
+      ctx.lineTo(center.x + 6, center.y);
+      ctx.lineTo(center.x + len * 0.4 + halfW, center.y + len);
+      ctx.lineTo(center.x + len * 0.4 - halfW, center.y + len);
+      ctx.closePath();
+      ctx.fill();
+
+      // 飘尘粒子（缓慢下落，循环）
+      let parts = this.dust.get(light.id);
+      if (!parts) {
+        parts = Array.from({ length: cfg.dustMin + Math.floor(Math.random() * (cfg.dustMax - cfg.dustMin + 1)) }, () => ({
+          t: Math.random(), spread: Math.random() * 2 - 1,
+          speed: 0.02 + Math.random() * 0.04, size: 1 + Math.random() * 1.5, phase: Math.random() * Math.PI * 2,
+        }));
+        this.dust.set(light.id, parts);
+      }
+      const t0 = (timeMs / 1000);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      for (const p of parts) {
+        const t = (p.t + t0 * p.speed) % 1;
+        const px = center.x + len * 0.4 * t + p.spread * halfW * t + Math.sin(t0 + p.phase) * 3;
+        const py = center.y + len * t;
+        ctx.globalAlpha = 0.3 * (1 - t);
+        ctx.beginPath();
+        ctx.arc(px, py, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    // 清理不再存在的火把尘埃
+    if (this.dust.size > 64) {
+      const alive = new Set(lights.filter(l => l.type === 'torch').map(l => l.id));
+      for (const id of this.dust.keys()) if (!alive.has(id)) this.dust.delete(id);
+    }
+  }
+
+  // ============ 自发光 ============
+
+  /**
+   * 自发光层（物体之上，'lighter' 叠加）：
+   * 精英 红 ×1.8 0.1-0.2 ｜ Boss 暗红 ×2.5 0.15-0.3 ｜ 未开宝箱 金 ×2 0.1-0.2（脉动）
+   */
+  drawSelfGlow(
+    ctx: CanvasRenderingContext2D,
+    entities: { entity: MapEntity; alive: boolean; opened: boolean }[],
+    timeMs: number,
+    view: { left: number; right: number; top: number; bottom: number },
+  ): void {
+    const half = projection.tileSize / 2;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const { entity, alive, opened } of entities) {
+      const center = projection.tileCenter(entity.y, entity.x);
+      if (center.x < view.left || center.x > view.right || center.y < view.top - 120 || center.y > view.bottom) continue;
+      const pulse = 0.75 + 0.25 * Math.sin(timeMs / 500 + entity.x);
+      let color = '';
+      let scale = 0;
+      let alpha = 0;
+      if (entity.kind === 'monster' && entity.isElite && alive) {
+        color = '255,68,68'; scale = 1.8; alpha = 0.15 * pulse;
+      } else if (entity.kind === 'boss' && alive) {
+        color = '255,0,68'; scale = 2.5; alpha = 0.22 * pulse;
+      } else if (entity.kind === 'chest' && !opened) {
+        color = '255,221,68'; scale = 2; alpha = 0.15 * pulse;
+      }
+      if (!color) continue;
+      const r = half * scale;
+      const grad = ctx.createRadialGradient(center.x, center.y - 8, 0, center.x, center.y - 8, r);
+      grad.addColorStop(0, `rgba(${color},${alpha.toFixed(3)})`);
+      grad.addColorStop(1, `rgba(${color},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(center.x, center.y - 8, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}

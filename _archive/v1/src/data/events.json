@@ -1,0 +1,346 @@
+{
+  "events": [
+    {
+      "id": "event_tutorial_guide", "roomId": "room_1A_start", "triggerType": "on_enter",
+      "triggerProbability": 1.0, "title": "老守卫的嘱托", "icon": "👴",
+      "description": "一位满身尘土的老守卫靠在石柱旁，朝你招了招手。",
+      "options": [
+        {
+          "text": "走上前去",
+          "effects": [
+            { "type": "show_dialog", "value": "老守卫：勇士，你终于醒了。这座塔被黑暗力量侵蚀，你必须往上走，找到光之源头。" },
+            { "type": "show_dialog", "value": "老守卫：前方有一只史莱姆，试试你的剑。撞向它就是攻击！" },
+            { "type": "show_dialog", "value": "老守卫：走廊尽头的房间有上楼楼梯——站上去按 ↑ 即可。祝你好运。" },
+            { "type": "give_quest", "value": "quest_tutorial_1" }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_trapped_traveler", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.15, "minFloor": 2, "maxFloor": 20,
+      "condition": "hasCollectible:false",
+      "title": "被困的旅人", "icon": "🧳",
+      "description": "一个旅人被塌落的石块困在角落，看见你后拼命挥手。",
+      "options": [
+        {
+          "text": "救下旅人",
+          "effects": [
+            { "type": "add_item", "value": "health_potion", "quantity": 2 },
+            { "type": "show_dialog", "value": "旅人感激地递给你两瓶药水。" }
+          ]
+        },
+        {
+          "text": "无视他",
+          "effects": [
+            { "type": "damage", "value": 15 },
+            { "type": "show_dialog", "value": "你转身离去，暗处的毒虫咬了你一口。" }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_mysterious_shrine", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.08, "minFloor": 10,
+      "title": "神秘神像", "icon": "🗿",
+      "description": "一尊无面神像立在房间中央，掌心向上，似乎在等待供奉。",
+      "options": [
+        {
+          "text": "献上100金币祈求祝福",
+          "condition": "gold>=100",
+          "effects": [
+            { "type": "remove_item", "value": "gold", "quantity": 100 },
+            { "type": "add_status", "value": "bless", "duration": 5 },
+            { "type": "show_dialog", "value": "神像发出光芒，你获得了祝福！接下来几场战斗伤害加成+10%。" }
+          ]
+        },
+        {
+          "text": "触摸神像",
+          "effects": [
+            { "type": "heal_full", "value": 0 },
+            { "type": "show_dialog", "value": "神像的力量治愈了你所有的伤口。" }
+          ]
+        },
+        {
+          "text": "转身离开",
+          "effects": []
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_gambler", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.1, "minFloor": 3,
+      "title": "骰子赌徒", "icon": "🎲",
+      "description": "一个戴着半张面具的赌徒晃着骰盅：「来一把？赢了翻倍，输了……咳，你也懂。」",
+      "options": [
+        {
+          "text": "押100金币",
+          "condition": "gold>=100",
+          "effects": [
+            { "type": "remove_item", "value": "gold", "quantity": 100 },
+            { "type": "add_gold", "value": 200 },
+            { "type": "show_dialog", "value": "骰子停在六点！赌徒脸色发青地付了钱。" }
+          ]
+        },
+        {
+          "text": "押50金币",
+          "condition": "gold>=50",
+          "effects": [
+            { "type": "remove_item", "value": "gold", "quantity": 50 },
+            { "type": "damage", "value": 20 },
+            { "type": "show_dialog", "value": "你输了。赌徒顺走你几枚硬币当「手续费」，还踩了你一脚。" }
+          ]
+        },
+        { "text": "不赌", "effects": [{ "type": "show_dialog", "value": "赌徒耸耸肩：「明智，无趣。」" }] }
+      ],
+      "once": false
+    },
+    {
+      "id": "event_blood_altar", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.07, "minFloor": 8,
+      "title": "血色祭坛", "icon": "🩸",
+      "description": "祭坛上的血迹还是新鲜的。石碑写着：「以血为誓，得力三战。」",
+      "options": [
+        {
+          "text": "割手立誓（损失25点生命，获得狂暴）",
+          "condition": "hpPct>=30",
+          "effects": [
+            { "type": "damage", "value": 25 },
+            { "type": "add_status", "value": "rage", "duration": 3 },
+            { "type": "show_dialog", "value": "血液渗入石缝，力量（和疼痛）涌了上来。" }
+          ]
+        },
+        { "text": "不去碰它", "effects": [] }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_whispering_skull", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.09, "minFloor": 6,
+      "title": "低语的骷髅", "icon": "💀",
+      "description": "一颗骷髅头悬浮在半空，口中念念有词。它注意到你，忽然停下。",
+      "options": [
+        {
+          "text": "听它说完",
+          "effects": [
+            { "type": "add_exp", "value": 120 },
+            { "type": "show_dialog", "value": "它讲述了一段古老的战斗技巧。经验+120。" }
+          ]
+        },
+        {
+          "text": "一拳砸碎它",
+          "effects": [
+            { "type": "damage", "value": 30 },
+            { "type": "add_item", "value": "health_potion_l", "quantity": 1 },
+            { "type": "show_dialog", "value": "碎片中藏着一瓶药水——还有一截咬在你拳头上的牙。" }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_poison_mist", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.1, "minFloor": 5,
+      "title": "毒雾弥漫", "icon": "☠️",
+      "description": "推开门的瞬间，紫色的雾气扑面而来。",
+      "options": [
+        {
+          "text": "屏住呼吸冲过去",
+          "effects": [
+            { "type": "damage", "value": 20 },
+            { "type": "show_dialog", "value": "你捂着嘴冲过毒雾，还是吸了几口。" }
+          ]
+        },
+        {
+          "text": "使用一瓶药水消毒",
+          "condition": "hasItem:health_potion",
+          "effects": [
+            { "type": "remove_item", "value": "health_potion", "quantity": 1 },
+            { "type": "show_dialog", "value": "药水的余量足够清洗呼吸道。有惊无险。" }
+          ]
+        }
+      ],
+      "once": false
+    },
+    {
+      "id": "event_healing_circle", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.08, "minFloor": 4,
+      "title": "治愈法阵", "icon": "✨",
+      "description": "地面上刻着一圈发光的法阵，暖意从石缝中渗出。",
+      "options": [
+        { "text": "站进法阵", "effects": [{ "type": "heal_full", "value": 0 }, { "type": "show_dialog", "value": "温暖的光芒包裹了你，伤口尽数愈合。" }] },
+        { "text": "谨慎地绕开", "effects": [] }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_collapsing_floor", "roomId": null, "triggerType": "on_step",
+      "triggerProbability": 0.06, "minFloor": 7,
+      "title": "塌陷的地板", "icon": "🕳️",
+      "description": "脚下石板忽然松动！",
+      "options": [
+        {
+          "text": "跳！",
+          "effects": [
+            { "type": "damage", "value": 15 },
+            { "type": "add_soul", "value": 1 },
+            { "type": "show_dialog", "value": "你在坠入黑暗前抓住了边缘，还顺手摸到了一颗魂晶。" }
+          ]
+        }
+      ],
+      "once": false
+    },
+    {
+      "id": "event_treasure_guardian", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.06, "minFloor": 12,
+      "title": "无主的钱箱", "icon": "💼",
+      "description": "角落里有一只无人看守的钱箱。箱子的影子比箱子本身大了一圈。",
+      "options": [
+        {
+          "text": "打开它",
+          "effects": [
+            { "type": "add_gold", "value": 260 },
+            { "type": "spawn_monster", "value": "skeleton" },
+            { "type": "show_dialog", "value": "金币到手——影子里也站起来了什么东西。" }
+          ]
+        },
+        { "text": "有诈，快走", "effects": [{ "type": "show_dialog", "value": "你后退几步，影子悻悻地缩了回去。" }] }
+      ],
+      "once": false
+    },
+    {
+      "id": "event_lost_diary", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.1, "minFloor": 9,
+      "title": "泛黄的日记", "icon": "📔",
+      "description": "废墟下压着一本探险者的日记，最后一页写着未完成的句子。",
+      "options": [
+        { "text": "细细阅读", "effects": [{ "type": "add_exp", "value": 200 }, { "type": "show_dialog", "value": "前人的教训变成了你的经验。+200经验。" }] },
+        { "text": "撕下空白页当引火", "effects": [{ "type": "add_gold", "value": 30 }, { "type": "show_dialog", "value": "夹在日记里的几枚旧币掉了出来。" }] }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_fairy_blessing", "roomId": null, "triggerType": "on_defeat_all",
+      "triggerProbability": 0.12, "minFloor": 3,
+      "title": "微小光芒", "icon": "🧚",
+      "description": "战斗的尘埃落定后，一缕金色的光芒自怪物残骸中升起，化作指尖大的精灵。",
+      "options": [
+        { "text": "接受精灵的礼物", "effects": [{ "type": "add_status", "value": "haste", "duration": 5 }, { "type": "heal", "value": 100 }, { "type": "show_dialog", "value": "「谢谢你解放了它。」精灵吻了吻你的额头。" }] },
+        { "text": "请求更多力量", "effects": [{ "type": "add_exp", "value": 150 }, { "type": "show_dialog", "value": "精灵叹了口气，把一小簇光芒按进你的胸口。" }] }
+      ],
+      "once": false
+    },
+    {
+      "id": "event_demon_dice", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.05, "minFloor": 15,
+      "title": "恶魔的骰子", "icon": "🎯",
+      "description": "地面中央嵌着一枚巨大的黑曜石骰子，六个面都是未知。",
+      "options": [
+        { "text": "掷出它", "effects": [{ "type": "add_soul", "value": 3 }, { "type": "damage", "value": 40 }, { "type": "show_dialog", "value": "骰子碎裂，痛苦与魂晶一同涌出。" }] },
+        { "text": "别碰", "effects": [] }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_mirror", "roomId": null, "triggerType": "on_interact",
+      "triggerProbability": 0.5, "minFloor": 8,
+      "title": "缄默之镜", "icon": "🪞",
+      "description": "一面完好的镜子立在废墟中。镜中的你动作总是慢半拍。",
+      "options": [
+        { "text": "凝视镜面", "effects": [{ "type": "add_status", "value": "shield" }, { "type": "show_dialog", "value": "镜中人抬手为你布下护盾。" }] },
+        { "text": "砸碎镜子", "effects": [{ "type": "damage", "value": 10 }, { "type": "add_gold", "value": 150 }, { "type": "show_dialog", "value": "镜片后藏着前人藏匿的钱袋。" }] }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_locked_chest_hint", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.07, "minFloor": 6,
+      "title": "锁匠的遗产", "icon": "🗝️",
+      "description": "一具尸体紧抱着工具箱——他生前是位锁匠。",
+      "options": [
+        { "text": "翻找工具箱", "effects": [{ "type": "add_item", "value": "key", "quantity": 1 }, { "type": "show_dialog", "value": "找到了一把还不错的钥匙。" }] },
+        { "text": "让他安息", "effects": [{ "type": "heal", "value": 50 }, { "type": "show_dialog", "value": "你为他合上双眼。心里莫名踏实了些。" }] }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_fountain_youth", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.05, "minFloor": 12,
+      "title": "微光泉水", "icon": "⛲",
+      "description": "岩壁间涌出一小股泛着蓝光的泉水。",
+      "options": [
+        { "text": "痛饮", "effects": [{ "type": "heal_full", "value": 0 }, { "type": "show_dialog", "value": "泉水清冽甘甜，伤痛尽消。" }] },
+        { "text": "装瓶带走", "effects": [{ "type": "add_item", "value": "health_potion_l", "quantity": 1 }, { "type": "show_dialog", "value": "你装了满满一瓶高级药水。" }] }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_cursed_sword", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.06, "minFloor": 10,
+      "title": "插在地上的黑剑", "icon": "🗡️",
+      "description": "一柄黑剑钉在石地中，剑身缠绕着淡淡的灰雾。",
+      "options": [
+        { "text": "拔剑（受伤）", "effects": [{ "type": "damage", "value": 30 }, { "type": "add_gold", "value": 400 }, { "type": "show_dialog", "value": "剑柄上串着前任主者的钱袋。剑本身化成了灰。" }] },
+        { "text": "封印它", "effects": [{ "type": "add_exp", "value": 150 }, { "type": "show_dialog", "value": "你用碎石盖住黑剑。某种存在向你致意。" }] }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_weary_merchant", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.08, "minFloor": 5,
+      "title": "疲惫的行商", "icon": "🐎",
+      "description": "一位行商瘫坐在货物堆旁：「打折清仓，塔里太危险了，我要回家。」",
+      "options": [
+        { "text": "买下打折药水（30金币×2瓶）", "condition": "gold>=30", "effects": [{ "type": "remove_item", "value": "gold", "quantity": 30 }, { "type": "add_item", "value": "health_potion_l", "quantity": 2 }, { "type": "show_dialog", "value": "两瓶高级药水，划算。" }] },
+        { "text": "祝他一路平安", "effects": [{ "type": "add_exp", "value": 60 }, { "type": "show_dialog", "value": "他分享了一段绕开危险的小径。+60经验。" }] }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_soul_crystal", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.06, "minFloor": 14,
+      "title": "魂晶矿脉", "icon": "💎",
+      "description": "岩壁上生着一簇生魂晶，正在幽幽发光。",
+      "options": [
+        { "text": "小心开采", "effects": [{ "type": "add_soul", "value": 2 }, { "type": "show_dialog", "value": "你收获了2颗魂晶。" }] },
+        { "text": "贪婪地敲下所有（有风险）", "effects": [{ "type": "add_soul", "value": 4 }, { "type": "damage", "value": 60 }, { "type": "show_dialog", "value": "矿脉坍塌了一角。4颗魂晶，代价是几块瘀伤。" }] }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_training_dummy", "roomId": null, "triggerType": "on_defeat_all",
+      "triggerProbability": 0.15, "minFloor": 2, "maxFloor": 30,
+      "title": "残破的木桩", "icon": "🥋",
+      "description": "清空房间后，你注意到角落有个练习用的木桩——正好活动下筋骨。",
+      "options": [
+        { "text": "练习", "effects": [{ "type": "add_exp", "value": 80 }, { "type": "show_dialog", "value": "木桩不会还手，但手感回来了。+80经验。" }] }
+      ],
+      "once": false
+    },
+    {
+      "id": "event_stair_riddle", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.05, "minFloor": 18,
+      "title": "石门上的谜题", "icon": "🚪",
+      "description": "通往深处的石门上刻着：「给予三分之一，得到十倍。」",
+      "options": [
+        { "text": "投入300金币（石门后似有回响）", "condition": "gold>=300", "effects": [{ "type": "remove_item", "value": "gold", "quantity": 300 }, { "type": "show_dialog", "value": "石门无声滑开，门后是一座小金库！" }, { "type": "add_gold", "value": 800 }] },
+        { "text": "转身离开", "effects": [] }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_frozen_adventurer", "roomId": null, "triggerType": "on_enter",
+      "triggerProbability": 0.06, "minFloor": 16,
+      "title": "冰封的冒险者", "icon": "🧊",
+      "description": "一块巨大的寒冰中封着一位冒险者，表情栩栩如生。",
+      "options": [
+        { "text": "尝试解冻", "effects": [{ "type": "add_item", "value": "health_potion_xl", "quantity": 1 }, { "type": "add_status", "value": "freeze", "duration": 1 }, { "type": "show_dialog", "value": "冰壳碎裂的寒气冻住了你一瞬。冒险者已逝去多年，行囊里有瓶圣愈药剂。" }] },
+        { "text": "默哀后离开", "effects": [{ "type": "add_exp", "value": 100 }, { "type": "show_dialog", "value": "你记住了他的面容。某种意志与你同在。" }] }
+      ],
+      "once": true
+    }
+  ]
+}

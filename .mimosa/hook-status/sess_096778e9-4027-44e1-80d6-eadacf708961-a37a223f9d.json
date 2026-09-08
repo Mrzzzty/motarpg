@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-09-08T06:06:08.531Z",
+  "sessionId": "sess_096778e9-4027-44e1-80d6-eadacf708961",
+  "event": "PostToolUse",
+  "toolName": "Edit",
+  "file": "src/effects/PixiLightSystem.ts",
+  "outcome": "inconclusive",
+  "coverage": "partial",
+  "findingCount": 0,
+  "durationMs": 5,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

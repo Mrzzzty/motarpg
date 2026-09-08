@@ -1,0 +1,52 @@
+{
+  "quests": [
+    {
+      "id": "quest_talk_guide",
+      "name": "初来乍到",
+      "description": "与起点的引导者艾登对话，了解这座塔的规则。",
+      "objectives": [{ "type": "talk_npc", "targetId": "npc_guide", "quantity": 1 }],
+      "rewards": [{ "type": "potion", "tier": "crude", "value": 2 }],
+      "prerequisites": [],
+      "guidance": "走到绿色方块旁，左键对话。"
+    },
+    {
+      "id": "quest_first_blood",
+      "name": "初试锋芒",
+      "description": "击败一只史莱姆。",
+      "objectives": [{ "type": "defeat_monster", "targetId": "slime", "quantity": 1 }],
+      "rewards": [{ "type": "gold", "value": 30 }],
+      "prerequisites": ["quest_talk_guide"],
+      "guidance": "撞向红色方块即进入战斗。"
+    },
+    {
+      "id": "quest_first_chest",
+      "name": "开箱有喜",
+      "description": "打开一个宝箱。",
+      "objectives": [{ "type": "open_chest", "quantity": 1 }],
+      "rewards": [{ "type": "gold", "value": 20 }],
+      "prerequisites": ["quest_talk_guide"],
+      "guidance": "左键点击金色宝箱。"
+    },
+    {
+      "id": "quest_first_equip",
+      "name": "披挂上阵",
+      "description": "穿戴一件装备。",
+      "objectives": [{ "type": "equip_item", "quantity": 1 }],
+      "rewards": [{ "type": "equipment", "quality": "poor" }],
+      "prerequisites": ["quest_first_chest"],
+      "guidance": "按 B 打开背包，双击装备穿戴。"
+    },
+    {
+      "id": "quest_descend",
+      "name": "更下一层",
+      "description": "通过终点楼梯到达第 2 层。",
+      "objectives": [{ "type": "reach_floor", "value": 2, "quantity": 1 }],
+      "rewards": [
+        { "type": "gold", "value": 50 },
+        { "type": "potion", "tier": "crude", "value": 1 }
+      ],
+      "prerequisites": ["quest_first_blood"],
+      "guidance": "找到房间角落的发光楼梯。"
+    }
+  ]
+}

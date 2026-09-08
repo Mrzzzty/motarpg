@@ -1,0 +1,102 @@
+{
+  "quests": [
+    {
+      "id": "quest_tutorial_1", "name": "初识战斗", "description": "击败房间A中的史莱姆，学习战斗。",
+      "type": "main",
+      "objectives": [{ "type": "defeat_monster", "targetId": "slime_tutorial", "quantity": 1, "currentProgress": 0 }],
+      "rewards": [{ "type": "exp", "value": 30 }, { "type": "gold", "value": 5 }],
+      "isRepeatable": false, "prerequisites": [], "isCompleted": false, "isTracked": true
+    },
+    {
+      "id": "quest_tutorial_2", "name": "踏上征程", "description": "穿过走廊，到达房间B，找到通往上一层的楼梯。",
+      "type": "main",
+      "objectives": [{ "type": "explore_room", "targetId": "room_1B_end", "quantity": 1, "currentProgress": 0 }],
+      "rewards": [{ "type": "exp", "value": 50 }, { "type": "gold", "value": 10 }],
+      "isRepeatable": false, "prerequisites": ["quest_tutorial_1"], "isCompleted": false, "isTracked": true
+    },
+    {
+      "id": "quest_first_boss", "name": "暗影阻击", "description": "击败第5层的Boss：昔年天使 耶利哥。",
+      "type": "main",
+      "objectives": [{ "type": "defeat_boss", "targetId": "f5boss", "quantity": 1, "currentProgress": 0 }],
+      "rewards": [{ "type": "exp", "value": 500 }, { "type": "gold", "value": 200 }, { "type": "soul", "value": 5 }],
+      "isRepeatable": false, "prerequisites": ["quest_tutorial_2"], "isCompleted": false, "isTracked": true
+    },
+    {
+      "id": "quest_reach_5", "name": "更上一层楼", "description": "到达第5层。",
+      "type": "main",
+      "objectives": [{ "type": "reach_floor", "targetId": "5", "quantity": 1, "currentProgress": 0 }],
+      "rewards": [{ "type": "exp", "value": 80 }, { "type": "gold", "value": 50 }],
+      "isRepeatable": false, "prerequisites": ["quest_tutorial_2"], "isCompleted": false, "isTracked": true
+    },
+    {
+      "id": "quest_reach_10", "name": "深入塔心", "description": "到达第10层并击败其Boss，深渊回廊的入口将会显现。",
+      "type": "main",
+      "objectives": [{ "type": "reach_floor", "targetId": "10", "quantity": 1, "currentProgress": 0 }],
+      "rewards": [{ "type": "exp", "value": 600 }, { "type": "gold", "value": 300 }, { "type": "soul", "value": 3 }],
+      "isRepeatable": false, "prerequisites": ["quest_first_boss"], "isCompleted": false, "isTracked": true
+    },
+    {
+      "id": "quest_reach_25", "name": "半程试炼", "description": "到达第25层。",
+      "type": "main",
+      "objectives": [{ "type": "reach_floor", "targetId": "25", "quantity": 1, "currentProgress": 0 }],
+      "rewards": [{ "type": "exp", "value": 2500 }, { "type": "gold", "value": 1200 }],
+      "isRepeatable": false, "prerequisites": ["quest_reach_10"], "isCompleted": false, "isTracked": false
+    },
+    {
+      "id": "quest_reach_50", "name": "塔身之半", "description": "到达第50层。",
+      "type": "main",
+      "objectives": [{ "type": "reach_floor", "targetId": "50", "quantity": 1, "currentProgress": 0 }],
+      "rewards": [{ "type": "exp", "value": 12000 }, { "type": "gold", "value": 6000 }, { "type": "soul", "value": 15 }],
+      "isRepeatable": false, "prerequisites": ["quest_reach_25"], "isCompleted": false, "isTracked": false
+    },
+    {
+      "id": "quest_reach_100", "name": "百层之门", "description": "到达第100层，触碰天堂的门槛。",
+      "type": "main",
+      "objectives": [{ "type": "reach_floor", "targetId": "100", "quantity": 1, "currentProgress": 0 }],
+      "rewards": [{ "type": "exp", "value": 80000 }, { "type": "soul", "value": 50 }],
+      "isRepeatable": false, "prerequisites": ["quest_reach_50"], "isCompleted": false, "isTracked": false
+    },
+    {
+      "id": "quest_collect_5", "name": "藏品收集者", "description": "收集5件不同藏品。",
+      "type": "side",
+      "objectives": [{ "type": "collect_collectible", "targetId": "any", "quantity": 5, "currentProgress": 0 }],
+      "rewards": [{ "type": "collectible", "value": "collect_gold", "quantity": 1 }],
+      "isRepeatable": false, "prerequisites": [], "isCompleted": false, "isTracked": false
+    },
+    {
+      "id": "quest_chests_10", "name": "开箱达人", "description": "打开10个宝箱。",
+      "type": "side",
+      "objectives": [{ "type": "open_chest", "targetId": "any", "quantity": 10, "currentProgress": 0 }],
+      "rewards": [{ "type": "gold", "value": 300 }, { "type": "item", "value": "key", "quantity": 2 }],
+      "isRepeatable": false, "prerequisites": [], "isCompleted": false, "isTracked": false
+    },
+    {
+      "id": "quest_slime_10", "name": "史莱姆克星", "description": "击败10只史莱姆。",
+      "type": "side",
+      "objectives": [{ "type": "defeat_monster", "targetId": "slime", "quantity": 10, "currentProgress": 0 }],
+      "rewards": [{ "type": "exp", "value": 150 }, { "type": "gold", "value": 100 }],
+      "isRepeatable": false, "prerequisites": [], "isCompleted": false, "isTracked": false
+    },
+    {
+      "id": "quest_level_15", "name": "初露锋芒", "description": "等级达到15级。",
+      "type": "side",
+      "objectives": [{ "type": "level_up", "targetId": "any", "quantity": 15, "currentProgress": 0 }],
+      "rewards": [{ "type": "soul", "value": 3 }, { "type": "gold", "value": 500 }],
+      "isRepeatable": false, "prerequisites": [], "isCompleted": false, "isTracked": false
+    },
+    {
+      "id": "quest_boss_3", "name": "屠戮塔主", "description": "击败3个Boss。",
+      "type": "side",
+      "objectives": [{ "type": "defeat_boss", "targetId": "any", "quantity": 3, "currentProgress": 0 }],
+      "rewards": [{ "type": "soul", "value": 10 }, { "type": "exp", "value": 2000 }],
+      "isRepeatable": false, "prerequisites": ["quest_first_boss"], "isCompleted": false, "isTracked": false
+    },
+    {
+      "id": "quest_equip_first", "name": "披坚执锐", "description": "穿戴第一件装备。",
+      "type": "side",
+      "objectives": [{ "type": "equip_item", "targetId": "any", "quantity": 1, "currentProgress": 0 }],
+      "rewards": [{ "type": "gold", "value": 50 }],
+      "isRepeatable": false, "prerequisites": [], "isCompleted": false, "isTracked": false
+    }
+  ]
+}

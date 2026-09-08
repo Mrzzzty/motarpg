@@ -1,0 +1,56 @@
+{
+  "events": [
+    {
+      "id": "ev_gold_fairy",
+      "name": "金币妖精",
+      "icon": "🧚",
+      "minFloor": 2,
+      "chance": 0.07,
+      "roomTypes": ["combat", "chest"],
+      "description": "一只金币妖精从阴影里窜出，翅膀上洒落着金粉。",
+      "options": [
+        { "text": "伸手去抓", "effects": [{ "type": "gold", "value": 30, "perFloor": 6 }] },
+        { "text": "目送它离开", "effects": [] }
+      ]
+    },
+    {
+      "id": "ev_trap",
+      "name": "可疑的踏板",
+      "icon": "⚠️",
+      "minFloor": 3,
+      "chance": 0.06,
+      "roomTypes": ["combat", "elite"],
+      "description": "脚下的石板忽然下陷——是陷阱！",
+      "options": [
+        { "text": "硬抗", "effects": [{ "type": "damagePct", "value": 8 }] },
+        { "text": "翻滚闪避（消耗体力）", "effects": [{ "type": "damagePct", "value": 3 }] }
+      ]
+    },
+    {
+      "id": "ev_spring",
+      "name": "神秘泉水",
+      "icon": "⛲",
+      "minFloor": 2,
+      "chance": 0.06,
+      "roomTypes": ["chest", "merchant", "end"],
+      "description": "角落里涌出一汪泛着微光的泉水。",
+      "options": [
+        { "text": "饮下泉水", "effects": [{ "type": "healPct", "value": 20 }] },
+        { "text": "谨慎起见，不喝", "effects": [] }
+      ]
+    },
+    {
+      "id": "ev_scroll",
+      "name": "古老的卷轴",
+      "icon": "📜",
+      "minFloor": 4,
+      "chance": 0.05,
+      "roomTypes": ["combat", "chest", "elite"],
+      "description": "墙上嵌着一卷古旧的卷轴，字迹依稀可辨。",
+      "options": [
+        { "text": "研读卷轴", "effects": [{ "type": "exp", "value": 25, "perFloor": 5 }] },
+        { "text": "没有兴趣", "effects": [] }
+      ]
+    }
+  ]
+}

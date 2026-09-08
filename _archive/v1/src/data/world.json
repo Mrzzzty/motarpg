@@ -1,0 +1,23 @@
+{
+  "worldName": "无尽之塔",
+  "maxFloors": 999,
+  "maxRoomsPerFloor": 16,
+  "bossFloorInterval": 5,
+  "difficultyUnlockFloor": 10,
+  "havenUnlockFloor": 100,
+  "tutorial": {
+    "floorId": 1,
+    "roomIds": ["room_1A_start", "room_1B_end"]
+  },
+  "floorNames": [
+    { "minFloor": 1, "maxFloor": 4, "names": ["遗忘之厅", "尘封回廊", "苔石门堂"] },
+    { "minFloor": 5, "maxFloor": 9, "names": ["暗影王座", "幽暗墓道", "蚀骨石阶", "回声长廊"] },
+    { "minFloor": 10, "maxFloor": 14, "names": ["灰烬祭坛", "裂隙深厅", "泣血回廊", "低语石林"] },
+    { "minFloor": 15, "maxFloor": 19, "names": ["圣骸封地", "苍白之门", "残烛走廊", "无光地窟"] },
+    { "minFloor": 20, "maxFloor": 29, "names": ["裁决天梯", "堕星之井", "万骨铺道", "悲鸣回环", "黑檀圣所"] },
+    { "minFloor": 30, "maxFloor": 39, "names": ["虚空凝渊", "镜面囚笼", "沉没神殿", "业火长阶", "逆十字回廊"] },
+    { "minFloor": 40, "maxFloor": 49, "names": ["圣杯残响", "天启前庭", "四骑之径", "终焉钟塔", "苍白王座"] },
+    { "minFloor": 50, "maxFloor": 99, "names": ["永夜层叠", "神骸矿脉", "沉默圣典", "逆光之渊", "万象归尘"] },
+    { "minFloor": 100, "maxFloor": 999, "names": ["天堂之门", "圣座回廊", "原初之海", "终焉彼岸"] }
+  ]
+}

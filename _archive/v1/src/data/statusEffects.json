@@ -1,0 +1,44 @@
+{
+  "statusEffects": [
+    {
+      "id": "poison", "name": "中毒", "type": "debuff", "duration": 3,
+      "stackable": true, "maxStacks": 3, "icon": "☠️",
+      "description": "每回合损失最大生命值的5%（可叠加至3层）"
+    },
+    {
+      "id": "rage", "name": "狂暴", "type": "buff", "duration": 3,
+      "stackable": false, "icon": "🔥",
+      "description": "攻击+30%，防御-20%"
+    },
+    {
+      "id": "shield", "name": "护盾", "type": "buff", "duration": -1,
+      "stackable": false, "icon": "🛡️",
+      "description": "吸收伤害（吸收量=防御力×2），直到被击破"
+    },
+    {
+      "id": "freeze", "name": "冰冻", "type": "debuff", "duration": 1,
+      "stackable": false, "icon": "❄️",
+      "description": "下回合无法行动"
+    },
+    {
+      "id": "burn", "name": "灼烧", "type": "debuff", "duration": 2,
+      "stackable": true, "maxStacks": 5, "icon": "🕯️",
+      "description": "每回合损失固定伤害（可叠加至5层）"
+    },
+    {
+      "id": "haste", "name": "急速", "type": "buff", "duration": 5,
+      "stackable": false, "icon": "💨",
+      "description": "闪避率+15%"
+    },
+    {
+      "id": "bless", "name": "祝福", "type": "buff", "duration": 3,
+      "stackable": false, "icon": "✨",
+      "description": "伤害加成+10%"
+    },
+    {
+      "id": "curse", "name": "诅咒", "type": "debuff", "duration": 3,
+      "stackable": false, "icon": "🕯️",
+      "description": "攻击力-15%"
+    }
+  ]
+}

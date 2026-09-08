@@ -1,0 +1,88 @@
+{
+  "affixes": [
+    {
+      "id": "boss_rage",
+      "name": "狂暴",
+      "description": "Boss生命低于30%时，攻击+50%，如坠魔道。",
+      "icon": "🔥",
+      "weight": 20
+    },
+    {
+      "id": "boss_shield",
+      "name": "圣袍",
+      "description": "圣光织就的袍——Boss每回合恢复2%生命。",
+      "icon": "🛡️",
+      "weight": 15
+    },
+    {
+      "id": "boss_thorns",
+      "name": "荆棘",
+      "description": "触之即伤：Boss反弹10%受到的伤害。",
+      "icon": "🌵",
+      "weight": 15
+    },
+    {
+      "id": "boss_poison",
+      "name": "腐圣",
+      "description": "其毒可蚀圣：Boss攻击附带中毒效果。",
+      "icon": "☠️",
+      "weight": 10
+    },
+    {
+      "id": "boss_fast",
+      "name": "虚相",
+      "description": "身形如雾：Boss闪避率+20%。",
+      "icon": "💨",
+      "weight": 10
+    },
+    {
+      "id": "boss_giant",
+      "name": "巨躯",
+      "description": "深渊充盈其身：Boss生命+50%，体型变大。",
+      "icon": "🗿",
+      "weight": 15
+    },
+    {
+      "id": "boss_cursed",
+      "name": "凶眼",
+      "description": "它的注视削弱你：Boss战中玩家暴击率减半。",
+      "icon": "🕯️",
+      "weight": 10
+    },
+    {
+      "id": "boss_legendary",
+      "name": "传奇",
+      "description": "被命运铭写的存在：Boss属性+30%，掉落品质提升两级。",
+      "icon": "🌟",
+      "weight": 5
+    },
+    {
+      "id": "boss_vampire",
+      "name": "血契",
+      "description": "以你之血续它之命：Boss攻击回复5%伤害的生命。",
+      "icon": "🩸",
+      "weight": 8
+    },
+    {
+      "id": "boss_frozen",
+      "name": "霜狱",
+      "description": "它的呼吸是寒冬：玩家每回合有10%概率被冰冻。",
+      "icon": "❄️",
+      "weight": 7
+    },
+    {
+      "id": "boss_berserk",
+      "name": "舍身",
+      "description": "弃守全攻：Boss攻击+80%，但防御-30%。",
+      "icon": "⚔️",
+      "weight": 10
+    },
+    {
+      "id": "boss_immortal",
+      "name": "不朽",
+      "description": "命不该绝：Boss生命首次低于10%时，保留无敌一回合。",
+      "icon": "😇",
+      "weight": 5
+    }
+  ]
+}

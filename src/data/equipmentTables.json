@@ -1,0 +1,71 @@
+{
+  "qualityOrder": ["poor", "common", "fine", "rare", "epic", "legendary", "mythic"],
+  "quality": {
+    "poor":      { "name": "破烂", "color": "#9e9e9e", "statMultiplier": 0.6, "affixCount": 0, "affixCountMax": 0, "sellMultiplier": 0.2,  "prefix": "破旧的", "basePrice": 5 },
+    "common":    { "name": "普通", "color": "#ffffff", "statMultiplier": 1.0, "affixCount": 0, "affixCountMax": 0, "sellMultiplier": 1.0,  "prefix": "",       "basePrice": 10 },
+    "fine":      { "name": "优秀", "color": "#4488ff", "statMultiplier": 1.4, "affixCount": 1, "affixCountMax": 1, "sellMultiplier": 2.0,  "prefix": "精良的", "basePrice": 30 },
+    "rare":      { "name": "稀有", "color": "#aa44ff", "statMultiplier": 1.9, "affixCount": 2, "affixCountMax": 3, "sellMultiplier": 4.0,  "prefix": "优质的", "basePrice": 80, "affixExtra": [{ "atEquipLevel": 20, "add": 1 }] },
+    "epic":      { "name": "史诗", "color": "#ffaa00", "statMultiplier": 2.5, "affixCount": 3, "affixCountMax": 5, "sellMultiplier": 8.0,  "prefix": "精制的", "basePrice": 200, "affixExtra": [{ "atEquipLevel": 15, "add": 1 }] },
+    "legendary": { "name": "传说", "color": "#ff5533", "statMultiplier": 3.5, "affixCount": 4, "affixCountMax": 7, "sellMultiplier": 16.0, "prefix": "完美的", "basePrice": 500, "affixExtra": [{ "atEquipLevel": 10, "add": 1 }] },
+    "mythic":    { "name": "神话", "color": "#ff44dd", "statMultiplier": 5.0, "affixCount": 4, "affixCountMax": 4, "sellMultiplier": 35.0, "prefix": "无双的", "basePrice": 1200 }
+  },
+  "qualityByFloor": [
+    { "minFloor": 1, "maxFloor": 5,   "weights": { "poor": 45, "common": 40, "fine": 12, "rare": 3, "epic": 0, "legendary": 0, "mythic": 0 } },
+    { "minFloor": 6, "maxFloor": 10,  "weights": { "poor": 10, "common": 50, "fine": 28, "rare": 10, "epic": 2, "legendary": 0, "mythic": 0 } },
+    { "minFloor": 11, "maxFloor": 20, "weights": { "poor": 1, "common": 35, "fine": 35, "rare": 20, "epic": 8, "legendary": 1, "mythic": 0 } },
+    { "minFloor": 21, "maxFloor": 30, "weights": { "poor": 1, "common": 15, "fine": 31, "rare": 30, "epic": 18, "legendary": 5, "mythic": 0 } },
+    { "minFloor": 31, "maxFloor": 40, "weights": { "poor": 0, "common": 5, "fine": 20, "rare": 30, "epic": 30, "legendary": 15, "mythic": 0 } },
+    { "minFloor": 41, "maxFloor": 50, "weights": { "poor": 0, "common": 0, "fine": 10, "rare": 25, "epic": 35, "legendary": 29.5, "mythic": 0.5 } },
+    { "minFloor": 51, "maxFloor": 9999, "weights": { "poor": 0, "common": 0, "fine": 8, "rare": 22, "epic": 33, "legendary": 35, "mythic": 2 } }
+  ],
+  "affixes": [
+    { "type": "sharp",        "name": "锋利", "minQuality": "fine",   "isPercent": false, "bands": [{ "maxEquipLevel": 10, "min": 3, "max": 8 }, { "maxEquipLevel": 25, "min": 8, "max": 20 }, { "maxEquipLevel": 40, "min": 20, "max": 40 }, { "maxEquipLevel": 50, "min": 40, "max": 70 }], "description": "攻击 +{v}" },
+    { "type": "sturdy",       "name": "坚固", "minQuality": "fine",   "isPercent": false, "bands": [{ "maxEquipLevel": 10, "min": 2, "max": 5 }, { "maxEquipLevel": 25, "min": 5, "max": 12 }, { "maxEquipLevel": 40, "min": 12, "max": 25 }, { "maxEquipLevel": 50, "min": 25, "max": 45 }], "description": "防御 +{v}" },
+    { "type": "vitality",     "name": "活力", "minQuality": "fine",   "isPercent": false, "bands": [{ "maxEquipLevel": 10, "min": 15, "max": 40 }, { "maxEquipLevel": 25, "min": 40, "max": 100 }, { "maxEquipLevel": 40, "min": 100, "max": 200 }, { "maxEquipLevel": 50, "min": 200, "max": 350 }], "description": "生命 +{v}" },
+    { "type": "precision",    "name": "精准", "minQuality": "rare",   "isPercent": true,  "bands": [{ "maxEquipLevel": 10, "min": 1, "max": 3 }, { "maxEquipLevel": 25, "min": 3, "max": 5 }, { "maxEquipLevel": 40, "min": 5, "max": 7 }, { "maxEquipLevel": 50, "min": 7, "max": 10 }], "description": "暴击率 +{v}%" },
+    { "type": "agility",      "name": "灵巧", "minQuality": "rare",   "isPercent": true,  "bands": [{ "maxEquipLevel": 10, "min": 1, "max": 2 }, { "maxEquipLevel": 25, "min": 2, "max": 4 }, { "maxEquipLevel": 40, "min": 4, "max": 6 }, { "maxEquipLevel": 50, "min": 6, "max": 8 }], "description": "闪避率 +{v}%" },
+    { "type": "savage",       "name": "强攻", "minQuality": "rare",   "isPercent": true,  "bands": [{ "maxEquipLevel": 10, "min": 2, "max": 4 }, { "maxEquipLevel": 25, "min": 4, "max": 7 }, { "maxEquipLevel": 40, "min": 7, "max": 10 }, { "maxEquipLevel": 50, "min": 10, "max": 15 }], "description": "攻击 +{v}%" },
+    { "type": "fortress",     "name": "铁壁", "minQuality": "rare",   "isPercent": true,  "bands": [{ "maxEquipLevel": 10, "min": 1, "max": 3 }, { "maxEquipLevel": 25, "min": 3, "max": 5 }, { "maxEquipLevel": 40, "min": 5, "max": 8 }, { "maxEquipLevel": 50, "min": 8, "max": 12 }], "description": "防御 +{v}%" },
+    { "type": "lifesteal",    "name": "嗜血", "minQuality": "epic",   "isPercent": true,  "bands": [{ "maxEquipLevel": 10, "min": 1, "max": 2 }, { "maxEquipLevel": 25, "min": 2, "max": 3 }, { "maxEquipLevel": 40, "min": 3, "max": 4 }, { "maxEquipLevel": 50, "min": 4, "max": 6 }], "description": "攻击回复生命 {v}%" },
+    { "type": "hellfire",     "name": "业火", "minQuality": "rare",   "isPercent": false, "bands": [{ "maxEquipLevel": 10, "min": 3, "max": 8 }, { "maxEquipLevel": 25, "min": 8, "max": 18 }, { "maxEquipLevel": 40, "min": 18, "max": 35 }, { "maxEquipLevel": 50, "min": 35, "max": 60 }], "description": "附加火焰伤害 {v}" },
+    { "type": "greed",        "name": "贪婪", "minQuality": "rare",   "isPercent": true,  "bands": [{ "maxEquipLevel": 10, "min": 5, "max": 10 }, { "maxEquipLevel": 25, "min": 10, "max": 15 }, { "maxEquipLevel": 40, "min": 15, "max": 20 }, { "maxEquipLevel": 50, "min": 20, "max": 30 }], "description": "金币获取 +{v}%" },
+    { "type": "wisdom",       "name": "博学", "minQuality": "rare",   "isPercent": true,  "bands": [{ "maxEquipLevel": 10, "min": 5, "max": 10 }, { "maxEquipLevel": 25, "min": 10, "max": 15 }, { "maxEquipLevel": 40, "min": 15, "max": 20 }, { "maxEquipLevel": 50, "min": 20, "max": 30 }], "description": "经验获取 +{v}%" },
+    { "type": "dragonslayer", "name": "屠龙", "minQuality": "epic",   "isPercent": true,  "bands": [{ "maxEquipLevel": 10, "min": 5, "max": 10 }, { "maxEquipLevel": 25, "min": 10, "max": 15 }, { "maxEquipLevel": 40, "min": 15, "max": 20 }, { "maxEquipLevel": 50, "min": 20, "max": 30 }], "description": "对Boss伤害 +{v}%" }
+  ],
+  "weaponTable": [
+    { "minEquipLevel": 1, "maxEquipLevel": 5,   "values": { "poor": [2, 5], "common": [4, 8], "fine": [8, 15], "rare": [15, 25], "epic": null, "legendary": null } },
+    { "minEquipLevel": 6, "maxEquipLevel": 10,  "values": { "poor": [5, 8], "common": [8, 15], "fine": [15, 25], "rare": [25, 40], "epic": [40, 55], "legendary": null } },
+    { "minEquipLevel": 11, "maxEquipLevel": 20, "values": { "poor": null, "common": [15, 25], "fine": [25, 40], "rare": [40, 60], "epic": [60, 85], "legendary": [85, 120] } },
+    { "minEquipLevel": 21, "maxEquipLevel": 30, "values": { "poor": null, "common": [25, 35], "fine": [35, 55], "rare": [55, 80], "epic": [80, 110], "legendary": [110, 160] } },
+    { "minEquipLevel": 31, "maxEquipLevel": 40, "values": { "poor": null, "common": null, "fine": [45, 65], "rare": [65, 95], "epic": [95, 140], "legendary": [140, 200] } },
+    { "minEquipLevel": 41, "maxEquipLevel": 50, "values": { "poor": null, "common": null, "fine": [60, 80], "rare": [80, 120], "epic": [120, 180], "legendary": [180, 280] } }
+  ],
+  "armorTable": [
+    { "minEquipLevel": 1, "maxEquipLevel": 5,   "values": { "poor": [1, 3], "common": [2, 5], "fine": [4, 8], "rare": [6, 12], "epic": null, "legendary": null } },
+    { "minEquipLevel": 6, "maxEquipLevel": 10,  "values": { "poor": [2, 4], "common": [4, 8], "fine": [8, 14], "rare": [12, 20], "epic": [18, 28], "legendary": null } },
+    { "minEquipLevel": 11, "maxEquipLevel": 20, "values": { "poor": null, "common": [8, 14], "fine": [14, 22], "rare": [20, 30], "epic": [30, 45], "legendary": [45, 60] } },
+    { "minEquipLevel": 21, "maxEquipLevel": 30, "values": { "poor": null, "common": [14, 20], "fine": [20, 30], "rare": [30, 45], "epic": [45, 60], "legendary": [60, 85] } },
+    { "minEquipLevel": 31, "maxEquipLevel": 40, "values": { "poor": null, "common": null, "fine": [25, 35], "rare": [35, 55], "epic": [55, 75], "legendary": [75, 110] } },
+    { "minEquipLevel": 41, "maxEquipLevel": 50, "values": { "poor": null, "common": null, "fine": [35, 45], "rare": [45, 65], "epic": [65, 95], "legendary": [95, 140] } }
+  ],
+  "mythicFromLegendary": 1.43,
+  "baseNames": {
+    "weapon": [
+      { "minEquipLevel": 1, "maxEquipLevel": 10, "names": ["铁剑"] },
+      { "minEquipLevel": 11, "maxEquipLevel": 20, "names": ["阔剑"] },
+      { "minEquipLevel": 21, "maxEquipLevel": 30, "names": ["长剑"] },
+      { "minEquipLevel": 31, "maxEquipLevel": 40, "names": ["符文剑"] },
+      { "minEquipLevel": 41, "maxEquipLevel": 50, "names": ["龙魂剑"] }
+    ],
+    "armor": [
+      { "minEquipLevel": 1, "maxEquipLevel": 10, "names": ["胸甲"] },
+      { "minEquipLevel": 11, "maxEquipLevel": 20, "names": ["鳞甲"] },
+      { "minEquipLevel": 21, "maxEquipLevel": 30, "names": ["板甲"] },
+      { "minEquipLevel": 31, "maxEquipLevel": 40, "names": ["符文甲"] },
+      { "minEquipLevel": 41, "maxEquipLevel": 50, "names": ["龙鳞甲"] }
+    ]
+  },
+  "equipLevelFormula": { "playerLevelFactor": 0.5, "floorFactor": 1.0, "randomMin": -2, "randomMax": 3, "min": 1, "max": 50 },
+  "buyPriceRule": { "sellMultiplier": 1.6, "min": 100, "max": 5000 },
+  "affixSpecial": { "mythicAffixCount": 4 }
+}

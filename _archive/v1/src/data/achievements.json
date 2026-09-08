@@ -1,0 +1,262 @@
+{
+  "achievements": [
+    {
+      "id": "ach_first_blood",
+      "name": "初罪",
+      "description": "击败你的第一只史莱姆。",
+      "icon": "⚔️",
+      "condition": {
+        "type": "defeat_monster",
+        "monsterId": "slime_tutorial",
+        "quantity": 1
+      },
+      "reward": {
+        "type": "gold",
+        "value": 20
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_level_10",
+      "name": "灵阶·十",
+      "description": "等级达到10级。",
+      "icon": "🌟",
+      "condition": {
+        "type": "level",
+        "value": 10
+      },
+      "reward": {
+        "type": "gold",
+        "value": 200
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_level_50",
+      "name": "圣阶·五十",
+      "description": "等级达到50级。",
+      "icon": "✨",
+      "condition": {
+        "type": "level",
+        "value": 50
+      },
+      "reward": {
+        "type": "soul",
+        "value": 20
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_boss_1",
+      "name": "使徒陨落",
+      "description": "击败第5层的Boss。",
+      "icon": "🏆",
+      "condition": {
+        "type": "defeat_boss",
+        "quantity": 1
+      },
+      "reward": {
+        "type": "soul",
+        "value": 2
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_boss_10",
+      "name": "使徒·十诫",
+      "description": "累计击败10个Boss。",
+      "icon": "🥇",
+      "condition": {
+        "type": "defeat_boss",
+        "quantity": 10
+      },
+      "reward": {
+        "type": "soul",
+        "value": 15
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_floor_20",
+      "name": "深阶·廿",
+      "description": "到达第20层。",
+      "icon": "🗼",
+      "condition": {
+        "type": "reach_floor",
+        "value": 20
+      },
+      "reward": {
+        "type": "gold",
+        "value": 1500
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_floor_100",
+      "name": "天阶百重",
+      "description": "到达第100层。",
+      "icon": "🗺️",
+      "condition": {
+        "type": "reach_floor",
+        "value": 100
+      },
+      "reward": {
+        "type": "soul",
+        "value": 50
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_collect_10",
+      "name": "圣物·十诫",
+      "description": "收集10件藏品。",
+      "icon": "💎",
+      "condition": {
+        "type": "collect_collectibles",
+        "quantity": 10
+      },
+      "reward": {
+        "type": "soul",
+        "value": 8
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_collect_20",
+      "name": "圣物·廿章",
+      "description": "收集20件藏品。",
+      "icon": "👑",
+      "condition": {
+        "type": "collect_collectibles",
+        "quantity": 20
+      },
+      "reward": {
+        "type": "soul",
+        "value": 20
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_legendary_equip",
+      "name": "圣典载录",
+      "description": "穿戴一件传说品质装备。",
+      "icon": "🗡️",
+      "condition": {
+        "type": "equip_legendary",
+        "quantity": 1
+      },
+      "reward": {
+        "type": "gold",
+        "value": 3000
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_gold_10000",
+      "name": "万金供奉",
+      "description": "累计获得10000金币。",
+      "icon": "🪙",
+      "condition": {
+        "type": "total_gold",
+        "value": 10000
+      },
+      "reward": {
+        "type": "item",
+        "value": "health_potion_l",
+        "quantity": 3
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_soul_50",
+      "name": "灵魂收割者",
+      "description": "累计获得50魂晶。",
+      "icon": "💠",
+      "condition": {
+        "type": "total_soul",
+        "value": 50
+      },
+      "reward": {
+        "type": "exp",
+        "value": 5000
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_chests_50",
+      "name": "启封五十",
+      "description": "打开50个宝箱。",
+      "icon": "📦",
+      "condition": {
+        "type": "open_chests",
+        "quantity": 50
+      },
+      "reward": {
+        "type": "item",
+        "value": "key",
+        "quantity": 5
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_quests_15",
+      "name": "戒律十五",
+      "description": "完成15个任务。",
+      "icon": "📜",
+      "condition": {
+        "type": "complete_quests",
+        "quantity": 15
+      },
+      "reward": {
+        "type": "soul",
+        "value": 10
+      },
+      "isHidden": false
+    },
+    {
+      "id": "ach_series_seals",
+      "name": "圣印齐聚",
+      "description": "集齐一个圣印系列。",
+      "icon": "🔖",
+      "condition": {
+        "type": "collect_series",
+        "seriesId": "series_atk"
+      },
+      "reward": {
+        "type": "soul",
+        "value": 30
+      },
+      "isHidden": true
+    },
+    {
+      "id": "ach_playtime_5",
+      "name": "塔中常客",
+      "description": "累计游戏5小时。",
+      "icon": "⏳",
+      "condition": {
+        "type": "play_time",
+        "value": 5
+      },
+      "reward": {
+        "type": "gold",
+        "value": 1000
+      },
+      "isHidden": true
+    },
+    {
+      "id": "ach_haven_unlock",
+      "name": "圣座之巅",
+      "description": "到达第100层，解锁天堂难度。",
+      "icon": "🕊️",
+      "condition": {
+        "type": "reach_floor",
+        "value": 100
+      },
+      "reward": {
+        "type": "soul",
+        "value": 30
+      },
+      "isHidden": false
+    }
+  ]
+}

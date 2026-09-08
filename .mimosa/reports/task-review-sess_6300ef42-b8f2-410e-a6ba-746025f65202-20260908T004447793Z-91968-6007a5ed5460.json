@@ -1,0 +1,1385 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260908T004447793Z-91968-6007a5ed5460",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "bash-discovery",
+      "target": "src/systems/MerchantSystem.ts",
+      "reason": "bash_discovery_truncated: changed-file discovery exceeded 80 files"
+    },
+    {
+      "stage": "candidate-select",
+      "target": "src/render/LightSystem.ts",
+      "reason": "candidate_limit_exceeded: 85 changed reviewable file(s) were not scanned because the limit is 20"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 78,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 46
+    },
+    "change_tracking": {
+      "touched_observed": 46,
+      "touched_retained": 46,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 80,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": true
+    },
+    "candidates": {
+      "eligible_files": 105,
+      "selected_files": 20,
+      "limit": 20,
+      "truncated": true
+    },
+    "scanning": {
+      "required_files": 20,
+      "scanned_files": 20,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "project_checks_required": 0,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {
+      "bash_discovery_truncated": 1,
+      "candidate_limit_exceeded": 1,
+      "project_check_failed": 2
+    },
+    "reasons": [
+      {
+        "code": "bash_discovery_truncated",
+        "stage": "bash-discovery",
+        "target": "src/systems/MerchantSystem.ts",
+        "detail": "changed-file discovery exceeded 80 files",
+        "affects_completion": true
+      },
+      {
+        "code": "candidate_limit_exceeded",
+        "stage": "candidate-select",
+        "target": "src/render/LightSystem.ts",
+        "detail": "85 changed reviewable file(s) were not scanned because the limit is 20",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "bash-discovery",
+        "target": "src/systems/MerchantSystem.ts",
+        "detail": "bash_discovery_truncated: changed-file discovery exceeded 80 files",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "src/render/LightSystem.ts",
+        "detail": "candidate_limit_exceeded: 85 changed reviewable file(s) were not scanned because the limit is 20",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-09-08T00:44:47.793Z",
+  "session_id": "sess_6300ef42-b8f2-410e-a6ba-746025f65202",
+  "target": ".",
+  "revision": null,
+  "rules_version": "unavailable",
+  "diff_hash": "a77e126b9b9ee7433e9508699c5205b7513f93606906d9b6691f01c897dd8a95",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 20,
+    "changed_files": [
+      {
+        "file": "src/core/CameraController.ts",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 6
+          },
+          {
+            "start": 9,
+            "end": 11
+          },
+          {
+            "start": 13,
+            "end": 13
+          },
+          {
+            "start": 17,
+            "end": 24
+          },
+          {
+            "start": 26,
+            "end": 26
+          },
+          {
+            "start": 30,
+            "end": 59
+          },
+          {
+            "start": 63,
+            "end": 91
+          },
+          {
+            "start": 93,
+            "end": 101
+          },
+          {
+            "start": 105,
+            "end": 113
+          }
+        ],
+        "before_hash": "b425cf48e86ebc7f6e7d8046c557b1be480f7efbdce7825fa7c5cf43d543749d",
+        "after_hash": "79429cf1b274a73484881c0338e95829f12e0735101cc716b04bbc5149cd831d"
+      },
+      {
+        "file": "src/core/DataManager.ts",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 3
+          },
+          {
+            "start": 6,
+            "end": 6
+          },
+          {
+            "start": 8,
+            "end": 18
+          },
+          {
+            "start": 20,
+            "end": 58
+          },
+          {
+            "start": 61,
+            "end": 157
+          },
+          {
+            "start": 166,
+            "end": 166
+          },
+          {
+            "start": 171,
+            "end": 171
+          },
+          {
+            "start": 174,
+            "end": 197
+          },
+          {
+            "start": 199,
+            "end": 199
+          }
+        ],
+        "before_hash": "54149c5cfacce8b9d8f48fb24edcdbdae2bae20f52efd30f8b9b136e0d5cb17c",
+        "after_hash": "a826d3b8df37f7344981d11ee0e9327e9c2d18885ea89cf6679604fe0e466332"
+      },
+      {
+        "file": "src/core/EventBus.ts",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 3
+          }
+        ],
+        "before_hash": "7bad8a542de341e4dc398bf73a8464e43c70c35d8f9c5abef8be0dbcbef24767",
+        "after_hash": "52b2b7daac285df2467f3d8a4b953aeef5d85567bb1a92659105937df2d7953d"
+      },
+      {
+        "file": "src/core/FloorManager.ts",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 2
+          },
+          {
+            "start": 4,
+            "end": 5
+          },
+          {
+            "start": 8,
+            "end": 8
+          },
+          {
+            "start": 13,
+            "end": 13
+          },
+          {
+            "start": 15,
+            "end": 15
+          },
+          {
+            "start": 19,
+            "end": 20
+          },
+          {
+            "start": 22,
+            "end": 34
+          },
+          {
+            "start": 37,
+            "end": 38
+          },
+          {
+            "start": 40,
+            "end": 43
+          }
+        ],
+        "before_hash": "d98bbba2d2f23f511e3539ac616765e87049e08efad9f77195739068c1e70dc9",
+        "after_hash": "2d1dd7320f6921f1e7d3cd910015782f9e41c0a511f88efba2fa5a705c100f29"
+      },
+      {
+        "file": "src/core/WorldManager.ts",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 3
+          },
+          {
+            "start": 5,
+            "end": 5
+          },
+          {
+            "start": 10,
+            "end": 11
+          },
+          {
+            "start": 15,
+            "end": 15
+          },
+          {
+            "start": 19,
+            "end": 25
+          },
+          {
+            "start": 28,
+            "end": 28
+          },
+          {
+            "start": 30,
+            "end": 32
+          },
+          {
+            "start": 35,
+            "end": 38
+          },
+          {
+            "start": 41,
+            "end": 44
+          },
+          {
+            "start": 47,
+            "end": 52
+          },
+          {
+            "start": 54,
+            "end": 54
+          },
+          {
+            "start": 57,
+            "end": 58
+          },
+          {
+            "start": 61,
+            "end": 62
+          },
+          {
+            "start": 65,
+            "end": 66
+          },
+          {
+            "start": 69,
+            "end": 72
+          },
+          {
+            "start": 74,
+            "end": 76
+          },
+          {
+            "start": 79,
+            "end": 80
+          },
+          {
+            "start": 83,
+            "end": 97
+          },
+          {
+            "start": 99,
+            "end": 99
+          },
+          {
+            "start": 102,
+            "end": 104
+          },
+          {
+            "start": 107,
+            "end": 115
+          },
+          {
+            "start": 117,
+            "end": 117
+          },
+          {
+            "start": 120,
+            "end": 122
+          },
+          {
+            "start": 125,
+            "end": 128
+          }
+        ],
+        "before_hash": "f204e69cc5b43278a03ff14e0477b7d532741c9446c205a56daf573dd8729057",
+        "after_hash": "8da6b0f269b97b8816beb260313bb1670309ea76ca294102c8667d4d06b339ef"
+      },
+      {
+        "file": "src/entities/Player.ts",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 2
+          },
+          {
+            "start": 5,
+            "end": 5
+          },
+          {
+            "start": 7,
+            "end": 8
+          },
+          {
+            "start": 11,
+            "end": 11
+          },
+          {
+            "start": 13,
+            "end": 14
+          },
+          {
+            "start": 16,
+            "end": 16
+          },
+          {
+            "start": 18,
+            "end": 39
+          },
+          {
+            "start": 42,
+            "end": 44
+          },
+          {
+            "start": 47,
+            "end": 49
+          },
+          {
+            "start": 52,
+            "end": 52
+          },
+          {
+            "start": 54,
+            "end": 54
+          },
+          {
+            "start": 56,
+            "end": 57
+          },
+          {
+            "start": 60,
+            "end": 72
+          },
+          {
+            "start": 74,
+            "end": 76
+          },
+          {
+            "start": 78,
+            "end": 92
+          },
+          {
+            "start": 95,
+            "end": 106
+          },
+          {
+            "start": 109,
+            "end": 157
+          },
+          {
+            "start": 161,
+            "end": 165
+          },
+          {
+            "start": 168,
+            "end": 173
+          },
+          {
+            "start": 176,
+            "end": 176
+          },
+          {
+            "start": 178,
+            "end": 178
+          },
+          {
+            "start": 180,
+            "end": 181
+          },
+          {
+            "start": 184,
+            "end": 192
+          },
+          {
+            "start": 195,
+            "end": 201
+          },
+          {
+            "start": 203,
+            "end": 205
+          },
+          {
+            "start": 207,
+            "end": 207
+          },
+          {
+            "start": 210,
+            "end": 210
+          },
+          {
+            "start": 212,
+            "end": 213
+          },
+          {
+            "start": 215,
+            "end": 217
+          },
+          {
+            "start": 220,
+            "end": 222
+          },
+          {
+            "start": 225,
+            "end": 234
+          },
+          {
+            "start": 237,
+            "end": 240
+          },
+          {
+            "start": 243,
+            "end": 249
+          },
+          {
+            "start": 251,
+            "end": 252
+          }
+        ],
+        "before_hash": "29514ec9c682e4fa14d72bec0f02cf69602eca1408e08ffe412ae3bc413bd950",
+        "after_hash": "89a521f00945379d527de4f7e2ca9c9548b601f9cce126fed8d879aaba142719"
+      },
+      {
+        "file": "src/map/ContentFiller.ts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 266
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "b827bf9af72104d6f5ca2761371643662ebde26df9cd309f625e4c75fc2f2d12"
+      },
+      {
+        "file": "src/map/CorridorGenerator.ts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 185
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "9502a64ba8511f81436d6d80f7085f856853226f938fceef52283b1109059aa7"
+      },
+      {
+        "file": "src/map/FloorGenerator.ts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 111
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "2b8f702f8f0fadeee897194dba5c6eb9d1c08f8aaf81d4d960829d493fbdb1d0"
+      },
+      {
+        "file": "src/map/MapGenerator.ts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 123
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "e17af7e4b73940eda69b152779e91cedaf9cae1429f0c67451050b8c4b0924cc"
+      },
+      {
+        "file": "src/map/MapValidator.ts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 115
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "9ce4bed09b952a790d1b420ba07402673f60ebd1329a2e225cacfcf6e0c4c076"
+      },
+      {
+        "file": "src/map/PathGenerator.ts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 124
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "6f4b1050f3745bbe50a790f92990af8efc97e985951b706c527274eb5f1095a6"
+      },
+      {
+        "file": "src/map/RoomGenerator.ts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 251
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "7eab211ce9836c44802523c0cde2477c047cdfde6c243125c60ef18367ac53ea"
+      },
+      {
+        "file": "src/render/Projection.ts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 51
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "3acb2beaf779ed6e44aa4a7c272198f94159799ee36e92cbd07579e988558a9d"
+      },
+      {
+        "file": "src/test/mapTest.ts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 186
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "3cda572e79d96d3ea7e7d3fd83d53b66483f09af8d840c4d2b6f4fe9ea46a5aa"
+      },
+      {
+        "file": "src/types/index.ts",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 3
+          },
+          {
+            "start": 8,
+            "end": 9
+          },
+          {
+            "start": 11,
+            "end": 12
+          },
+          {
+            "start": 14,
+            "end": 14
+          },
+          {
+            "start": 16,
+            "end": 20
+          },
+          {
+            "start": 22,
+            "end": 23
+          },
+          {
+            "start": 25,
+            "end": 26
+          },
+          {
+            "start": 28,
+            "end": 29
+          },
+          {
+            "start": 31,
+            "end": 31
+          },
+          {
+            "start": 34,
+            "end": 37
+          },
+          {
+            "start": 39,
+            "end": 40
+          },
+          {
+            "start": 42,
+            "end": 42
+          },
+          {
+            "start": 45,
+            "end": 45
+          },
+          {
+            "start": 47,
+            "end": 47
+          },
+          {
+            "start": 49,
+            "end": 49
+          },
+          {
+            "start": 51,
+            "end": 53
+          },
+          {
+            "start": 57,
+            "end": 59
+          },
+          {
+            "start": 61,
+            "end": 67
+          },
+          {
+            "start": 70,
+            "end": 78
+          },
+          {
+            "start": 80,
+            "end": 95
+          },
+          {
+            "start": 98,
+            "end": 106
+          },
+          {
+            "start": 109,
+            "end": 109
+          },
+          {
+            "start": 115,
+            "end": 116
+          },
+          {
+            "start": 118,
+            "end": 120
+          },
+          {
+            "start": 122,
+            "end": 128
+          },
+          {
+            "start": 131,
+            "end": 136
+          },
+          {
+            "start": 139,
+            "end": 142
+          },
+          {
+            "start": 145,
+            "end": 158
+          },
+          {
+            "start": 162,
+            "end": 163
+          },
+          {
+            "start": 168,
+            "end": 170
+          },
+          {
+            "start": 174,
+            "end": 174
+          },
+          {
+            "start": 176,
+            "end": 178
+          },
+          {
+            "start": 180,
+            "end": 185
+          },
+          {
+            "start": 189,
+            "end": 191
+          },
+          {
+            "start": 193,
+            "end": 194
+          },
+          {
+            "start": 197,
+            "end": 198
+          },
+          {
+            "start": 200,
+            "end": 202
+          },
+          {
+            "start": 204,
+            "end": 211
+          },
+          {
+            "start": 214,
+            "end": 216
+          },
+          {
+            "start": 218,
+            "end": 223
+          },
+          {
+            "start": 227,
+            "end": 227
+          },
+          {
+            "start": 229,
+            "end": 248
+          },
+          {
+            "start": 251,
+            "end": 253
+          },
+          {
+            "start": 256,
+            "end": 262
+          },
+          {
+            "start": 265,
+            "end": 265
+          },
+          {
+            "start": 267,
+            "end": 270
+          },
+          {
+            "start": 273,
+            "end": 282
+          },
+          {
+            "start": 285,
+            "end": 285
+          },
+          {
+            "start": 287,
+            "end": 288
+          },
+          {
+            "start": 290,
+            "end": 291
+          },
+          {
+            "start": 293,
+            "end": 327
+          },
+          {
+            "start": 329,
+            "end": 329
+          },
+          {
+            "start": 332,
+            "end": 335
+          },
+          {
+            "start": 339,
+            "end": 342
+          },
+          {
+            "start": 347,
+            "end": 350
+          },
+          {
+            "start": 353,
+            "end": 353
+          },
+          {
+            "start": 360,
+            "end": 360
+          },
+          {
+            "start": 363,
+            "end": 363
+          },
+          {
+            "start": 365,
+            "end": 367
+          },
+          {
+            "start": 370,
+            "end": 370
+          },
+          {
+            "start": 372,
+            "end": 378
+          },
+          {
+            "start": 380,
+            "end": 383
+          },
+          {
+            "start": 386,
+            "end": 386
+          },
+          {
+            "start": 391,
+            "end": 392
+          },
+          {
+            "start": 394,
+            "end": 399
+          },
+          {
+            "start": 408,
+            "end": 410
+          },
+          {
+            "start": 412,
+            "end": 412
+          },
+          {
+            "start": 415,
+            "end": 424
+          },
+          {
+            "start": 428,
+            "end": 429
+          },
+          {
+            "start": 431,
+            "end": 436
+          },
+          {
+            "start": 438,
+            "end": 442
+          },
+          {
+            "start": 444,
+            "end": 445
+          },
+          {
+            "start": 447,
+            "end": 450
+          }
+        ],
+        "before_hash": "60f67a8da6fd0406489aa44467585cff731f205c26b9c6f9a93a8db7ff1feb35",
+        "after_hash": "83affb76bcb03938a0a3389225710db574e3b29ab37b14a9a71d87b40082e67b"
+      },
+      {
+        "file": "src/utils/IdGenerator.ts",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 2
+          }
+        ],
+        "before_hash": "8343f154967daa54b5011f33a863721777a3693e2a2f8310978472c597ad8b54",
+        "after_hash": "52519dd32d2642c16f3d3ac8f23e36208b9d6029a6b9d9ced91c27bbf9c344ad"
+      },
+      {
+        "file": "src/utils/Logger.ts",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 2
+          }
+        ],
+        "before_hash": "617e28119244aab4fce844680de6f951c2b0a766990bdb8dcf624ae905b48600",
+        "after_hash": "64a9b29996a4b212e3290f773eb3b1687ffdf78b22d4a893053b1c299f9745b8"
+      },
+      {
+        "file": "src/utils/MathUtils.ts",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 2
+          },
+          {
+            "start": 13,
+            "end": 15
+          },
+          {
+            "start": 18,
+            "end": 20
+          },
+          {
+            "start": 24,
+            "end": 24
+          }
+        ],
+        "before_hash": "b5031313f5b994f28a771be1a35afbb8b22e0aa0fc99c8599af8a43c79544ebf",
+        "after_hash": "bfc6853774fee508cadd18991bacb94cb8a7c04f7a1ea579f8fb0298766fc9a6"
+      },
+      {
+        "file": "src/utils/StatCalculator.ts",
+        "ranges": [
+          {
+            "start": 2,
+            "end": 2
+          },
+          {
+            "start": 4,
+            "end": 4
+          },
+          {
+            "start": 6,
+            "end": 6
+          },
+          {
+            "start": 9,
+            "end": 13
+          },
+          {
+            "start": 16,
+            "end": 25
+          },
+          {
+            "start": 27,
+            "end": 33
+          },
+          {
+            "start": 36,
+            "end": 37
+          },
+          {
+            "start": 39,
+            "end": 46
+          },
+          {
+            "start": 48,
+            "end": 58
+          },
+          {
+            "start": 62,
+            "end": 69
+          },
+          {
+            "start": 73,
+            "end": 87
+          },
+          {
+            "start": 90,
+            "end": 93
+          }
+        ],
+        "before_hash": "2133c71352305ad73c012dd3ddba4c439002c3a9bf02391621e5428e032cc3c1",
+        "after_hash": "484011ece81eb2400a1c3df4522c747aa8279789c251a621074e303fee84e826"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-09-08T00:44:45.947Z",
+    "completed_at": "2026-09-08T00:44:47.793Z",
+    "duration_ms": 1846,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 1846,
+    "peakMemoryBytes": 130379776,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 20,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [
+    {
+      "finding_id": "mimosa-0bc8d9cdc8f78774e9de3cd3",
+      "file": "src/utils/MathUtils.ts",
+      "line": 26,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-07T23:47:17.174Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "e4824e839f9737e8c8397f9624685e7b74ea4164effbce439e6105de86c3f87b",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-313ae8c939de5e302c0e1ef0",
+      "file": "src/utils/MathUtils.ts",
+      "line": 27,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-07T23:47:17.174Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "7e5ea5c796e8d0f1043516d42be6b71630f5717c31f6f6334aa5b557705ef3c3",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-53b9821197ce08af7263054f",
+      "file": "src/utils/MathUtils.ts",
+      "line": 28,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-07T23:47:17.174Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "7f502ccb5ecb83a09f43e154831f7a46e95ce6ce99499613f5a5cd7768cf6b6f",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-851e01a6bd43c7d52ee7c37e",
+      "file": "src/utils/MathUtils.ts",
+      "line": 29,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-07T23:47:17.174Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "01e2dc5140d9445a3e0b9e6a75f2f7ff09b9f72c7c4a09b40c0f77db9d8b3a1e",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-5c11c38bec81df33e2d7848b",
+      "file": "src/utils/MathUtils.ts",
+      "line": 30,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-07T23:47:17.174Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "9c9e2b1a716b3dcd649bdc349123cb6a4e0c9a3457b9c6d8abf49e6b26f9e543",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-bae5e6a89be41dfb985c7dff",
+      "file": "src/utils/MathUtils.ts",
+      "line": 35,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-07T23:47:17.174Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "35a182aff68c85498110ff5368edd250fe403a17d72f36964595c2fe36dca7c7",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-f1eba706b59301f30238113f",
+      "file": "src/utils/MathUtils.ts",
+      "line": 45,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-07T23:47:17.174Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "515c212056505ab1cb1cbb06830a49cfea322e6c6c97c16f10c277fd5d360bf2",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-dd3fab3f56f7452e077517ca",
+      "file": "src/effects/ParticleSystem.ts",
+      "line": 29,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-08T00:02:18.705Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "0084cd5a086d8a97f35acf84812ff43abf6629cb7dc434dab34d83d3afd4f1eb",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-ec6f3489068a366ccc388294",
+      "file": "src/effects/ParticleSystem.ts",
+      "line": 30,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-08T00:02:18.705Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "06d1fbb283871a665002db10ba359a6f8c3d4e101cee7449f6cc2368a0cfcff9",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-e36f9dcc12ead81cb021de3d",
+      "file": "src/effects/ParticleSystem.ts",
+      "line": 33,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-08T00:02:18.705Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "52bd9945c6128fa147c283fa3a9915eb3831ea04bf341bea4a2dc94e9fa01cf1",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-1451c8594a32db3e4256932a",
+      "file": "src/systems/BattleSystem.ts",
+      "line": 47,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-08T00:04:44.240Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "b82de4ea145ac3b2a43e0f67dc6c2dc4e1810cce02122d7c72f24a5bbc10c75a",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-1451c8594a32db3e4256932a",
+      "file": "src/systems/BattleSystem.ts",
+      "line": 51,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-08T00:04:44.240Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "b82de4ea145ac3b2a43e0f67dc6c2dc4e1810cce02122d7c72f24a5bbc10c75a",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-cbb359b53c9ac4a76c460c12",
+      "file": "src/systems/BattleSystem.ts",
+      "line": 70,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-08T00:04:44.240Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "cb0c0badce23db9ebf2676b6fce98cdcc752573405b32179df8b864ca6c0729b",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-dd3fab3f56f7452e077517ca",
+      "file": "src/effects/ParticleSystem.ts",
+      "line": 28,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-08T00:05:01.122Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "0084cd5a086d8a97f35acf84812ff43abf6629cb7dc434dab34d83d3afd4f1eb",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-ec6f3489068a366ccc388294",
+      "file": "src/effects/ParticleSystem.ts",
+      "line": 29,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-08T00:05:01.122Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "06d1fbb283871a665002db10ba359a6f8c3d4e101cee7449f6cc2368a0cfcff9",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-e36f9dcc12ead81cb021de3d",
+      "file": "src/effects/ParticleSystem.ts",
+      "line": 32,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-08T00:05:01.122Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "52bd9945c6128fa147c283fa3a9915eb3831ea04bf341bea4a2dc94e9fa01cf1",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-e9bf2bff6eb08495205b7fe7",
+      "file": "src/test/equipTest.ts",
+      "line": 45,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-08T00:17:56.027Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "9978700ec1a6eef6ba2c660089f10d4aa6e825461e8aad295a5a21a2f3dbb1e2",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-e9bf2bff6eb08495205b7fe7",
+      "file": "src/test/equipTest.ts",
+      "line": 9,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "弱随机数",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-09-08T00:18:26.919Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "9978700ec1a6eef6ba2c660089f10d4aa6e825461e8aad295a5a21a2f3dbb1e2",
+        "runtime_oracle": false
+      }
+    }
+  ],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_6300ef42-b8f2-410e-a6ba-746025f65202-20260908T004447793Z-91968-6007a5ed5460.json",
+    "latest_report": ".mimosa/reports/task-review-sess_6300ef42-b8f2-410e-a6ba-746025f65202.json",
+    "history_summary": ".mimosa/history/run-20260908T004447793Z-91968-6007a5ed5460.json"
+  }
+}

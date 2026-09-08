@@ -1,0 +1,31 @@
+{
+  "items": [
+    {
+      "id": "health_potion", "name": "生命药水", "icon": "🧪",
+      "type": "potion",
+      "effect": { "type": "heal_pct", "value": 35 },
+      "buyPrice": 30, "sellPrice": 10,
+      "description": "恢复35%最大生命值。"
+    },
+    {
+      "id": "health_potion_l", "name": "高级生命药水", "icon": "⚗️",
+      "type": "potion",
+      "effect": { "type": "heal_pct", "value": 60 },
+      "buyPrice": 80, "sellPrice": 30,
+      "description": "恢复60%最大生命值。"
+    },
+    {
+      "id": "health_potion_xl", "name": "圣愈药剂", "icon": "🏅",
+      "type": "potion",
+      "effect": { "type": "heal_pct", "value": 100 },
+      "buyPrice": 180, "sellPrice": 70,
+      "description": "完全恢复生命值。"
+    },
+    {
+      "id": "key", "name": "钥匙", "icon": "🗝️",
+      "type": "key",
+      "buyPrice": 80, "sellPrice": 30,
+      "description": "打开上锁的宝箱。"
+    }
+  ]
+}
