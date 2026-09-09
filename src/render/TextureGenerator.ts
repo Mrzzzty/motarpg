@@ -8,6 +8,7 @@
 import { dataManager } from '../core/DataManager';
 import { projection } from './Projection';
 import { placeholderArt } from './PlaceholderArt';
+import { drawPotion } from './PotionArt';
 import type { MapEntity, MonsterDef, RoomData } from '../types';
 
 /** 房间类型地面色（与旧渲染器一致，保持明亮可读） */
@@ -18,6 +19,7 @@ export const FLOOR_COLORS: Record<string, { base: string; alt: string; line: str
   elite:    { base: '#8e7a78', alt: '#867270', line: 'rgba(255,255,255,0.08)' },
   chest:    { base: '#9a9184', alt: '#928a7d', line: 'rgba(255,255,255,0.10)' },
   merchant: { base: '#9a8f7e', alt: '#928779', line: 'rgba(255,255,255,0.10)' },
+  blacksmith: { base: '#6e5a4a', alt: '#65523f', line: 'rgba(255,180,90,0.12)' },
   witch:    { base: '#7d6f9a', alt: '#766893', line: 'rgba(230,200,255,0.14)' },
   boss:     { base: '#8a6f6f', alt: '#826868', line: 'rgba(255,255,255,0.08)' },
   rest:     { base: '#87987f', alt: '#809178', line: 'rgba(255,255,255,0.10)' },
@@ -51,11 +53,13 @@ class HTMLCanvasElementGenerator {
   private glowCache = new Map<string, HTMLCanvasElement>();
   private vignette: HTMLCanvasElement | null = null;
   private cone: HTMLCanvasElement | null = null;
+  private moon: HTMLCanvasElement | null = null;
 
   private get tile(): number { return projection.tileSize; }
 
-  /** 地砖（棋盘格两色 + 网格线） */
+  /** 地砖（棋盘格两色 + 网格线）；走廊特殊：苔藓木板 */
   floor(roomType: string, checker: 0 | 1): HTMLCanvasElement {
+    if (roomType === 'corridor') return this.corridorFloor(checker);
     const key = `floor_${roomType}_${checker}`;
     let tex = this.floorCache.get(key);
     if (!tex) {
@@ -68,6 +72,77 @@ class HTMLCanvasElementGenerator {
         ctx.strokeStyle = palette.line;
         ctx.lineWidth = dataManager.config.render.gridLineWidth;
         ctx.strokeRect(0.5, 0.5, s - 1, s - 1);
+      });
+      this.floorCache.set(key, tex);
+    }
+    return tex;
+  }
+
+  /**
+   * 走廊地板：久远城堡的木板，铺满深绿色苔藓。
+   * 木板横向拼条（深浅棕 + 板缝 + 节疤），苔藓为多块深绿斑（边缘更密），
+   * checker 作为伪随机种子让相邻两格苔藓分布不同。
+   */
+  private corridorFloor(checker: 0 | 1): HTMLCanvasElement {
+    const key = `floor_corridor_${checker}`;
+    let tex = this.floorCache.get(key);
+    if (!tex) {
+      const s = this.tile;
+      tex = bake(s, s, ctx => {
+        // 木板底色（久经岁月的暗棕）
+        ctx.fillStyle = checker === 0 ? '#4a3a26' : '#443523';
+        ctx.fillRect(0, 0, s, s);
+        // 横向木板拼条：每条 12px，条间色差 + 深色板缝
+        const plankH = 12;
+        let rnd = checker === 0 ? 7 : 13;
+        const nextRnd = () => { rnd = (rnd * 16807 + 11) % 9973; return rnd / 9973; };
+        for (let y = 0; y < s; y += plankH) {
+          const shade = 0.85 + nextRnd() * 0.3;
+          ctx.fillStyle = `rgba(${Math.round(107 * shade)},${Math.round(84 * shade)},${Math.round(52 * shade)},1)`;
+          ctx.fillRect(0, y, s, plankH - 1);
+          ctx.fillStyle = 'rgba(20,14,8,0.75)';
+          ctx.fillRect(0, y + plankH - 1, s, 1);
+          // 板端竖缝（错位）
+          const seamX = Math.floor(nextRnd() * s);
+          ctx.fillRect(seamX, y, 1, plankH - 1);
+          // 节疤
+          if (nextRnd() > 0.55) {
+            ctx.fillStyle = 'rgba(30,20,10,0.5)';
+            ctx.beginPath();
+            ctx.ellipse(nextRnd() * s, y + plankH / 2, 1.6, 1.1, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        // 深绿苔藓：多块边缘柔和的斑块（两档绿色），边缘区域更密
+        const blotch = (x: number, y: number, r: number, color: string, alpha: number): void => {
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+          g.addColorStop(0, color);
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        };
+        const greens = ['rgba(38,74,38,0.9)', 'rgba(52,88,44,0.85)', 'rgba(28,60,32,0.95)'];
+        for (let i = 0; i < 10; i++) {
+          // 前几块靠边缘（墙角返潮），后面随机铺开
+          const edge = i < 5;
+          const side = Math.floor(nextRnd() * 4);
+          const x = edge
+            ? (side === 2 ? s - 2 : side === 3 ? 2 : nextRnd() * s)
+            : nextRnd() * s;
+          const y = edge
+            ? (side === 0 ? 2 : side === 1 ? s - 2 : nextRnd() * s)
+            : nextRnd() * s;
+          blotch(x, y, 3 + nextRnd() * 7, greens[Math.floor(nextRnd() * greens.length)], 0.5 + nextRnd() * 0.35);
+        }
+        // 细碎苔点
+        ctx.fillStyle = 'rgba(46,84,44,0.7)';
+        for (let i = 0; i < 14; i++) {
+          ctx.fillRect(nextRnd() * s, nextRnd() * s, 1, 1);
+        }
       });
       this.floorCache.set(key, tex);
     }
@@ -208,15 +283,18 @@ class HTMLCanvasElementGenerator {
           break;
         }
         case 'potion': {
-          const def = dataManager.getPotion(e.potionTier ?? '');
+          const tier = (e.potionTier ?? 'normal') as 'crude' | 'normal' | 'quality' | 'strong' | 'holy';
+          const def = dataManager.getPotion(tier);
           const color = def?.color ?? '#ff5a7a';
           const h = dataManager.config.heights.potion;
-          placeholderArt.drawBox(ctx, 0, 0, h, 0.36, {
-            top: mix(color, '#ffffff', 0.6),
-            left: mix(color, '#000000', 0.4),
-            right: color,
-            border: mix(color, '#ffffff', 0.75),
-          }, { label: '药水', labelColor: color });
+          if (!drawPotion(ctx, tier, 0, 0, h)) {
+            placeholderArt.drawBox(ctx, 0, 0, h, 0.36, {
+              top: mix(color, '#ffffff', 0.6),
+              left: mix(color, '#000000', 0.4),
+              right: color,
+              border: mix(color, '#ffffff', 0.75),
+            }, { label: '药水', labelColor: color });
+          }
           break;
         }
         case 'cauldron': {
@@ -362,20 +440,154 @@ class HTMLCanvasElementGenerator {
     void height;
   }
 
-  /** 自发光光晕纹理（径向渐变圆，按色相缓存，'add' 叠加 + 缩放调色） */
-  glow(color: string): HTMLCanvasElement {
-    let tex = this.glowCache.get(color);
+  /** 自发光光晕纹理（径向渐变圆，按色相+中心透明度缓存，'add' 叠加 + 缩放调色） */
+  glow(color: string, centerAlpha = 1): HTMLCanvasElement {
+    const cacheKey = `${color}@${centerAlpha}`;
+    let tex = this.glowCache.get(cacheKey);
     if (!tex) {
+      const rgba = (a: number): string => {
+        const n = parseInt(color.slice(1), 16);
+        return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+      };
       tex = bake(128, 128, ctx => {
         const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-        g.addColorStop(0, color);
-        g.addColorStop(1, 'rgba(0,0,0,0)');
+        g.addColorStop(0, rgba(centerAlpha));
+        g.addColorStop(1, rgba(0));
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, 128, 128);
       });
-      this.glowCache.set(color, tex);
+      this.glowCache.set(cacheKey, tex);
     }
     return tex;
+  }
+
+  /** 方形环状光晕（白色，供材质染色）：沿边框一圈亮线 + 向内外衰减的柔光，贴地用 */
+  stairRing(): HTMLCanvasElement {
+    let tex = this.glowCache.get('__ring__');
+    if (!tex) {
+      tex = bake(256, 256, ctx => {
+        // 多层描边模拟发光：宽而淡 → 窄而亮
+        for (const [w, a] of [[34, 0.05], [22, 0.09], [12, 0.18], [6, 0.4], [2.5, 0.95]] as const) {
+          ctx.strokeStyle = `rgba(255,255,255,${a})`;
+          ctx.lineWidth = w;
+          ctx.strokeRect(64, 64, 128, 128);
+        }
+      });
+      this.glowCache.set('__ring__', tex);
+    }
+    return tex;
+  }
+
+  /**
+   * 房间地毯（商人与女巫房）：深红绒面（横向明暗条模拟绒毛倒伏）
+   * + 金线双框（外粗内细，虚线缝线质感）+ 四角金菱饰 + 中央金环纹。
+   * 按 (宽,高) 格数缓存；1 格 = 64px。
+   */
+  roomCarpet(w: number, h: number): HTMLCanvasElement {
+    const key = `carpet_${w}_${h}`;
+    let tex = this.floorCache.get(key);
+    if (tex) return tex;
+    const s = this.tile;
+    const W = Math.max(1, w) * s;
+    const H = Math.max(1, h) * s;
+    tex = bake(W, H, ctx => {
+      // 绒面基底：深红 + 横向明暗条（绒毛倒伏的光泽差）
+      ctx.fillStyle = '#7e1e1e';
+      ctx.fillRect(0, 0, W, H);
+      for (let y = 0; y < H; y += 18) {
+        ctx.fillStyle = y % 36 === 0 ? 'rgba(0,0,0,0.10)' : 'rgba(255,120,90,0.05)';
+        ctx.fillRect(0, y, W, 9);
+      }
+      // 边缘磨损暗角
+      const edge = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.62);
+      edge.addColorStop(0, 'rgba(0,0,0,0)');
+      edge.addColorStop(1, 'rgba(0,0,0,0.22)');
+      ctx.fillStyle = edge;
+      ctx.fillRect(0, 0, W, H);
+
+      // 金线外框（粗）+ 缝线感虚线内框（细）
+      const gold = '#e8b93c';
+      const goldDim = 'rgba(232,185,60,0.65)';
+      ctx.strokeStyle = gold;
+      ctx.lineWidth = 5;
+      ctx.strokeRect(10, 10, W - 20, H - 20);
+      ctx.strokeStyle = goldDim;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([9, 6]);
+      ctx.strokeRect(22, 22, W - 44, H - 44);
+      ctx.setLineDash([]);
+
+      // 四角金菱饰（实心菱 + 内嵌小菱）
+      const diamond = (cx: number, cy: number, r: number, fill: string): void => {
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r);
+        ctx.lineTo(cx + r, cy);
+        ctx.lineTo(cx, cy + r);
+        ctx.lineTo(cx - r, cy);
+        ctx.closePath();
+        ctx.fill();
+      };
+      const corners: [number, number][] = [
+        [34, 34], [W - 34, 34], [34, H - 34], [W - 34, H - 34],
+      ];
+      for (const [x, y] of corners) {
+        diamond(x, y, 11, gold);
+        diamond(x, y, 5, '#8a5a2b');
+      }
+
+      // 中央金环纹（圆环 + 内十字点缀；小地毯跳过）
+      if (W > 200 && H > 200) {
+        ctx.strokeStyle = goldDim;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(W / 2, H / 2, Math.min(W, H) * 0.16, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(W / 2, H / 2, Math.min(W, H) * 0.11, 0, Math.PI * 2);
+        ctx.stroke();
+        diamond(W / 2, H / 2, 7, gold);
+      }
+
+      // 金线碎点（点缀，沿对角散布）
+      ctx.fillStyle = 'rgba(232,185,60,0.4)';
+      let rnd = w * 31 + h * 17;
+      const next = () => { rnd = (rnd * 16807 + 13) % 9973; return rnd / 9973; };
+      for (let i = 0; i < Math.floor(W * H / 9000); i++) {
+        ctx.fillRect(30 + next() * (W - 60), 30 + next() * (H - 60), 2, 2);
+      }
+    });
+    this.floorCache.set(key, tex);
+    return tex;
+  }
+
+  /** 月亮本体：冷调淡蓝白圆盘 + 边缘轻微暗斑（月球海），外缘柔化（缓存） */  moonDisc(): HTMLCanvasElement {
+    if (!this.moon) {
+      const size = 256;
+      const r = size * 0.4;
+      this.moon = bake(size, size, ctx => {
+        // 本体：冷调淡蓝白圆盘
+        ctx.fillStyle = '#eef4ff';
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, r, 0, Math.PI * 2);
+        ctx.fill();
+        // 月球海：几块蓝灰斑
+        ctx.globalAlpha = 0.14;
+        ctx.fillStyle = '#9aa4b8';
+        const seas: [number, number, number][] = [
+          [0.42, 0.38, 0.16], [0.58, 0.55, 0.2], [0.4, 0.62, 0.12],
+          [0.62, 0.36, 0.1], [0.52, 0.46, 0.26],
+        ];
+        for (const [x, y, rr] of seas) {
+          ctx.beginPath();
+          ctx.arc(size * x, size * y, size * rr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      });
+    }
+    return this.moon;
   }
 
   /** 丁达尔光锥（梯形渐变，白染色，可 tint/scale） */

@@ -47,13 +47,17 @@ export interface MapGenConfig {
   merchantLimit: { fewMaxRooms: number; fewCount: number; manyCount: number };
   /** 女巫酿药间出现约束：最早楼层 + 出现间隔（每 interval 层一间，落在 5~8 层区间内） */
   witchLimit: { minFloor: number; interval: number };
+  /** 铁匠铺出现约束：最早楼层 + 出现间隔（错开女巫楼层） */
+  blacksmithLimit: { minFloor: number; interval: number };
   path: { maxLengthDiff: number };
   corridor: { extraChance: number; extraMax: number; adjacentManhattan: number };
   content: {
     monsterMinDistFromEntry: number;
     smallAreaMax: number;
     mediumAreaMax: number;
-    density: { small: number; medium: number; large: number };
+    /** 大房上限：内面积 > largeAreaMax 走 xlarge 密度档 */
+    largeAreaMax: number;
+    density: { small: number; medium: number; large: number; xlarge: number };
     chestRoomMin: number;
     chestRoomMax: number;
     otherRoomChestChance: number;
@@ -212,6 +216,17 @@ export class DataManager {
   }
 
   get config(): GameConfig { return gameConfigJson as GameConfig; }
+
+  /** 药水素材图路径（public/img/p_<tier>.png；素材统一放 public/img，短文件名） */
+  potionIconSrc(tier: string): string {
+    return `img/p_${tier}.png`;
+  }
+
+  /** 药水素材 <img> 标签（UI 通用） */
+  potionIconImg(tier: string, cls = 'potion-icon'): string {
+    return `<img class="${cls}" src="${this.potionIconSrc(tier)}" alt="${tier}" draggable="false">`;
+  }
+
   get mapGen(): MapGenConfig { return mapGenerationJson as MapGenConfig; }
   get monsters(): MonstersFile { return monstersJson as MonstersFile; }
   get potions(): { potions: PotionDef[] } { return potionsJson as unknown as { potions: PotionDef[] }; }

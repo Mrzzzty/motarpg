@@ -19,6 +19,8 @@ import { Player } from '../entities/Player';
 import { dataManager } from '../core/DataManager';
 import { projection } from '../render/Projection';
 import { textureGen } from '../render/TextureGenerator';
+import { getHeroAtlas } from '../render/HeroAtlas';
+import { HeroAnimator, type HeroAction } from '../render/HeroAnimator';
 import { canvasTexture, brickTexture } from './ThreeTextures';
 import { ParticleSystem } from './ParticleSystem';
 import { ThreeParticleSystem } from './ThreeParticleSystem';
@@ -45,6 +47,7 @@ const ROOM_LIGHT_COLORS: Record<string, number> = {
   elite: 0xff9a3c,    // 橙黄
   chest: 0xffd166,    // 金色
   merchant: 0xffe9c4, // 暖白
+  blacksmith: 0xffb060, // 锻炉暖橙
   witch: 0xc78cff,    // 神秘紫
   boss: 0xff5a4a,     // 暗红
   end: 0xbcd8ff,      // 蓝白
@@ -73,6 +76,10 @@ interface GateAnim {
 
 /** 地板厚度与墙基准（文档 3.2） */
 const FLOOR_THICKNESS = 0.1;
+/** 走廊地板厚度：让走廊呈现可供通行的实体桥感 */
+const CORRIDOR_THICKNESS = 0.55;
+/** 墙体向下延伸深度：塔身高耸入暗的截面感（只向下，不向上） */
+const TOWER_DEPTH = 16;
 
 export class ThreeRenderer {
   private static instance: ThreeRenderer;
@@ -100,6 +107,12 @@ export class ThreeRenderer {
   private hoverMesh: THREE.Mesh | null = null;
   /** 玩家纸片人（Player 单例不在 allEntities() 中，需单独维护） */
   private playerSprite: THREE.Sprite | null = null;
+  /** 主角帧动画控制器（用图集时启用；图集缺失则为 null） */
+  private heroAnimator: HeroAnimator | null = null;
+  /** 主角基准宽度（scale.x 绝对值），镜像时仅翻转符号 */
+  private heroBaseW = 1;
+  /** 主角朝向：图集动作帧原生朝左，向右移动时水平镜像（scale.x 取负） */
+  private heroFacesLeft = true;
   /** 玩家贴地阴影 */
   private playerShadow: THREE.Mesh | null = null;
   /** Boss 铁门（含开合动画进度） */
@@ -125,8 +138,15 @@ export class ThreeRenderer {
   private shakeTotal = 0;
   private shakeIntensity = 0;
 
-  private ambient: THREE.AmbientLight | null = null;
+  private ambient: THREE.HemisphereLight | null = null;
   private dirLight: THREE.DirectionalLight | null = null;
+  /** 星空（Points，随相机平移 = 无穷远天空；uTime 驱动闪烁） */
+  private starField: THREE.Points | null = null;
+  private starMat: THREE.ShaderMaterial | null = null;
+  /** 月亮（本体 + 光晕精灵），固定跟随注视点上方，方向与月光一致 */
+  private moonGroup: THREE.Group | null = null;
+  /** 月亮相对注视点的偏移（与月光入射方向一致：光从月亮洒下）。水平分量大 → 倾斜角约 39°，影子被拉长 */
+  private static readonly MOON_OFFSET = { x: 16, y: 34, z: 22 };
   private playerTorch: THREE.PointLight | null = null;
   private torchLights = new Map<string, THREE.PointLight>();
   /** 氛围点光源（宝箱/Boss/楼梯），不投影 */
@@ -165,6 +185,9 @@ export class ThreeRenderer {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // 电影感色调映射：高光柔和过渡（火把不再死白炸开），暗部保留细节
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
     renderer.domElement.id = 'game-canvas';
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
@@ -176,6 +199,7 @@ export class ThreeRenderer {
     this.setupLights();
     scene.add(this.floorGroup, this.wallGroup, this.entityGroup, this.particleGroup);
     this.buildHoverMesh();
+    this.buildStars();
 
     // 后期处理（辉光 / 暗角 / 颜色校正）
     postProcessing.init(renderer, scene, camera, w, h);
@@ -200,18 +224,26 @@ export class ThreeRenderer {
     window.addEventListener('resize', () => this.resize());
   }
 
-  /** 光照（文档 4.2 / 四）：环境光 + 方向光（主光源投影）+ 玩家火炬 */
+  /**
+   * 光照（文档 4.2 / 四 + 月光全局光照）：
+   * - 月光：白偏暖的巨型月亮自天洒落（DirectionalLight 平行光，主投影光源），
+   *   墙壁/柱体在地板上投下大片冷影，为塔内蒙上一层影子。
+   * - 环境光：偏冷蓝灰，与暖月光形成补色对比，暗部仍可辨认。
+   * - 玩家火炬：暖橙点光源，贴身补光。
+   */
   private setupLights(): void {
     if (!this.scene) return;
-    this.ambient = new THREE.AmbientLight(0x404060, 0.6);
+    // 半球光替代纯环境光：天光冷蓝 / 地面反光暖褐，明暗有方向层次而非死平
+    this.ambient = new THREE.HemisphereLight(0x4d5a72, 0x241b12, 0.6);
     this.scene.add(this.ambient);
 
-    const dir = new THREE.DirectionalLight(0xffeedd, 0.8);
-    dir.position.set(10, 20, 5);
+    // 月光：冷调淡蓝白（#dfe9ff），昏暗斜洒；柔和阴影边缘
+    const dir = new THREE.DirectionalLight(0xdfe9ff, 0.55);
+    dir.position.set(ThreeRenderer.MOON_OFFSET.x, ThreeRenderer.MOON_OFFSET.y, ThreeRenderer.MOON_OFFSET.z);
     dir.castShadow = true;
     dir.shadow.mapSize.set(2048, 2048);
     dir.shadow.camera.near = 0.5;
-    dir.shadow.camera.far = 120;
+    dir.shadow.camera.far = 140;
     const d = 24; // 阴影正交范围需覆盖视口周边；镜头拉近后收紧，换取更高阴影精度
     dir.shadow.camera.left = -d;
     dir.shadow.camera.right = d;
@@ -219,15 +251,102 @@ export class ThreeRenderer {
     dir.shadow.camera.bottom = -d;
     dir.shadow.bias = -0.0006;
     dir.shadow.normalBias = 0.02;
+    dir.shadow.radius = 4; // 月光柔影
     this.scene.add(dir);
     this.scene.add(dir.target);
     this.dirLight = dir;
 
-    this.playerTorch = new THREE.PointLight(0xffcc66, 1.5, 10);
+    // 月亮本体 + 光晕（Sprite 始终面向相机；Bloom 让辉光自然溢出）
+    this.moonGroup = new THREE.Group();
+    const disc = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: canvasTexture(textureGen.moonDisc()),
+      transparent: true,
+      depthWrite: false,
+      fog: false,
+    }));
+    disc.scale.set(7, 7, 1);
+    this.moonGroup.add(disc);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: canvasTexture(textureGen.glow('rgba(225,235,255,0.85)')),
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+      fog: false,
+      opacity: 0.38,
+    }));
+    halo.scale.set(24, 24, 1);
+    halo.renderOrder = -1;
+    this.moonGroup.add(halo);
+    this.moonGroup.position.set(ThreeRenderer.MOON_OFFSET.x, ThreeRenderer.MOON_OFFSET.y, ThreeRenderer.MOON_OFFSET.z);
+    this.scene.add(this.moonGroup);
+
+    this.playerTorch = new THREE.PointLight(0xff9a3d, 1.5, 10);
+    this.playerTorch.decay = 1.5;
     this.playerTorch.castShadow = true;
     this.playerTorch.shadow.mapSize.set(1024, 1024);
     this.playerTorch.shadow.bias = -0.002;
     this.scene.add(this.playerTorch);
+  }
+
+  /** 星空：随机球壳分布的闪烁星点（ShaderMaterial 逐星相位闪烁，加色混合） */
+  private buildStars(): void {
+    if (!this.scene) return;
+    const count = 520;
+    const positions = new Float32Array(count * 3);
+    const phases = new Float32Array(count);
+    const sizes = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      // 均匀球壳分布（半径 110~170，相机 far=200 内）
+      const u = Math.random() * 2 - 1;
+      const theta = Math.random() * Math.PI * 2;
+      const r = 110 + Math.random() * 60;
+      const s = Math.sqrt(1 - u * u);
+      positions[i * 3] = r * s * Math.cos(theta);
+      positions[i * 3 + 1] = r * u;
+      positions[i * 3 + 2] = r * s * Math.sin(theta);
+      phases[i] = Math.random();
+      sizes[i] = 1.2 + Math.random() * Math.random() * 4.5; // 少量亮星
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
+    geo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+    this.starMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexShader: /* glsl */ `
+        attribute float aPhase;
+        attribute float aSize;
+        uniform float uTime;
+        varying float vTwinkle;
+        varying float vWarm;
+        void main() {
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mv;
+          // 双频闪烁：慢呼吸 + 快闪（每星相位不同）
+          float t = uTime * 0.001 + aPhase * 6.2831;
+          vTwinkle = 0.45 + 0.35 * sin(t * 1.7) + 0.2 * sin(t * 5.3 + 1.4);
+          vWarm = fract(aPhase * 7.31);
+          gl_PointSize = max(1.5, aSize * (420.0 / -mv.z));
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        varying float vTwinkle;
+        varying float vWarm;
+        void main() {
+          vec2 d = gl_PointCoord - 0.5;
+          float a = smoothstep(0.5, 0.06, length(d));
+          // 大部分冷白星，少量暖星
+          vec3 tint = mix(vec3(0.87, 0.92, 1.0), vec3(1.0, 0.94, 0.82), step(0.82, vWarm));
+          gl_FragColor = vec4(tint, a * (0.3 + 0.7 * max(0.05, vTwinkle)));
+        }
+      `,
+    });
+    this.starField = new THREE.Points(geo, this.starMat);
+    this.starField.frustumCulled = false;
+    this.scene.add(this.starField);
   }
 
   /** 悬浮格高亮（贴合地面的方框） */
@@ -251,6 +370,7 @@ export class ThreeRenderer {
     if (!floor) return;
     this.builtFloorId = floor.floorId;
     this.focusInit = false; // 换层时相机直接定位，避免从旧楼层平滑"飞"过去
+    this.heroVis.init = false; // 换层后主角直接落位（不做跨层插值）
 
     // 墙将重建：旧实例映射失效，先归还全部虚化槽位
     for (const key of [...this.fadeCells.keys()]) this.releaseFadeWall(key);
@@ -258,8 +378,35 @@ export class ThreeRenderer {
     this.clearGroup(this.floorGroup);
     this.clearGroup(this.wallGroup);
     this.buildFloorTiles(floor);
+    this.buildRoomCarpets(floor);
     this.buildWalls(floor);
     this.rebuildEntities();
+  }
+
+  /**
+   * 商人/女巫房整铺红地毯：金色双框缝线 + 四角金菱 + 中央金环。
+   * 覆盖房间内部地板（去掉墙圈），微高于地面避免 z-fighting，接收月光阴影。
+   */
+  private buildRoomCarpets(floor: { rooms: RoomData[] }): void {
+    const CARPET_ROOMS = new Set(['merchant', 'witch']);
+    for (const room of floor.rooms) {
+      if (!CARPET_ROOMS.has(room.type)) continue;
+      const w = room.width - 2;  // 去掉墙圈
+      const h = room.height - 2;
+      if (w <= 0 || h <= 0) continue;
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, h),
+        new THREE.MeshStandardMaterial({
+          map: canvasTexture(textureGen.roomCarpet(w, h)),
+          roughness: 0.94, metalness: 0.02,
+          polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+        }),
+      );
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(room.x + 1 + w / 2, 0.012, room.y + 1 + h / 2);
+      mesh.receiveShadow = true;
+      this.floorGroup.add(mesh);
+    }
   }
 
   /** 每格所属房间类型 */
@@ -273,13 +420,25 @@ export class ThreeRenderer {
     return roomGrid;
   }
 
-  /** 地板：按 (房间配色 + 棋盘格) 分组，每组一个 InstancedMesh（避免上千 draw call） */
+  /** 地板：按 (房间配色 + 棋盘格) 分组，每组一个 InstancedMesh（避免上千 draw call）。楼梯 2×2 区域挖空 */
   private buildFloorTiles(floor: { grid: number[][]; width: number; height: number; rooms: RoomData[] }): void {
+    // 2×2 大楼梯的地板挖空区
+    const holes = new Set<string>();
+    for (const room of floor.rooms) {
+      for (const e of room.entities) {
+        if (e.kind === 'stair' && e.stairSpan === 2) {
+          for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+            holes.add(`${e.x + dx},${e.y + dy}`);
+          }
+        }
+      }
+    }
     const roomGrid = this.roomGridOf(floor);
     const groups = new Map<string, { roomKey: string; checker: 0 | 1; cells: [number, number][] }>();
     for (let row = 0; row < floor.height; row++) {
       for (let col = 0; col < floor.width; col++) {
         if (floor.grid[row][col] !== 0) continue; // 仅地板（1/2 为墙/柱，4 为悬崖）
+        if (holes.has(`${col},${row}`)) continue; // 楼梯竖井
         const roomKey = roomGrid[`${col},${row}`] ?? 'corridor';
         const checker: 0 | 1 = (row + col) % 2 === 0 ? 0 : 1;
         const key = `${roomKey}_${checker}`;
@@ -298,10 +457,12 @@ export class ThreeRenderer {
       const mat = new THREE.MeshStandardMaterial({
         map: canvasTexture(canvas), roughness: 0.85, metalness: 0.05,
       });
-      const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, FLOOR_THICKNESS, 1), mat, g.cells.length);
+      // 走廊地板加厚：呈现悬空栈道的体积感（顶面仍与房间地面平齐）
+      const thick = g.roomKey === 'corridor' ? CORRIDOR_THICKNESS : FLOOR_THICKNESS;
+      const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, thick, 1), mat, g.cells.length);
       inst.receiveShadow = true;
       g.cells.forEach(([col, row], i) => {
-        dummy.position.set(col + 0.5, -FLOOR_THICKNESS / 2, row + 0.5);
+        dummy.position.set(col + 0.5, -thick / 2, row + 0.5);
         dummy.updateMatrix();
         inst.setMatrixAt(i, dummy.matrix);
       });
@@ -362,19 +523,39 @@ export class ThreeRenderer {
       });
       inst.instanceMatrix.needsUpdate = true;
       this.wallGroup.add(inst);
+
+      // 塔身填充：墙向下延伸入暗（高耸塔楼截面感；上方不加）
+      const shaft = new THREE.InstancedMesh(
+        new THREE.BoxGeometry(1, TOWER_DEPTH, 1),
+        new THREE.MeshStandardMaterial({ color: 0x2e3833, roughness: 0.9, metalness: 0.05 }),
+        g.cells.length,
+      );
+      shaft.receiveShadow = false;
+      g.cells.forEach(([col, row], i) => {
+        dummy.position.set(col + 0.5, -TOWER_DEPTH / 2, row + 0.5);
+        dummy.updateMatrix();
+        shaft.setMatrixAt(i, dummy.matrix);
+      });
+      shaft.instanceMatrix.needsUpdate = true;
+      this.wallGroup.add(shaft);
     }
     for (const g of pillarGroups.values()) {
-      const mat = new THREE.MeshStandardMaterial({ color: 0x9d9da6, roughness: 0.7, metalness: 0.12 });
-      const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(0.4, g.h, 0.4), mat, g.cells.length);
-      inst.castShadow = true;
-      inst.receiveShadow = true;
-      g.cells.forEach(([col, row], i) => {
-        dummy.position.set(col + 0.5, g.h / 2, row + 0.5);
-        dummy.updateMatrix();
-        inst.setMatrixAt(i, dummy.matrix);
-      });
-      inst.instanceMatrix.needsUpdate = true;
-      this.wallGroup.add(inst);
+      // 精细柱子：基座 + 收分柱身 + 柱冠（原为纯方盒）
+      for (const [col, row] of g.cells) {
+        const pillar = new THREE.Group();
+        const stone = new THREE.MeshStandardMaterial({ color: 0x6f7f74, roughness: 0.72, metalness: 0.12 });
+        const stoneDark = new THREE.MeshStandardMaterial({ color: 0x57655c, roughness: 0.8, metalness: 0.1 });
+        const base = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.14, 0.52), stoneDark);
+        base.position.y = 0.07;
+        const shaftH = Math.max(0.2, g.h - 0.26);
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.19, shaftH, 10), stone);
+        shaft.position.y = 0.14 + shaftH / 2;
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.12, 0.48), stoneDark);
+        cap.position.y = 0.14 + shaftH + 0.06;
+        for (const m of [base, shaft, cap]) { m.castShadow = true; m.receiveShadow = true; pillar.add(m); }
+        pillar.position.set(col + 0.5, 0, row + 0.5);
+        this.wallGroup.add(pillar);
+      }
     }
 
     // 走廊栅栏：代替实心墙包裹走廊两侧
@@ -572,7 +753,7 @@ export class ThreeRenderer {
             transparent: true, opacity: 1, depthWrite: false,
           }),
         );
-        mesh.castShadow = false; // 半透明墙不投实心阴影，避免又挡住视线
+        mesh.castShadow = true; // 虚化期间仍投影：实心实例已移出视野，若替代墙不投影，墙影会突然消失
         slot = { mesh, key: null };
         this.fadePool.push(slot);
         this.scene?.add(mesh);
@@ -635,11 +816,25 @@ export class ThreeRenderer {
       this.addEntity(entity, room, def, height, ts);
     }
 
-    // 玩家（单例不在 allEntities 中）
-    const canvas = textureGen.player();
-    const pScale = Math.max(1.35, (heights.player / ts) * 1.6);
-    this.playerSprite = this.makePaperSprite(canvas, pScale);
-    this.playerShadow = this.addGroundShadow(0, 0, pScale * 0.3); // 位置由 syncPlayer 跟随
+    // 玩家（单例不在 allEntities 中）—— 优先用精灵图集（帧动画），加载失败回退原烘焙纹理
+    const atlas = getHeroAtlas();
+    // 图集帧为 64×64 方格（角色约占格高 5/6），世界高度单独定；旧烘焙贴图沿用原比例
+    const heroH = atlas ? 2.0 : Math.max(1.35, (heights.player / ts) * 1.6);
+    const heroCanvas = atlas ?? textureGen.player();
+    this.playerSprite = this.makePaperSprite(heroCanvas, heroH);
+    if (atlas) {
+      // 图集帧是 64×64 方格：makePaperSprite 按整图宽高比(384/832≈0.46)算宽会把角色压窄，这里覆盖为 1:1
+      this.playerSprite.scale.set(heroH, heroH, 1);
+      this.playerSprite.userData.footRatio = 5 / 64; // 帧内角色脚底约在第 59/64 行
+    }
+    this.heroBaseW = Math.abs(this.playerSprite.scale.x);
+    this.playerShadow = this.addGroundShadow(0, 0, heroH * 0.28); // 位置由 syncPlayer 跟随
+    if (atlas) {
+      const tex = this.playerSprite.material.map as THREE.Texture;
+      this.heroAnimator = new HeroAnimator(tex);
+    } else {
+      this.heroAnimator = null;
+    }
     this.syncPlayer();
     this.entityGroup.add(this.playerSprite);
 
@@ -656,20 +851,39 @@ export class ThreeRenderer {
     const opened = entity.kind === 'chest' && WorldManager.getInstance().isChestOpened(entity);
 
     if (entity.kind === 'torch') {
-      // 火把：杆 + 火焰球 + PointLight（文档 3.3 / 四）
+      // 火把挂在墙格上：贴到朝向地板一侧的墙面边缘，而不是埋在墙体中心
+      const floor = WorldManager.getInstance().currentFloor;
+      let tx = cx;
+      let tz = cz;
+      for (const [dx, dz] of [[0, -1], [0, 1], [-1, 0], [1, 0]] as const) {
+        if (floor?.grid[entity.y + dz]?.[entity.x + dx] === 0) {
+          tx = cx + dx * 0.44; // 墙格半宽 0.5，留 0.06 让火把杆贴住墙面
+          tz = cz + dz * 0.44;
+          break;
+        }
+      }
+
+      // 壁挂火把：支架固定在墙面上，短杆斜挑 + 火焰悬在半空（不再立在地上）
+      const bracket = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 0.06, 0.1),
+        new THREE.MeshStandardMaterial({ color: 0x3d3d42, roughness: 0.5, metalness: 0.7 }),
+      );
+      bracket.position.set(tx - (tx - cx) * 0.35, 0.58, tz - (tz - cz) * 0.35);
+      this.entityGroup.add(bracket);
+
       const pole = new THREE.Mesh(
-        new THREE.BoxGeometry(0.1, 0.8, 0.1),
+        new THREE.BoxGeometry(0.07, 0.34, 0.07),
         new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.9 }),
       );
-      pole.position.set(cx, 0.4, cz);
+      pole.position.set(tx, 0.72, tz);
       pole.castShadow = true;
       this.entityGroup.add(pole);
 
       const flame = new THREE.Mesh(
-        new THREE.SphereGeometry(0.12, 10, 10),
-        new THREE.MeshBasicMaterial({ color: 0xffaa33 }),
+        new THREE.SphereGeometry(0.09, 10, 10),
+        new THREE.MeshBasicMaterial({ color: 0xff8c1a }),
       );
-      flame.position.set(cx, 0.9, cz);
+      flame.position.set(tx, 0.98, tz);
       this.entityGroup.add(flame);
 
       // 丁达尔光锥：火焰向下的可见光柱（additive，氛围级透明度，不遮挡物体）
@@ -678,7 +892,7 @@ export class ThreeRenderer {
       const coneW = Math.max(0.35, cfgT.width / ts);
       const cone = new THREE.Sprite(new THREE.SpriteMaterial({
         map: canvasTexture(textureGen.coneTex()),
-        color: 0xffaa55,
+        color: 0xff9944,
         blending: THREE.AdditiveBlending,
         transparent: true,
         depthTest: true,
@@ -686,7 +900,7 @@ export class ThreeRenderer {
         opacity: cfgT.alpha,
       }));
       cone.scale.set(coneW, coneH, 1);
-      cone.position.set(cx, coneH / 2, cz);
+      cone.position.set(tx, coneH / 2, tz);
       cone.renderOrder = 2;
       this.entityGroup.add(cone);
 
@@ -704,14 +918,15 @@ export class ThreeRenderer {
         dust.renderOrder = 3;
         this.entityGroup.add(dust);
         this.dustItems.push({
-          sprite: dust, baseX: cx, baseZ: cz, baseY: 0.1,
+          sprite: dust, baseX: tx, baseZ: tz, baseY: 0.1,
           phase: Math.random(), speed: 0.12 + Math.random() * 0.1,
         });
       }
 
       if (this.torchLights.size < MAX_TORCH_LIGHTS) {
-        const light = new THREE.PointLight(ROOM_LIGHT_COLORS[room.type] ?? 0xff8844, 1.0, 8);
-        light.position.set(cx, 1.0, cz);
+        const light = new THREE.PointLight(ROOM_LIGHT_COLORS[room.type] ?? 0xff9040, 1.0, 8);
+        light.decay = 1.6; // 衰减放缓：墙上不再出现生硬的圆形光斑
+        light.position.set(tx, 0.95, tz);
         light.castShadow = this.torchLights.size < MAX_SHADOW_TORCH;
         if (light.castShadow) light.shadow.mapSize.set(512, 512);
         this.scene?.add(light);
@@ -727,14 +942,36 @@ export class ThreeRenderer {
       this.entityGroup.add(chest);
       // 未开启的宝箱：金色氛围光 + 急促闪烁（文档：宝箱光 #ffdd44）
       if (!opened) {
-        this.addGlowLight(entity.id, 0xffcc44, 0.9, 6, cx, 0.7, cz);
-        this.addGlow('#ffcc44', 0.55, cx, 0.45, cz, 3.0);
+        this.addGlowLight(entity.id, 0xffcc44, 0.55, 5, cx, 0.7, cz);
       }
       return;
     }
 
     if (entity.kind === 'stair') {
-      // 楼梯：4 级递增台阶（文档 3.3）
+      if (entity.stairSpan === 1) return; // 2×2 从属占位格：只阻挡/触发，不渲染
+      if (entity.stairSpan === 2) {
+        // 2×2 大阶梯：挖空区域内向下延伸约 1 格，下行方向朝北（远离镜头）
+        this.buildStaircase(entity.x, entity.y);
+        this.addGlowLight(entity.id, 0x44ddff, 0.8, 6, cx, 0.7, cz);
+        // 沿 2×2 格子边缘一圈蓝光：贴地方形光环（additive 染色，静态无脉动）
+        const ring = new THREE.Mesh(
+          new THREE.PlaneGeometry(2.9, 2.9),
+          new THREE.MeshBasicMaterial({
+            map: canvasTexture(textureGen.stairRing()),
+            color: 0x44ddff,
+            blending: THREE.AdditiveBlending,
+            transparent: true,
+            opacity: 0.55,
+            depthWrite: false,
+          }),
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(cx + 0.5, 0.045, cz + 0.5);
+        ring.renderOrder = 2;
+        this.entityGroup.add(ring);
+        return;
+      }
+      // 旧版单格楼梯：4 级递增台阶（文档 3.3，兼容旧存档/预制图）
       for (let i = 0; i < 4; i++) {
         const step = new THREE.Mesh(
           new THREE.BoxGeometry(0.86, 0.12, 0.22),
@@ -748,6 +985,92 @@ export class ThreeRenderer {
       // 楼梯：蓝白指引光 + 稳定呼吸（文档：终点楼梯光 #44ddff）
       this.addGlowLight(entity.id, 0x44ddff, 0.8, 6, cx, 0.8, cz);
       this.addGlow('#44ddff', 0.5, cx, 0.35, cz, 1.2);
+      return;
+    }
+
+    // 女巫大锅：3D 建模（圆锅 + 锅沿 + 三足 + 药液面），替代纸片人
+    if (entity.kind === 'cauldron') {
+      const g = new THREE.Group();
+      const iron = new THREE.MeshStandardMaterial({ color: 0x2c2f33, roughness: 0.55, metalness: 0.75 });
+      const pot = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12, 0, Math.PI * 2, Math.PI * 0.35, Math.PI * 0.65), iron);
+      pot.position.y = 0.36;
+      pot.castShadow = true;
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.035, 10, 24), iron);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = 0.55;
+      g.add(pot, rim);
+      for (const a of [0, 2.1, 4.2]) {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, 0.3, 8), iron);
+        leg.position.set(Math.cos(a) * 0.2, 0.15, Math.sin(a) * 0.2);
+        g.add(leg);
+      }
+      const brew = new THREE.Mesh(
+        new THREE.CircleGeometry(0.27, 20),
+        new THREE.MeshStandardMaterial({ color: 0x46d97a, emissive: 0x1f8a4a, emissiveIntensity: 0.8, roughness: 0.3 }),
+      );
+      brew.rotation.x = -Math.PI / 2;
+      brew.position.y = 0.53;
+      g.add(brew);
+      g.position.set(cx, 0, cz);
+      this.entityGroup.add(g);
+      this.addGlow('#7effb2', 0.5, cx, 0.62, cz, 2.2);
+      return;
+    }
+
+    // 药架：木架 + 三层隔板 + 彩色药瓶排，替代纸片人
+    if (entity.kind === 'shelf') {
+      const g = new THREE.Group();
+      const wood = new THREE.MeshStandardMaterial({ color: 0x5f452c, roughness: 0.8 });
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.86, 1.0, 0.16), wood);
+      frame.position.y = 0.5;
+      frame.castShadow = true;
+      g.add(frame);
+      const bottleColors = [0x9a4ddb, 0x3fae6a, 0xd9553f, 0x3f7fd9, 0xd9a92b, 0x64d93f];
+      for (let lvl = 0; lvl < 3; lvl++) {
+        const board = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.05, 0.26), wood);
+        board.position.set(0, 0.22 + lvl * 0.34, 0.08);
+        board.castShadow = true;
+        g.add(board);
+        for (let b = 0; b < 3; b++) {
+          const glass = new THREE.MeshStandardMaterial({
+            color: bottleColors[(lvl * 3 + b) % bottleColors.length],
+            roughness: 0.25, metalness: 0.1, emissive: bottleColors[(lvl * 3 + b) % bottleColors.length],
+            emissiveIntensity: 0.25,
+          });
+          const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.13, 8), glass);
+          bottle.position.set(-0.26 + b * 0.26, 0.32 + lvl * 0.34, 0.08);
+          g.add(bottle);
+        }
+      }
+      g.position.set(cx, 0, cz);
+      this.entityGroup.add(g);
+      return;
+    }
+
+    // 治疗喷泉：石盆 + 内层水面 + 中柱涌泉，替代纸片人
+    if (entity.kind === 'fountain') {
+      const g = new THREE.Group();
+      const stone = new THREE.MeshStandardMaterial({ color: 0x7d8a94, roughness: 0.75 });
+      const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 0.22, 20), stone);
+      basin.position.y = 0.11;
+      basin.castShadow = true;
+      basin.receiveShadow = true;
+      const water = new THREE.Mesh(
+        new THREE.CircleGeometry(0.36, 20),
+        new THREE.MeshStandardMaterial({ color: 0x59d8e8, emissive: 0x1f7a8a, emissiveIntensity: 0.7, roughness: 0.2 }),
+      );
+      water.rotation.x = -Math.PI / 2;
+      water.position.y = 0.2;
+      const column = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.42, 10), stone);
+      column.position.y = 0.4;
+      const top = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 10),
+        new THREE.MeshStandardMaterial({ color: 0x9fe8f2, emissive: 0x3fb8cc, emissiveIntensity: 0.9, roughness: 0.2 }));
+      top.position.y = 0.64;
+      g.add(basin, water, column, top);
+      g.position.set(cx, 0, cz);
+      this.entityGroup.add(g);
+      this.addGlow('#6bebff', 0.5, cx, 0.5, cz, 1.4);
+      this.addGlowLight(entity.id, 0x6bebff, 0.5, 4, cx, 0.6, cz);
       return;
     }
 
@@ -771,14 +1094,40 @@ export class ThreeRenderer {
       // 药水：按档次颜色的轻微呼吸光（自发光，不占点光源预算）
       const potion = dataManager.getPotion(entity.potionTier ?? '');
       this.addGlow(potion?.color ?? '#ff5a7a', 0.3, cx, sprite.position.y + sprite.scale.y * 0.3, cz, 1.8);
-    } else if (entity.kind === 'fountain') {
-      // 治疗泉：青蓝呼吸光，突出可交互的治疗服务
-      this.addGlow('#6bebff', 0.4, cx, sprite.position.y + sprite.scale.y * 0.25, cz, 1.4);
-      this.addGlowLight(entity.id, 0x6bebff, 0.5, 4, cx, 0.6, cz);
-    } else if (entity.kind === 'cauldron') {
-      // 熬药大锅：魔药绿光，强化女巫房身份
-      this.addGlow('#7effb2', 0.32, cx, sprite.position.y + sprite.scale.y * 0.4, cz, 2.2);
     }
+  }
+
+  /**
+   * 2×2 下行大阶梯：起点房地板挖空 2×2，6 级台阶向北（远离镜头）下行，
+   * 总落差约 1 格（每级 0.17）；台阶为实心楔（各自落到井底），配两侧沿壁 + 南缘压条。
+   * @param x 阶梯左上格 X（占 2×2：x..x+1）
+   * @param y 阶梯左上格 Y
+   */
+  private buildStaircase(x: number, y: number): void {
+    const steps = 6;
+    const depth = 2;
+    const pitBottom = -1.15;
+    const stepMat = new THREE.MeshStandardMaterial({ color: 0x8093a3, roughness: 0.82 });
+    for (let i = 0; i < steps; i++) {
+      const top = -0.1 - i * 0.17;
+      const h = top - pitBottom;
+      const step = new THREE.Mesh(new THREE.BoxGeometry(2, h, depth / steps), stepMat);
+      step.position.set(x + 1, top - h / 2, y + 2 - (i + 0.5) * (depth / steps));
+      step.castShadow = true;
+      step.receiveShadow = true;
+      this.entityGroup.add(step);
+    }
+    // 两侧沿壁（盖住地板截面的细缝，也强化"竖井"感）
+    const sideMat = new THREE.MeshStandardMaterial({ color: 0x4c5a66, roughness: 0.9 });
+    for (const sx of [x + 0.04, x + 1.96]) {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.09, 1.32, 2.08), sideMat);
+      wall.position.set(sx, -0.55, y + 1);
+      this.entityGroup.add(wall);
+    }
+    // 南缘压条（入口处遮住 0.1 厚的地板侧缝）
+    const lip = new THREE.Mesh(new THREE.BoxGeometry(2, 0.26, 0.1), sideMat);
+    lip.position.set(x + 1, -0.13, y + 2.02);
+    this.entityGroup.add(lip);
   }
 
   /** 氛围点光源（不投影，受 MAX_GLOW_LIGHTS 限制，避免过多点光源拖慢着色） */
@@ -797,15 +1146,16 @@ export class ThreeRenderer {
   /** 自发光光晕（additive 叠加；登记后由 render 每帧驱动脉动） */
   private addGlow(
     color: string, radius: number, x: number, y: number, z: number, speed: number,
+    opacity = 0.8, centerAlpha = 1,
   ): void {
     const size = radius * 2;
     const mat = new THREE.SpriteMaterial({
-      map: canvasTexture(textureGen.glow(color)),
+      map: canvasTexture(textureGen.glow(color, centerAlpha)),
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthTest: true,
       depthWrite: false,
-      opacity: 0.8,
+      opacity,
     });
     const sprite = new THREE.Sprite(mat);
     sprite.scale.set(size, size, 1);
@@ -919,6 +1269,11 @@ export class ThreeRenderer {
     return sprite.scale.y * (0.5 - footRatio);
   }
 
+  /** 切换主角动作（外部由状态机/输入驱动；当前默认 idle 循环） */
+  setHeroAction(a: HeroAction): void { this.heroAnimator?.setAction(a); }
+  /** 获取当前主角动作；图集缺失时返回 null */
+  getHeroAction(): HeroAction | null { return this.heroAnimator?.getAction() ?? null; }
+
   /**
    * 贴地阴影：Sprite 不写深度、无法投射真实阴影，用水平面片 + 径向渐变模拟。
    * 水平放置后会随透视压缩成椭圆，比把阴影画在竖直贴图上自然得多。
@@ -986,12 +1341,38 @@ export class ThreeRenderer {
     }
   }
 
-  /** 玩家纸片人位置同步 */
-  private syncPlayer(): void {
+  /** 玩家纸片人位置同步（视觉位置向逻辑格中心平滑插值 = 平滑移动） */
+  private heroVis = { x: 0, z: 0, init: false };
+  private syncPlayer(dt = 16.67): void {
     if (!this.playerSprite) return;
     const p = Player.getInstance().pos;
-    this.playerSprite.position.set(p.x + 0.5, this.footedY(this.playerSprite), p.y + 0.5);
-    if (this.playerShadow) this.playerShadow.position.set(p.x + 0.5, 0.015, p.y + 0.5);
+    const tx = p.x + 0.5;
+    const tz = p.y + 0.5;
+    if (!this.heroVis.init) {
+      this.heroVis.x = tx;
+      this.heroVis.z = tz;
+      this.heroVis.init = true;
+    }
+    // 指数插值：约 120ms 收敛到目标格，格间移动肉眼平滑
+    const k = 1 - Math.exp(-dt / 45);
+    const dist = Math.hypot(tx - this.heroVis.x, tz - this.heroVis.z);
+    this.heroVis.x += (tx - this.heroVis.x) * k;
+    this.heroVis.z += (tz - this.heroVis.z) * k;
+    this.playerSprite.position.set(this.heroVis.x, this.footedY(this.playerSprite), this.heroVis.z);
+    if (this.playerShadow) this.playerShadow.position.set(this.heroVis.x, 0.015, this.heroVis.z);
+    // 朝向：以「目标格 - 视觉位置」的水平分量为准，向右移动时水平镜像（图集帧原生朝左）
+    const dx = tx - this.heroVis.x;
+    if (dx > 0.005) this.heroFacesLeft = false;
+    else if (dx < -0.005) this.heroFacesLeft = true;
+    this.playerSprite.scale.x = this.heroFacesLeft ? this.heroBaseW : -this.heroBaseW;
+    // 主角动作自动切换：视觉位移中 → 行走帧，到位静止 → 静止帧（attack/hurt/death 不被覆盖）
+    if (this.heroAnimator) {
+      const moving = dist > 0.02;
+      const cur = this.heroAnimator.getAction();
+      if ((cur === 'idle' || cur === 'walk') && moving !== (cur === 'walk')) {
+        this.setHeroAction(moving ? 'walk' : 'idle');
+      }
+    }
   }
 
   /** 每帧：相机跟随 + 光源跟随 + 悬浮高亮 + 渲染 */
@@ -1046,18 +1427,39 @@ export class ThreeRenderer {
     this.camera.position.set(this.focusX, cam3d.height, this.focusZ + cam3d.distance);
     this.camera.lookAt(this.focusX, 0, this.focusZ);
 
-    // 主光源跟随视口，保证阴影相机始终覆盖可见区域
+    // 星空跟随相机（无穷远天空，无视差）+ 推进闪烁时间
+    if (this.starField && this.starMat) {
+      this.starField.position.copy(this.camera.position);
+      this.starMat.uniforms.uTime.value = timeMs;
+    }
+
+    // 月光与月亮跟随视口：光从月亮方向洒落，阴影相机始终覆盖可见区域
     if (this.dirLight) {
-      this.dirLight.position.set(this.focusX + 4, 26, this.focusZ + 6);
+      const mo = ThreeRenderer.MOON_OFFSET;
+      this.dirLight.position.set(this.focusX + mo.x, mo.y, this.focusZ + mo.z);
       this.dirLight.target.position.set(this.focusX, 0, this.focusZ);
       this.dirLight.target.updateMatrixWorld();
     }
+    if (this.moonGroup) {
+      const mo = ThreeRenderer.MOON_OFFSET;
+      this.moonGroup.position.set(this.focusX + mo.x, mo.y, this.focusZ + mo.z);
+    }
 
-    // 玩家火炬跟随（p 已在注视点计算处定义）
-    this.syncPlayer();
+    // 玩家火炬跟随（p 已在注视点计算处定义）：多频叠加的火焰跳动 + 位置微颤
+    this.syncPlayer(dt);
+    if (this.heroAnimator) this.heroAnimator.update(dt);
     if (this.playerTorch) {
-      this.playerTorch.position.set(p.x + 0.5, 1.5, p.y + 0.5);
-      this.playerTorch.intensity = 1.5 * (0.9 + 0.1 * Math.sin(timeMs / 110));
+      const tSec = timeMs / 1000;
+      const flick = 0.84
+        + 0.10 * Math.sin(tSec * 9.3)
+        + 0.05 * Math.sin(tSec * 23.7 + 1.3)
+        + 0.04 * Math.sin(tSec * 4.1 + 0.5);
+      this.playerTorch.intensity = 1.5 * flick;
+      this.playerTorch.position.set(
+        p.x + 0.5 + Math.sin(tSec * 7.1) * 0.035,
+        1.5 + Math.sin(tSec * 5.3 + 2.0) * 0.025,
+        p.y + 0.5 + Math.cos(tSec * 6.2) * 0.035,
+      );
     }
 
     // 墙壁火把闪烁（避免每帧改 uniform，直接调 intensity）

@@ -1,22 +1,21 @@
 @echo off
-chcp 65001 >nul
-title 无尽之塔 · 玩发布版
+title Mota RPG - Release build
 cd /d "%~dp0"
 
 if not exist "dist\index.html" (
-    echo [提示] 尚未打包，请先运行「打包游戏.bat」。
+    echo [HINT] Not built yet. Run "build game.bat" first.
     pause
     exit /b 1
 )
 
-echo 正在启动游戏（发布版）...
+echo Starting game (release build)...
 start "" http://127.0.0.1:8080/
 
 where python >nul 2>nul
 if errorlevel 1 (
     where py >nul 2>nul
     if errorlevel 1 (
-        echo [提示] 未检测到 Python，改用 Node 启动...
+        echo [HINT] Python not found, falling back to Node...
         call npx --yes vite preview --port 8080
     ) else (
         py -m http.server 8080 --directory dist

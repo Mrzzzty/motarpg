@@ -19,6 +19,7 @@ import { Notification } from './Notification';
 import { Panels } from './Panels';
 import { DialogPanel } from './DialogPanel';
 import { ShopPanel } from './ShopPanel';
+import { BlacksmithPanel } from './BlacksmithPanel';
 import { EventPanel } from './EventPanel';
 import { TitleScreen } from './TitleScreen';
 import { MiniMap } from './MiniMap';
@@ -38,6 +39,7 @@ export class GameUI {
   private panels!: Panels;
   private tooltip!: Tooltip;
   private miniMap!: MiniMap;
+  private titleScreen: TitleScreen | null = null;
 
   private constructor() {}
   static getInstance(): GameUI {
@@ -84,6 +86,7 @@ export class GameUI {
             <button data-panel="character">👤 角色(C)</button>
             <button data-panel="quest">📋 任务(J)</button>
             <button data-panel="bestiary">📖 图鉴(G)</button>
+            <button data-panel="achievements">🏆 成就</button>
             <button data-panel="settings">⚙️ 设置(Esc)</button>
             <button id="btn-save">💾 存档(K)</button>
           </div>
@@ -101,9 +104,10 @@ export class GameUI {
     this.panels = new Panels(document.getElementById('overlay-layer')!);
     new DialogPanel(document.getElementById('overlay-layer')!);
     new ShopPanel(document.getElementById('overlay-layer')!);
+    new BlacksmithPanel(document.getElementById('overlay-layer')!);
     new EventPanel(document.getElementById('overlay-layer')!);
     new ConfirmDialog(document.getElementById('overlay-layer')!);
-    new TitleScreen(document.getElementById('title-screen')!);
+    this.titleScreen = new TitleScreen(document.getElementById('title-screen')!);
 
     // 引用缓存
     this.leftHpFill = document.getElementById('hp-fill')!;
@@ -160,6 +164,8 @@ export class GameUI {
     eventBus.on('questCompleted', () => this.refreshRight());
     eventBus.on('bossWarning', p => this.showBossWarning(p.floor, p.name));
     eventBus.on('playerDied', () => this.showDeathNotice());
+    // 设置面板「回到首页」：自动存档并重新渲染标题屏
+    eventBus.on('returnToTitle', () => this.returnToTitle());
     // 面板快捷键（含关闭逻辑）
     eventBus.on('panelToggled', p => {
       if (p.open) this.panels.open(p.panel);
@@ -195,7 +201,7 @@ export class GameUI {
       ${stats.lifesteal > 0 ? `<div>🩸 嗜血 ${stats.lifesteal}%</div>` : ''}
       ${stats.fireDamage > 0 ? `<div>🔥 业火 +${stats.fireDamage}</div>` : ''}
       ${stats.bossDamage > 0 ? `<div>🐉 屠龙 +${stats.bossDamage}%</div>` : ''}
-      <div>🪙 金币 ${player.state.gold}　🗝️ 钥匙 ${player.state.keys}</div>
+      <div>💰 金币 ${player.state.gold}　🗝️ 钥匙 ${player.state.keys}</div>
     `;
     const equipRow = (label: string, equip: { name: string; quality: string } | null) => {
       if (!equip) return `<div class="equip-item dim">${label}：未装备</div>`;
@@ -255,7 +261,7 @@ export class GameUI {
         const def = dataManager.getPotion(tier)!;
         const count = player.getPotionCount(tier);
         el.classList.toggle('empty', count === 0);
-        content.innerHTML = `${def.icon}<span class="count">${count}</span>`;
+        content.innerHTML = `${dataManager.potionIconImg(tier, 'potion-icon hotbar-icon')}<span class="count">${count}</span>`;
         (el as HTMLElement).title = `${def.name}：回复${Math.round(def.healPct * 100)}%生命（按此键使用；右键解绑）`;
       } else {
         el.classList.add('empty');
@@ -309,5 +315,15 @@ export class GameUI {
     document.getElementById('title-screen')!.classList.add('hidden');
     document.getElementById('game-root')!.classList.remove('hidden');
     this.refreshAll();
+  }
+
+  /** 回到首页：先自动存档，停掉游戏态并重新渲染标题屏（设置面板「🏠 回到首页」触发） */
+  returnToTitle(): void {
+    SaveManager.getInstance().save('manual');
+    gameState.started = false;
+    WorldManager.getInstance().reset();
+    document.getElementById('game-root')!.classList.add('hidden');
+    document.getElementById('title-screen')!.classList.remove('hidden');
+    this.titleScreen?.show();
   }
 }

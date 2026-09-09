@@ -2,7 +2,7 @@
  * 宝箱系统：开启宝箱 → 金币（楼层段位表）+ 装备（概率）+ 药水（小概率）。
  * 大宝箱（Boss奖励房）金币翻倍且必出装备。
  */
-import type { MapEntity, PotionTier, RoomType } from '../types';
+import type { Equipment, MapEntity, PotionTier, RoomType } from '../types';
 import { Player } from '../entities/Player';
 import { WorldManager } from '../core/WorldManager';
 import { dataManager } from '../core/DataManager';
@@ -14,6 +14,8 @@ import { EquipmentGenerator } from './EquipmentGenerator';
 export interface ChestRewards {
   gold: number;
   equipment: boolean;
+  /** 开出的装备（含品质，供获得提示展示；无装备时为 null） */
+  equip: Equipment | null;
   potion: string | null;
 }
 
@@ -40,13 +42,14 @@ export class ChestSystem {
     const floorId = player.state.currentFloor;
 
     const gold = Math.round(this.goldForFloor(floorId) * (grand ? 2.5 : 1));
-    const rewards: ChestRewards = { gold, equipment: false, potion: null };
+    const rewards: ChestRewards = { gold, equipment: false, equip: null, potion: null };
 
     if (cfg.goldAlways && gold > 0) player.gainGold(gold);
     if (grand || rng.chance(cfg.equipmentChance)) {
       const equip = EquipmentGenerator.getInstance().generate(grand ? 'boss' : 'chest', { floorId });
       player.addEquipment(equip);
       rewards.equipment = true;
+      rewards.equip = equip;
     }
     if (rng.chance(cfg.potionChance)) {
       const tier = this.potionTierForFloor(floorId);

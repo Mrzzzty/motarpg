@@ -6,30 +6,181 @@
     "critRate": 5,
     "dodgeRate": 3
   },
-  "expFormula": { "base": 20, "power": 1.5 },
+  "expFormula": {
+    "base": 20,
+    "power": 1.5
+  },
   "growthTable": [
-    { "minLevel": 1, "maxLevel": 5, "hp": 125, "attack": 6, "defense": 3 },
-    { "minLevel": 6, "maxLevel": 10, "hp": 260, "attack": 10, "defense": 5 },
-    { "minLevel": 11, "maxLevel": 15, "hp": 250, "attack": 12, "defense": 6 },
-    { "minLevel": 16, "maxLevel": 20, "hp": 260, "attack": 14, "defense": 7 },
-    { "minLevel": 21, "maxLevel": 25, "hp": 100, "attack": 16, "defense": 8 },
-    { "minLevel": 26, "maxLevel": 30, "hp": 100, "attack": 18, "defense": 9 },
-    { "minLevel": 31, "maxLevel": 35, "hp": 230, "attack": 22, "defense": 11 },
-    { "minLevel": 36, "maxLevel": 40, "hp": 500, "attack": 26, "defense": 13 },
-    { "minLevel": 41, "maxLevel": 45, "hp": 1000, "attack": 30, "defense": 15 },
-    { "minLevel": 46, "maxLevel": 50, "hp": 1000, "attack": 34, "defense": 17 },
-    { "minLevel": 51, "maxLevel": 999, "hp": 1200, "attack": 38, "defense": 19 }
+    {
+      "minLevel": 1,
+      "maxLevel": 5,
+      "hp": 125,
+      "attack": 6,
+      "defense": 3
+    },
+    {
+      "minLevel": 6,
+      "maxLevel": 10,
+      "hp": 260,
+      "attack": 10,
+      "defense": 5
+    },
+    {
+      "minLevel": 11,
+      "maxLevel": 15,
+      "hp": 250,
+      "attack": 12,
+      "defense": 6
+    },
+    {
+      "minLevel": 16,
+      "maxLevel": 20,
+      "hp": 260,
+      "attack": 14,
+      "defense": 7
+    },
+    {
+      "minLevel": 21,
+      "maxLevel": 25,
+      "hp": 100,
+      "attack": 16,
+      "defense": 8
+    },
+    {
+      "minLevel": 26,
+      "maxLevel": 30,
+      "hp": 100,
+      "attack": 18,
+      "defense": 9
+    },
+    {
+      "minLevel": 31,
+      "maxLevel": 35,
+      "hp": 230,
+      "attack": 22,
+      "defense": 11
+    },
+    {
+      "minLevel": 36,
+      "maxLevel": 40,
+      "hp": 500,
+      "attack": 26,
+      "defense": 13
+    },
+    {
+      "minLevel": 41,
+      "maxLevel": 45,
+      "hp": 1000,
+      "attack": 30,
+      "defense": 15
+    },
+    {
+      "minLevel": 46,
+      "maxLevel": 50,
+      "hp": 1000,
+      "attack": 34,
+      "defense": 17
+    },
+    {
+      "minLevel": 51,
+      "maxLevel": 999,
+      "hp": 1200,
+      "attack": 38,
+      "defense": 19
+    }
   ],
   "floorAnchors": {
-    "floors": [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
-    "hp":    [165, 310, 485, 685, 900, 1175, 1500, 1900, 2400, 3100, 4150],
-    "atk":   [40, 75, 120, 200, 280, 340, 420, 520, 680, 950, 1300],
-    "def":   [7, 14, 21, 30, 40, 52, 66, 84, 106, 136, 183],
-    "exp":   [15, 40, 100, 180, 280, 400, 550, 720, 900, 1100, 1350],
-    "gold":  [20, 20, 45, 90, 90, 160, 160, 275, 275, 425, 425],
-    "overflowPerFloor": { "hp": 0.08, "atk": 0.05, "def": 0.05, "exp": 0.08, "gold": 0.05 }
+    "floors": [
+      1,
+      5,
+      10,
+      15,
+      20,
+      25,
+      30,
+      35,
+      40,
+      45,
+      50
+    ],
+    "hp": [
+      165,
+      310,
+      485,
+      685,
+      900,
+      1175,
+      1500,
+      1900,
+      2400,
+      3100,
+      4150
+    ],
+    "atk": [
+      40,
+      75,
+      120,
+      200,
+      280,
+      340,
+      420,
+      520,
+      680,
+      950,
+      1300
+    ],
+    "def": [
+      7,
+      14,
+      21,
+      30,
+      40,
+      52,
+      66,
+      84,
+      106,
+      136,
+      183
+    ],
+    "exp": [
+      15,
+      40,
+      100,
+      180,
+      280,
+      400,
+      550,
+      720,
+      900,
+      1100,
+      1350
+    ],
+    "gold": [
+      20,
+      20,
+      45,
+      90,
+      90,
+      160,
+      160,
+      275,
+      275,
+      425,
+      425
+    ],
+    "overflowPerFloor": {
+      "hp": 0.08,
+      "atk": 0.05,
+      "def": 0.05,
+      "exp": 0.08,
+      "gold": 0.05
+    }
   },
-  "bossStatBonus": { "hp": 0.0, "atk": 0.0, "def": 0.0 },
+  "bossStatBonus": {
+    "hp": 0.0,
+    "atk": 0.0,
+    "def": 0.0
+  },
   "battle": {
     "damageJitter": 0.1,
     "critMultiplier": 1.8,
@@ -38,12 +189,42 @@
   },
   "chestRewards": {
     "goldBands": [
-      { "minFloor": 1, "maxFloor": 5, "min": 1, "max": 5 },
-      { "minFloor": 6, "maxFloor": 10, "min": 5, "max": 15 },
-      { "minFloor": 11, "maxFloor": 20, "min": 15, "max": 40 },
-      { "minFloor": 21, "maxFloor": 30, "min": 40, "max": 80 },
-      { "minFloor": 31, "maxFloor": 40, "min": 80, "max": 150 },
-      { "minFloor": 41, "maxFloor": 9999, "min": 150, "max": 250 }
+      {
+        "minFloor": 1,
+        "maxFloor": 5,
+        "min": 1,
+        "max": 5
+      },
+      {
+        "minFloor": 6,
+        "maxFloor": 10,
+        "min": 5,
+        "max": 15
+      },
+      {
+        "minFloor": 11,
+        "maxFloor": 20,
+        "min": 15,
+        "max": 40
+      },
+      {
+        "minFloor": 21,
+        "maxFloor": 30,
+        "min": 40,
+        "max": 80
+      },
+      {
+        "minFloor": 31,
+        "maxFloor": 40,
+        "min": 80,
+        "max": 150
+      },
+      {
+        "minFloor": 41,
+        "maxFloor": 9999,
+        "min": 150,
+        "max": 250
+      }
     ],
     "equipmentChance": 0.6,
     "potionChance": 0.15,
@@ -53,7 +234,10 @@
     "equipmentChance": 0.03,
     "potionChance": 0.02
   },
-  "revive": { "goldPenaltyRate": 0.2, "hpRestorePct": 1.0 },
+  "revive": {
+    "goldPenaltyRate": 0.2,
+    "hpRestorePct": 1.0
+  },
   "merchant": {
     "potionCountMin": 2,
     "potionCountMax": 4,
@@ -79,9 +263,25 @@
     "gridLineWidth": 1
   },
   "postProcess": {
-    "bloom": { "enabled": true, "strength": 0.5, "radius": 0.45, "threshold": 0.82 },
-    "vignette": { "enabled": true, "strength": 0.3, "offset": 1.0, "darkness": 1.1 },
-    "adjustment": { "enabled": true, "gamma": 1.05, "contrast": 1.05, "saturation": 1.1, "brightness": 1.0 }
+    "bloom": {
+      "enabled": true,
+      "strength": 0.5,
+      "radius": 0.45,
+      "threshold": 0.82
+    },
+    "vignette": {
+      "enabled": true,
+      "strength": 0.3,
+      "offset": 1.0,
+      "darkness": 1.1
+    },
+    "adjustment": {
+      "enabled": true,
+      "gamma": 1.05,
+      "contrast": 1.05,
+      "saturation": 1.1,
+      "brightness": 1.0
+    }
   },
   "shadow": {
     "staticAlpha": 0.2,
@@ -90,7 +290,13 @@
     "maxDynamic": 20,
     "samples": 3,
     "penumbra": 6,
-    "tyndall": { "length": 150, "width": 30, "alpha": 0.13, "dustMin": 5, "dustMax": 10 }
+    "tyndall": {
+      "length": 150,
+      "width": 30,
+      "alpha": 0.13,
+      "dustMin": 5,
+      "dustMax": 10
+    }
   },
   "heights": {
     "player": 45,
@@ -108,15 +314,45 @@
     "shelf": 46,
     "fountain": 16,
     "wallByRoom": {
-      "start": 60, "combat": 65, "elite": 75, "chest": 55,
-      "merchant": 55, "witch": 58, "boss": 90, "rest": 55, "end": 60
+      "start": 60,
+      "combat": 65,
+      "elite": 75,
+      "chest": 55,
+      "merchant": 55,
+      "witch": 58,
+      "boss": 90,
+      "rest": 55,
+      "end": 60,
+      "blacksmith": 65
     },
     "corridorWall": 75
   },
-  "raycast": { "level": 2 },
-  "camera": { "lerp": 0.12, "transitionMs": 400, "roomPaddingPx": 24 },
-  "camera3D": { "fov": 45, "distance": 5, "height": 12.5 },
-  "hover": { "showDelayMs": 200, "hideDelayMs": 300, "offsetX": 12, "offsetY": 12 },
-  "save": { "key": "motarpg_v2_save", "version": "2.0.0", "autosaveDefault": true },
-  "input": { "moveRepeatMs": 110, "moveBufferMs": 120 }
+  "raycast": {
+    "level": 2
+  },
+  "camera": {
+    "lerp": 0.12,
+    "transitionMs": 400,
+    "roomPaddingPx": 24
+  },
+  "camera3D": {
+    "fov": 45,
+    "distance": 5,
+    "height": 12.5
+  },
+  "hover": {
+    "showDelayMs": 200,
+    "hideDelayMs": 300,
+    "offsetX": 12,
+    "offsetY": 12
+  },
+  "save": {
+    "key": "motarpg_v2_save",
+    "version": "2.0.0",
+    "autosaveDefault": true
+  },
+  "input": {
+    "moveRepeatMs": 110,
+    "moveBufferMs": 120
+  }
 }

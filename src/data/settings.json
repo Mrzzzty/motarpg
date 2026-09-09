@@ -1,5 +1,6 @@
 {
   "defaults": {
-    "autoSave": true
+    "autoSave": true,
+    "fpsCap": 0
   }
 }

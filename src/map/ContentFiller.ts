@@ -78,6 +78,32 @@ class RoomFill {
       && y >= this.room.y && y < this.room.y + this.room.height;
   }
 
+  /**
+   * 下行楼梯贴墙放置（2×2）：贴北墙、水平居中，逐格外移避开所有门的内侧格
+   * （防止从门进来第一格就踩到楼梯直接下落）。放不下返回 false，由调用方兜底。
+   */
+  placeStairAgainstWall(targetFloor: number): boolean {
+    const ay = this.room.y + 1; // 第一行地面格，紧贴上墙
+    const doorInners = new Set(this.room.doors.map(d => {
+      const p = this.innerOfDoor(d);
+      return `${p.x},${p.y}`;
+    }));
+    for (let step = 0; step <= this.room.width; step++) {
+      const off = step === 0 ? 0 : (step % 2 === 1 ? (step + 1) / 2 : -(step / 2));
+      const ax = this.room.centerX - 1 + off;
+      if (ax < this.room.x + 1 || ax + 1 > this.room.x + this.room.width - 2) continue;
+      const cells = [0, 1].flatMap(dz => [0, 1].map(dx => ({ x: ax + dx, y: ay + dz })));
+      if (!cells.every(p => this.freeAt(p.x, p.y))) continue;
+      if (cells.some(p => doorInners.has(`${p.x},${p.y}`))) continue;
+      this.put({ kind: 'stair', x: ax, y: ay, targetFloor, stairSpan: 2 });
+      this.put({ kind: 'stair', x: ax + 1, y: ay, targetFloor, stairSpan: 1 });
+      this.put({ kind: 'stair', x: ax, y: ay + 1, targetFloor, stairSpan: 1 });
+      this.put({ kind: 'stair', x: ax + 1, y: ay + 1, targetFloor, stairSpan: 1 });
+      return true;
+    }
+    return false;
+  }
+
   private monsterAt(id: string, isElite: boolean, p: P): void {
     this.put({ kind: 'monster', monsterId: id, isElite, x: p.x, y: p.y });
   }
@@ -211,16 +237,17 @@ class RoomFill {
   // ============ 阻塞模式（文档二） ============
 
   /**
-   * 挡路型：在入口→出口主路径中段架一道横跨房间的屏障。
+   * 挡路型：在入口→出口主路径上架一道横跨房间的屏障。
+   * ratio：屏障落在路径的什么位置（0=入口侧，0.5=中段默认，0.7=偏出口侧），双屏障布局用不同 ratio 架两道。
    * 怪物占 N 格，其余格用柱子补满（barrier.fillWithPillars）→ 必须打掉至少 1 只怪才能通过。
    * 返回实际放置的怪物数（0 = 无法架设，调用方需兜底）。
    */
-  blockPath(count: number, pool: PoolEntry[], isElite: boolean): number {
+  blockPath(count: number, pool: PoolEntry[], isElite: boolean, ratio = 0.5): number {
     if (count <= 0 || pool.length === 0) return 0;
     const path = this.mainPath();
     if (path.length < 3) return 0;
 
-    const i = Math.floor(path.length / 2);
+    const i = Math.max(1, Math.min(path.length - 2, Math.round(path.length * ratio)));
     const cur = path[i];
     const nxt = path[i + 1] ?? path[i - 1];
     const alongX = cur.y === nxt.y; // 路径沿 x 走 → 屏障是竖线（固定 x）
@@ -248,15 +275,26 @@ class RoomFill {
       this.monsterAt(rng.pickWeighted(pool, m => m.weight).id, isElite, c);
       placed++;
     }
-    // 柱子补满屏障（仅在怪物成功落下时才补，避免封死房间）
+    // 柱子补满屏障（仅在怪物成功落下时才补，避免封死房间）；
+    // 门内侧格绝不立柱——柱子改地形(2)会封死那扇门
     if (placed > 0 && dataManager.mapGen.content.barrier.fillWithPillars) {
+      const doorInners = this.doorInnerCells();
       for (const c of line) {
         if (this.taken.has(`${c.x},${c.y}`)) continue;
+        if (doorInners.has(`${c.x},${c.y}`)) continue;
         this.put({ kind: 'pillar', x: c.x, y: c.y });
         this.grid[c.y][c.x] = 2; // 装饰地形：阻挡
       }
     }
     return placed;
+  }
+
+  /** 所有门的内侧格（立柱禁区：柱子改地形会封门） */
+  private doorInnerCells(): Set<string> {
+    return new Set(this.room.doors.map(d => {
+      const p = this.innerOfDoor(d);
+      return `${p.x},${p.y}`;
+    }));
   }
 
   /** 围宝型 / 守卫型：在目标周围 radius 格内的空位放怪，返回实际数量 */
@@ -280,7 +318,8 @@ class RoomFill {
   /** 守卫型：在目标（楼梯/Boss）朝向入口一侧 1-2 格放怪 */
   guardStair(count: number, pool: PoolEntry[], isElite = false): number {
     if (count <= 0 || pool.length === 0) return 0;
-    const target = { x: this.room.centerX, y: this.room.centerY };
+    const stair = this.room.entities.find(e => e.kind === 'stair');
+    const target = stair ? { x: stair.x, y: stair.y } : { x: this.room.centerX, y: this.room.centerY };
     const entry = this.mainPath()[0] ?? { x: target.x, y: target.y + 1 };
     const dx = Math.sign(entry.x - target.x);
     const dy = Math.sign(entry.y - target.y);
@@ -296,6 +335,47 @@ class RoomFill {
       placed++;
     }
     return placed;
+  }
+
+  /** 精确放置：王座型精英/护卫用（目标格被占则返回 false，由调用方兜底） */
+  placeMonsterAt(id: string, isElite: boolean, p: P): boolean {
+    if (!this.freeAt(p.x, p.y)) return false;
+    this.monsterAt(id, isElite, p);
+    return true;
+  }
+
+  /** 从怪池取一只（不放置）；空池返回 null */
+  pickMonsterId(pool: PoolEntry[]): string | null {
+    return pool.length > 0 ? rng.pickWeighted(pool, m => m.weight).id : null;
+  }
+
+  /**
+   * 竞技场型：中轴对称立柱圈（3×3 外圈留四正位），中央留空给怪物群。
+   * 柱子避开主路径格与门内侧格，保证所有门可达；可立柱不足 4 根视为失败。
+   */
+  placeArenaPillars(): boolean {
+    const cx = this.room.centerX;
+    const cy = this.room.centerY;
+    const ring: P[] = [
+      { x: cx - 2, y: cy }, { x: cx + 2, y: cy },
+      { x: cx, y: cy - 2 }, { x: cx, y: cy + 2 },
+      { x: cx - 2, y: cy - 2 }, { x: cx + 2, y: cy - 2 },
+      { x: cx - 2, y: cy + 2 }, { x: cx + 2, y: cy + 2 },
+    ];
+    const protectedCells = new Set<string>();
+    for (const d of this.room.doors) {
+      const p = this.innerOfDoor(d);
+      protectedCells.add(`${p.x},${p.y}`);
+    }
+    for (const p of this.mainPath()) protectedCells.add(`${p.x},${p.y}`);
+
+    const placeable = ring.filter(p =>
+      this.inRoom(p.x, p.y)
+      && this.freeAt(p.x, p.y)
+      && !protectedCells.has(`${p.x},${p.y}`));
+    if (placeable.length < 4) return false;
+    for (const p of placeable) this.putBlocking('pillar', p.x, p.y);
+    return true;
   }
 
   // ============ 物品与装饰 ============
@@ -382,11 +462,13 @@ class RoomFill {
     return pts.sort((a, b) => cd(a) - cd(b));
   }
 
-  /** 装饰：宽≥7 的房间四角立柱子（阻挡通行） */
+  /** 装饰：宽≥7 的房间四角立柱子（阻挡通行；门内侧格豁免避免封门） */
   placePillars(): void {
     if (this.room.width - 2 < dataManager.mapGen.decor.pillarMinRoomWidth) return;
+    const doorInners = this.doorInnerCells();
     for (const c of this.innerCorners()) {
       if (!this.freeAt(c.x, c.y)) continue;
+      if (doorInners.has(`${c.x},${c.y}`)) continue;
       this.put({ kind: 'pillar', x: c.x, y: c.y });
       this.grid[c.y][c.x] = 2;
     }
@@ -563,7 +645,25 @@ export class ContentFiller {
         }
 
         case 'end': {
-          rf.put({ kind: 'stair', x: room.centerX, y: room.centerY, targetFloor: floorId + 1 });
+          // 下行楼梯：2×2 大阶梯优先贴北墙（进门不直踩）；空间不足回退旧版中央 2×2，再回退单格
+          if (!rf.placeStairAgainstWall(floorId + 1)) {
+            const ax = room.centerX - 1;
+            const ay = room.centerY - 1;
+            const span2 = [0, 1].flatMap(dz => [0, 1].map(dx => ({ x: ax + dx, y: ay + dz })));
+            if (span2.every(p => rf.freeAt(p.x, p.y))) {
+              rf.put({ kind: 'stair', x: ax, y: ay, targetFloor: floorId + 1, stairSpan: 2 });
+              rf.put({ kind: 'stair', x: ax + 1, y: ay, targetFloor: floorId + 1, stairSpan: 1 });
+              rf.put({ kind: 'stair', x: ax, y: ay + 1, targetFloor: floorId + 1, stairSpan: 1 });
+              rf.put({ kind: 'stair', x: ax + 1, y: ay + 1, targetFloor: floorId + 1, stairSpan: 1 });
+            } else {
+              const wallSpot = { x: room.centerX, y: room.y + 1 };
+              if (rf.freeAt(wallSpot.x, wallSpot.y)) {
+                rf.put({ kind: 'stair', x: wallSpot.x, y: wallSpot.y, targetFloor: floorId + 1 });
+              } else {
+                rf.put({ kind: 'stair', x: room.centerX, y: room.centerY, targetFloor: floorId + 1 });
+              }
+            }
+          }
           if (kind === 'initial') {
             rf.put({ kind: 'chest', chestTier: 'normal', x: room.x + 1, y: room.y + 1 });
             rf.guardStair(1, pool);
@@ -589,6 +689,12 @@ export class ContentFiller {
           break;
         }
 
+        case 'blacksmith': {
+          // 安全房：铁匠（重铸/升级/提品质），无战斗无掉落
+          rf.put({ kind: 'npc', npcId: 'npc_blacksmith', x: room.centerX, y: room.centerY });
+          break;
+        }
+
         case 'witch': {
           // 安全房：女巫（特殊药水交易）+ 治疗泉（治疗服务），无战斗
           // 物品清单对齐文档 4.1：女巫1 / 药架2 / 治疗泉1 / 大锅1 / 火把4（药水为商店库存，不落地）
@@ -609,11 +715,36 @@ export class ContentFiller {
         }
 
         case 'combat': {
-          // 挡路型：按深度取数量架屏障；架不起来则退化为随机放置
+          // 布局随机（大房解锁更多排列）：挡路 / 双重屏障 / 竞技场立柱 / 游散
           const band = rf.bandFor(c.combatByDepth);
           const cap = this.densityCap(room);
           const want = Math.max(1, Math.min(rng.randInt(band.monsters[0], band.monsters[1]), cap));
-          if (rf.blockPath(want, pool, false) === 0) rf.placeMonsters(want, false, pool);
+          const bigW = room.width - 2 >= 8;
+          const bigH = room.height - 2 >= 7;
+          const layouts: { id: string; weight: number }[] = [
+            { id: 'barrier', weight: 4 },
+            { id: 'double', weight: bigW ? 2 : 0 },
+            { id: 'arena', weight: bigW && bigH ? 2 : 0 },
+            { id: 'scattered', weight: 2 },
+          ];
+          const layout = rng.pickWeighted(layouts, l => l.weight).id;
+          room.layout = layout;
+          let placed = 0;
+          if (layout === 'double') {
+            // 两道屏障夹出一条杀走廊：前轻后重
+            const first = Math.max(1, Math.floor(want / 2));
+            placed = rf.blockPath(first, pool, false, 0.32)
+              + rf.blockPath(want - first, pool, false, 0.68);
+          } else if (layout === 'arena') {
+            if (rf.placeArenaPillars()) {
+              placed = rf.guardAround(room.centerX, room.centerY, want, pool, false, 2);
+            }
+          } else if (layout === 'barrier') {
+            placed = rf.blockPath(want, pool, false);
+          } else {
+            placed = rf.placeMonsters(want, false, pool);
+          }
+          if (placed === 0) rf.placeMonsters(want, false, pool); // 布局架设失败兜底
           const elites = rng.randInt(band.elites[0], band.elites[1]);
           if (elites > 0) rf.placeMonsters(elites, true, pool);
           rf.placeCornerChests(rng.randInt(band.chests[0], band.chests[1]));
@@ -622,9 +753,50 @@ export class ContentFiller {
         }
 
         case 'elite': {
-          // 挡路型精英 + 围宝型辅助（文档 4.1 精英房）
-          if (rf.blockPath(1, pool, true) === 0) rf.placeMonsters(1, true, pool);
-          rf.placeMonsters(rng.randInt(c.eliteRoom.monsters[0], c.eliteRoom.monsters[1]), false, pool);
+          // 布局随机：挡路 / 王座（精英镇守主路径最深格） / 竞技场（立柱围精英）
+          const bigW = room.width - 2 >= 9;
+          const bigH = room.height - 2 >= 7;
+          const layouts: { id: string; weight: number }[] = [
+            { id: 'barrier', weight: 3 },
+            { id: 'throne', weight: bigH ? 3 : 0 },
+            { id: 'arena', weight: bigW && bigH ? 2 : 0 },
+          ];
+          const layout = rng.pickWeighted(layouts, l => l.weight).id;
+          room.layout = `elite_${layout}`;
+          const path = rf.mainPath();
+          const seat = path[path.length - 1] ?? { x: room.centerX, y: room.centerY };
+          const eid = rf.pickMonsterId(pool);
+          if (layout === 'throne' && eid) {
+            const ok = rf.placeMonsterAt(eid, true, seat)
+              || rf.placeMonsterAt(eid, true, { x: seat.x, y: seat.y - 1 })
+              || rf.placeMonsterAt(eid, true, { x: seat.x, y: seat.y + 1 })
+              || rf.placeMonsterAt(eid, true, { x: seat.x - 1, y: seat.y });
+            if (!ok) rf.blockPath(1, pool, true);
+          } else if (layout === 'arena' && eid) {
+            if (!rf.placeArenaPillars()
+              || !rf.placeMonsterAt(eid, true, { x: room.centerX, y: room.centerY })) {
+              rf.placeMonsters(1, true, pool);
+            }
+          } else {
+            // barrier 布局（含 throne/arena 因无怪池等原因落入此处的兜底）
+            if (rf.blockPath(1, pool, true) === 0) rf.placeMonsters(1, true, pool);
+          }
+          // 护卫杂兵：王座型分立在精英两侧，其余布局随机散布
+          const adds = rng.randInt(c.eliteRoom.monsters[0], c.eliteRoom.monsters[1]);
+          if (layout === 'throne') {
+            const mid = rf.pickMonsterId(pool);
+            let n = 0;
+            if (mid) {
+              for (const off of [-1, 1]) {
+                if (n >= adds) break;
+                if (rf.placeMonsterAt(mid, false, { x: seat.x + off, y: seat.y })) n++;
+                else if (rf.placeMonsterAt(mid, false, { x: seat.x, y: seat.y + off })) n++;
+              }
+            }
+            if (n < adds) rf.placeMonsters(adds - n, false, pool);
+          } else {
+            rf.placeMonsters(adds, false, pool);
+          }
           const chests = rf.placeCornerChests(rng.randInt(c.eliteRoom.chests[0], c.eliteRoom.chests[1]), true);
           for (const ch of chests) rf.guardAround(ch.x, ch.y, 1, pool, false, 1);
           rf.placePotions(rng.randInt(c.eliteRoom.potions[0], c.eliteRoom.potions[1]));

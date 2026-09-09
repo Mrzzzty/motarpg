@@ -7,30 +7,181 @@ var gameConfig_default = {
     critRate: 5,
     dodgeRate: 3
   },
-  expFormula: { base: 20, power: 1.5 },
+  expFormula: {
+    base: 20,
+    power: 1.5
+  },
   growthTable: [
-    { minLevel: 1, maxLevel: 5, hp: 125, attack: 6, defense: 3 },
-    { minLevel: 6, maxLevel: 10, hp: 260, attack: 10, defense: 5 },
-    { minLevel: 11, maxLevel: 15, hp: 250, attack: 12, defense: 6 },
-    { minLevel: 16, maxLevel: 20, hp: 260, attack: 14, defense: 7 },
-    { minLevel: 21, maxLevel: 25, hp: 100, attack: 16, defense: 8 },
-    { minLevel: 26, maxLevel: 30, hp: 100, attack: 18, defense: 9 },
-    { minLevel: 31, maxLevel: 35, hp: 230, attack: 22, defense: 11 },
-    { minLevel: 36, maxLevel: 40, hp: 500, attack: 26, defense: 13 },
-    { minLevel: 41, maxLevel: 45, hp: 1e3, attack: 30, defense: 15 },
-    { minLevel: 46, maxLevel: 50, hp: 1e3, attack: 34, defense: 17 },
-    { minLevel: 51, maxLevel: 999, hp: 1200, attack: 38, defense: 19 }
+    {
+      minLevel: 1,
+      maxLevel: 5,
+      hp: 125,
+      attack: 6,
+      defense: 3
+    },
+    {
+      minLevel: 6,
+      maxLevel: 10,
+      hp: 260,
+      attack: 10,
+      defense: 5
+    },
+    {
+      minLevel: 11,
+      maxLevel: 15,
+      hp: 250,
+      attack: 12,
+      defense: 6
+    },
+    {
+      minLevel: 16,
+      maxLevel: 20,
+      hp: 260,
+      attack: 14,
+      defense: 7
+    },
+    {
+      minLevel: 21,
+      maxLevel: 25,
+      hp: 100,
+      attack: 16,
+      defense: 8
+    },
+    {
+      minLevel: 26,
+      maxLevel: 30,
+      hp: 100,
+      attack: 18,
+      defense: 9
+    },
+    {
+      minLevel: 31,
+      maxLevel: 35,
+      hp: 230,
+      attack: 22,
+      defense: 11
+    },
+    {
+      minLevel: 36,
+      maxLevel: 40,
+      hp: 500,
+      attack: 26,
+      defense: 13
+    },
+    {
+      minLevel: 41,
+      maxLevel: 45,
+      hp: 1e3,
+      attack: 30,
+      defense: 15
+    },
+    {
+      minLevel: 46,
+      maxLevel: 50,
+      hp: 1e3,
+      attack: 34,
+      defense: 17
+    },
+    {
+      minLevel: 51,
+      maxLevel: 999,
+      hp: 1200,
+      attack: 38,
+      defense: 19
+    }
   ],
   floorAnchors: {
-    floors: [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
-    hp: [165, 310, 485, 685, 900, 1175, 1500, 1900, 2400, 3100, 4150],
-    atk: [40, 75, 120, 200, 280, 340, 420, 520, 680, 950, 1300],
-    def: [7, 14, 21, 30, 40, 52, 66, 84, 106, 136, 183],
-    exp: [15, 40, 100, 180, 280, 400, 550, 720, 900, 1100, 1350],
-    gold: [20, 20, 45, 90, 90, 160, 160, 275, 275, 425, 425],
-    overflowPerFloor: { hp: 0.08, atk: 0.05, def: 0.05, exp: 0.08, gold: 0.05 }
+    floors: [
+      1,
+      5,
+      10,
+      15,
+      20,
+      25,
+      30,
+      35,
+      40,
+      45,
+      50
+    ],
+    hp: [
+      165,
+      310,
+      485,
+      685,
+      900,
+      1175,
+      1500,
+      1900,
+      2400,
+      3100,
+      4150
+    ],
+    atk: [
+      40,
+      75,
+      120,
+      200,
+      280,
+      340,
+      420,
+      520,
+      680,
+      950,
+      1300
+    ],
+    def: [
+      7,
+      14,
+      21,
+      30,
+      40,
+      52,
+      66,
+      84,
+      106,
+      136,
+      183
+    ],
+    exp: [
+      15,
+      40,
+      100,
+      180,
+      280,
+      400,
+      550,
+      720,
+      900,
+      1100,
+      1350
+    ],
+    gold: [
+      20,
+      20,
+      45,
+      90,
+      90,
+      160,
+      160,
+      275,
+      275,
+      425,
+      425
+    ],
+    overflowPerFloor: {
+      hp: 0.08,
+      atk: 0.05,
+      def: 0.05,
+      exp: 0.08,
+      gold: 0.05
+    }
   },
-  bossStatBonus: { hp: 0, atk: 0, def: 0 },
+  bossStatBonus: {
+    hp: 0,
+    atk: 0,
+    def: 0
+  },
   battle: {
     damageJitter: 0.1,
     critMultiplier: 1.8,
@@ -39,12 +190,42 @@ var gameConfig_default = {
   },
   chestRewards: {
     goldBands: [
-      { minFloor: 1, maxFloor: 5, min: 1, max: 5 },
-      { minFloor: 6, maxFloor: 10, min: 5, max: 15 },
-      { minFloor: 11, maxFloor: 20, min: 15, max: 40 },
-      { minFloor: 21, maxFloor: 30, min: 40, max: 80 },
-      { minFloor: 31, maxFloor: 40, min: 80, max: 150 },
-      { minFloor: 41, maxFloor: 9999, min: 150, max: 250 }
+      {
+        minFloor: 1,
+        maxFloor: 5,
+        min: 1,
+        max: 5
+      },
+      {
+        minFloor: 6,
+        maxFloor: 10,
+        min: 5,
+        max: 15
+      },
+      {
+        minFloor: 11,
+        maxFloor: 20,
+        min: 15,
+        max: 40
+      },
+      {
+        minFloor: 21,
+        maxFloor: 30,
+        min: 40,
+        max: 80
+      },
+      {
+        minFloor: 31,
+        maxFloor: 40,
+        min: 80,
+        max: 150
+      },
+      {
+        minFloor: 41,
+        maxFloor: 9999,
+        min: 150,
+        max: 250
+      }
     ],
     equipmentChance: 0.6,
     potionChance: 0.15,
@@ -54,7 +235,10 @@ var gameConfig_default = {
     equipmentChance: 0.03,
     potionChance: 0.02
   },
-  revive: { goldPenaltyRate: 0.2, hpRestorePct: 1 },
+  revive: {
+    goldPenaltyRate: 0.2,
+    hpRestorePct: 1
+  },
   merchant: {
     potionCountMin: 2,
     potionCountMax: 4,
@@ -65,13 +249,55 @@ var gameConfig_default = {
     equipmentCountMin: 1,
     equipmentCountMax: 2
   },
+  witch: {
+    potionCountMin: 2,
+    potionCountMax: 3,
+    fountainCostBase: 40,
+    fountainCostPerFloor: 12
+  },
   render: {
     tileWidth: 64,
     tileHeight: 32,
     vignetteMax: 0.3,
-    maxLights: 8,
-    maxParticles: 50,
+    maxLights: 20,
+    maxParticles: 1e3,
     gridLineWidth: 1
+  },
+  postProcess: {
+    bloom: {
+      enabled: true,
+      strength: 0.5,
+      radius: 0.45,
+      threshold: 0.82
+    },
+    vignette: {
+      enabled: true,
+      strength: 0.3,
+      offset: 1,
+      darkness: 1.1
+    },
+    adjustment: {
+      enabled: true,
+      gamma: 1.05,
+      contrast: 1.05,
+      saturation: 1.1,
+      brightness: 1
+    }
+  },
+  shadow: {
+    staticAlpha: 0.2,
+    staticOffset: 3,
+    baseOffset: 6,
+    maxDynamic: 20,
+    samples: 3,
+    penumbra: 6,
+    tyndall: {
+      length: 150,
+      width: 30,
+      alpha: 0.13,
+      dustMin: 5,
+      dustMax: 10
+    }
   },
   heights: {
     player: 45,
@@ -79,36 +305,57 @@ var gameConfig_default = {
     monsterElite: 52,
     boss: 70,
     chest: 18,
+    potion: 14,
     torch: 55,
     pillar: 70,
     npc: 42,
     stair: 10,
     carpet: 4,
+    cauldron: 26,
+    shelf: 46,
+    fountain: 16,
     wallByRoom: {
       start: 60,
       combat: 65,
       elite: 75,
       chest: 55,
       merchant: 55,
+      witch: 58,
       boss: 90,
       rest: 55,
-      end: 60
+      end: 60,
+      blacksmith: 65
     },
     corridorWall: 75
   },
-  lights: {
-    player: { radiusX: 130, wallGlow: 0, color: "#ffcc44", intensity: 0.18, behavior: "sway" },
-    torch: { radiusX: 70, wallGlow: 70, color: "#ff8833", intensity: 0.28, behavior: "flicker" },
-    boss: { radiusX: 180, wallGlow: 90, color: "#ff2244", intensity: 0.3, behavior: "pulse" },
-    chest: { radiusX: 45, wallGlow: 0, color: "#ffdd44", intensity: 0.22, behavior: "blink" },
-    portal: { radiusX: 70, wallGlow: 70, color: "#8844ff", intensity: 0.22, behavior: "rotate" },
-    stair: { radiusX: 55, wallGlow: 0, color: "#44ddff", intensity: 0.2, behavior: "breathe" },
-    priorities: { player: 1, boss: 2, portal: 3, stair: 3, torch: 4, chest: 5 }
+  raycast: {
+    level: 2
   },
-  camera: { lerp: 0.12, transitionMs: 400, roomPaddingPx: 24 },
-  hover: { showDelayMs: 200, hideDelayMs: 300, offsetX: 12, offsetY: 12 },
-  save: { key: "motarpg_v2_save", version: "2.0.0", autosaveDefault: true },
-  input: { moveRepeatMs: 110, moveBufferMs: 120 }
+  camera: {
+    lerp: 0.12,
+    transitionMs: 400,
+    roomPaddingPx: 24
+  },
+  camera3D: {
+    fov: 45,
+    distance: 5,
+    height: 12.5
+  },
+  hover: {
+    showDelayMs: 200,
+    hideDelayMs: 300,
+    offsetX: 12,
+    offsetY: 12
+  },
+  save: {
+    key: "motarpg_v2_save",
+    version: "2.0.0",
+    autosaveDefault: true
+  },
+  input: {
+    moveRepeatMs: 110,
+    moveBufferMs: 120
+  }
 };
 
 // src/data/mapGeneration.json
@@ -117,53 +364,337 @@ var mapGeneration_default = {
   cellSpacingY: 11,
   gridRadius: 2,
   floorRoomCounts: [
-    { minFloor: 2, maxFloor: 5, min: 4, max: 6 },
-    { minFloor: 6, maxFloor: 10, min: 4, max: 8 },
-    { minFloor: 11, maxFloor: 20, min: 6, max: 8 },
-    { minFloor: 21, maxFloor: 9999, min: 6, max: 12 }
+    {
+      minFloor: 2,
+      maxFloor: 5,
+      min: 4,
+      max: 6
+    },
+    {
+      minFloor: 6,
+      maxFloor: 10,
+      min: 4,
+      max: 8
+    },
+    {
+      minFloor: 11,
+      maxFloor: 20,
+      min: 6,
+      max: 8
+    },
+    {
+      minFloor: 21,
+      maxFloor: 9999,
+      min: 6,
+      max: 12
+    }
   ],
   maxRooms: 12,
   bossFloorInterval: 5,
   initialFloor: 1,
   roomSpecs: {
-    start: { width: 5, height: 5 },
-    end: { width: 6, height: 5 },
-    combat: { width: [6, 7], height: [5, 6] },
-    elite: { width: [7, 8], height: [6, 7] },
-    chest: { width: 5, height: 5 },
-    merchant: { width: 6, height: 6 },
-    boss: { width: [9, 10], height: [7, 8] },
-    rest: { width: 5, height: 5 }
+    start: {
+      width: 5,
+      height: 5
+    },
+    end: {
+      width: 6,
+      height: 5
+    },
+    combat: {
+      width: [
+        6,
+        7
+      ],
+      height: [
+        5,
+        6
+      ]
+    },
+    elite: {
+      width: [
+        7,
+        8
+      ],
+      height: [
+        6,
+        7
+      ]
+    },
+    chest: {
+      width: 5,
+      height: 5
+    },
+    merchant: {
+      width: 6,
+      height: 6
+    },
+    witch: {
+      width: [
+        7,
+        8
+      ],
+      height: [
+        6,
+        7
+      ]
+    },
+    boss: {
+      width: [
+        9,
+        10
+      ],
+      height: [
+        7,
+        8
+      ]
+    },
+    rest: {
+      width: 5,
+      height: 5
+    },
+    blacksmith: {
+      width: 6,
+      height: 6
+    }
   },
   minRoomWidth: 4,
   minRoomHeight: 4,
   tension: {
-    weights: { combat: 1, elite: 3, chest: -1, merchant: -2 },
+    weights: {
+      combat: 1,
+      elite: 3,
+      chest: -1,
+      merchant: -2,
+      witch: -3,
+      blacksmith: -1
+    },
     forcePositiveAt: 4,
     forceNegativeAt: -3
   },
-  merchantLimit: { fewMaxRooms: 7, fewCount: 1, manyCount: 2 },
-  path: { maxLengthDiff: 2 },
-  corridor: { extraChance: 0.25, extraMax: 2, adjacentManhattan: 1 },
+  merchantLimit: {
+    fewMaxRooms: 7,
+    fewCount: 1,
+    manyCount: 2
+  },
+  witchLimit: {
+    minFloor: 6,
+    interval: 6
+  },
+  path: {
+    maxLengthDiff: 2
+  },
+  corridor: {
+    extraChance: 0.25,
+    extraMax: 2,
+    adjacentManhattan: 1
+  },
   content: {
     monsterMinDistFromEntry: 3,
     smallAreaMax: 30,
     mediumAreaMax: 42,
-    density: { small: 2, medium: 3, large: 4 },
+    density: {
+      small: 2,
+      medium: 3,
+      large: 4
+    },
     chestRoomMin: 2,
     chestRoomMax: 3,
     otherRoomChestChance: 0.35,
     eliteRoomEliteMin: 1,
     eliteRoomEliteMax: 2,
     bossRoomAddsMin: 0,
-    bossRoomAddsMax: 2
+    bossRoomAddsMax: 2,
+    combatByDepth: [
+      {
+        maxDepth: 1,
+        monsters: [
+          1,
+          2
+        ],
+        elites: [
+          0,
+          0
+        ],
+        chests: [
+          0,
+          1
+        ],
+        potions: [
+          0,
+          1
+        ]
+      },
+      {
+        maxDepth: 2,
+        monsters: [
+          2,
+          2
+        ],
+        elites: [
+          0,
+          1
+        ],
+        chests: [
+          0,
+          1
+        ],
+        potions: [
+          1,
+          1
+        ]
+      },
+      {
+        maxDepth: 9999,
+        monsters: [
+          2,
+          3
+        ],
+        elites: [
+          1,
+          1
+        ],
+        chests: [
+          1,
+          1
+        ],
+        potions: [
+          1,
+          1
+        ]
+      }
+    ],
+    eliteRoom: {
+      elites: [
+        1,
+        1
+      ],
+      monsters: [
+        1,
+        2
+      ],
+      chests: [
+        1,
+        2
+      ],
+      potions: [
+        1,
+        1
+      ]
+    },
+    treasureRoom: {
+      chests: [
+        2,
+        3
+      ],
+      monsters: [
+        1,
+        2
+      ],
+      potions: [
+        1,
+        2
+      ]
+    },
+    merchantRoom: {
+      chests: [
+        0,
+        1
+      ],
+      potions: [
+        1,
+        2
+      ]
+    },
+    witchRoom: {
+      shelves: [
+        2,
+        2
+      ]
+    },
+    bossRoom: {
+      elites: [
+        0,
+        2
+      ],
+      chests: [
+        2,
+        3
+      ],
+      potions: [
+        2,
+        4
+      ]
+    },
+    exitRoom: {
+      guards: [
+        0,
+        1
+      ],
+      chests: [
+        0,
+        2
+      ],
+      potions: [
+        1,
+        1
+      ]
+    },
+    startRoom: {
+      potions: [
+        1,
+        1
+      ]
+    },
+    guard: {
+      chestRadius: 3,
+      stairRadius: 3
+    },
+    barrier: {
+      fillWithPillars: true
+    },
+    roomTorches: {
+      start: [
+        2,
+        4
+      ],
+      merchant: [
+        4,
+        4
+      ],
+      witch: [
+        4,
+        4
+      ],
+      boss: [
+        6,
+        8
+      ],
+      end: [
+        4,
+        4
+      ],
+      blacksmith: [
+        3,
+        3
+      ]
+    }
   },
   decor: {
     torchCorridorEvery: 4,
     pillarMinRoomWidth: 7,
-    carpetRooms: ["chest", "boss"]
+    carpetRooms: [
+      "chest",
+      "boss"
+    ]
   },
-  generation: { maxAttempts: 40 }
+  generation: {
+    maxAttempts: 40
+  },
+  blacksmithLimit: {
+    minFloor: 4,
+    interval: 4
+  }
 };
 
 // src/data/monsters.json
@@ -420,6 +951,28 @@ var npcs_default = {
         "\u836F\u6C34\u6309\u697C\u5C42\u8FDB\u65B0\u8D27\uFF0C\u65E9\u4E70\u65E9\u5B89\u5FC3\u3002",
         "\u94A5\u5319\u4E0D\u5ACC\u591A\uFF0C\u5B9D\u7BB1\u53EF\u7B49\u4E0D\u4E86\u4EBA\u3002"
       ]
+    },
+    {
+      id: "npc_witch",
+      name: "\u5973\u5DEB\xB7\u8587\u8587\u5B89",
+      color: "#c78cff",
+      isWitch: true,
+      lines: [
+        "\u5618\u2014\u2014\u522B\u78B0\u6211\u7684\u9505\uFF0C\u90A3\u6C64\u836F\u8FD8\u6CA1\u9192\u3002",
+        "\u5854\u91CC\u7684\u602A\u7269\u8D8A\u6DF1\u8D8A\u51F6\uFF0C\u6211\u7684\u836F\u6C34\u5374\u8D8A\u6DF1\u8D8A\u7075\u3002\u8981\u8BD5\u8BD5\u5417\uFF1F",
+        "\u65C1\u8FB9\u90A3\u53E3\u6CC9\u6C34\u80FD\u6D17\u53BB\u4F60\u7684\u4F24\uFF0C\u4E0D\u8FC7\u2026\u2026\u5F97\u4ED8\u70B9\u91D1\u5B50\u3002"
+      ]
+    },
+    {
+      id: "npc_blacksmith",
+      name: "\u94C1\u5320\xB7\u970D\u6069",
+      color: "#ff9a3d",
+      isBlacksmith: true,
+      lines: [
+        "\u94C1\u7827\u4E0D\u9A97\u4EBA\u3002\u5251\u662F\u597D\u5251\uFF0C\u5C31\u662F\u8FD8\u5DEE\u53E3\u6C14\u2014\u2014\u4EA4\u7ED9\u6211\u3002",
+        "\u91CD\u94F8\u8BCD\u6761\u3001\u9524\u70BC\u7B49\u7EA7\u3001\u6DEC\u706B\u63D0\u54C1\u8D28\uFF0C\u90FD\u884C\uFF0C\u6536\u8D39\u516C\u9053\u3002",
+        "\u5148\u8BF4\u597D\uFF1A\u53F2\u8BD7\u5F80\u4E0A\u7684\u795E\u5175\u6211\u4E0D\u78B0\uFF0C\u51E1\u706B\u6DEC\u4E0D\u52A8\u3002"
+      ]
     }
   ]
 };
@@ -550,6 +1103,8 @@ var texts_default = {
     elite: "\u7CBE\u82F1\u6BBF\u5802",
     chest: "\u5B9D\u85CF\u95F4",
     merchant: "\u5546\u4EBA\u8425\u5730",
+    blacksmith: "\u94C1\u5320\u94FA",
+    witch: "\u5973\u5DEB\u917F\u836F\u95F4",
     boss: "Boss\u5DE2\u7A74",
     rest: "\u4F11\u6574\u8425\u5730"
   },
@@ -559,7 +1114,8 @@ var texts_default = {
     talk: "\u5DE6\u952E\u5BF9\u8BDD",
     open: "\u5DE6\u952E\u6253\u5F00",
     stair: "\u70B9\u51FB\u6216\u8D70\u4E0A\u697C\u68AF",
-    trade: "\u5DE6\u952E\u4EA4\u6613"
+    trade: "\u5DE6\u952E\u4EA4\u6613",
+    heal: "\u5DE6\u952E\u6CBB\u7597"
   },
   titles: {
     gameTitle: "\u65E0\u5C3D\u4E4B\u5854",
@@ -582,14 +1138,19 @@ var texts_default = {
     stair: "\u901A\u5F80\u7B2C {floor} \u5C42",
     carpet: "\u5730\u6BEF",
     pillar: "\u77F3\u67F1",
-    torch: "\u706B\u628A"
+    potion: "\u836F\u6C34",
+    torch: "\u706B\u628A",
+    cauldron: "\u71AC\u836F\u5927\u9505",
+    shelf: "\u836F\u67B6",
+    fountain: "\u6CBB\u7597\u6CC9"
   }
 };
 
 // src/data/settings.json
 var settings_default = {
   defaults: {
-    autoSave: true
+    autoSave: true,
+    fpsCap: 0
   }
 };
 
@@ -608,6 +1169,14 @@ var DataManager = class _DataManager {
   }
   get config() {
     return gameConfig_default;
+  }
+  /** 药水素材图路径（public/img/p_<tier>.png；素材统一放 public/img，短文件名） */
+  potionIconSrc(tier) {
+    return `img/p_${tier}.png`;
+  }
+  /** 药水素材 <img> 标签（UI 通用） */
+  potionIconImg(tier, cls = "potion-icon") {
+    return `<img class="${cls}" src="${this.potionIconSrc(tier)}" alt="${tier}" draggable="false">`;
   }
   get mapGen() {
     return mapGeneration_default;
@@ -1023,8 +1592,36 @@ var FloorGenerator = class _FloorGenerator {
       result.push(type);
       tension += weights[type] ?? 0;
     }
+    if (this.isWitchFloor(floorId)) {
+      const idx = result.findIndex((t) => t === "chest");
+      const target = idx >= 0 ? idx : result.length - 1;
+      if (target >= 0) {
+        tension -= weights[result[target]] ?? 0;
+        result[target] = "witch";
+        tension += weights.witch ?? 0;
+      }
+    }
+    if (this.isBlacksmithFloor(floorId) && !this.isWitchFloor(floorId)) {
+      const idx = result.findIndex((t) => t === "chest");
+      const target = idx >= 0 ? idx : result.length - 1;
+      if (target >= 0) {
+        tension -= weights[result[target]] ?? 0;
+        result[target] = "blacksmith";
+        tension += weights.blacksmith ?? 0;
+      }
+    }
     Logger.debug(`[FloorGen] \u697C\u5C42${floorId} \u7C7B\u578B\u5206\u914D=${result.join(",")} \u7EC8\u6001Tension=${tension}`);
     return result;
+  }
+  /** 女巫酿药间出现楼层：最早 minFloor 起，每 interval 层一间（5~8 层区间内） */
+  isWitchFloor(floorId) {
+    const cfg = dataManager.mapGen.witchLimit;
+    return floorId >= cfg.minFloor && (floorId - cfg.minFloor) % cfg.interval === 0;
+  }
+  /** 铁匠铺出现楼层：最早 minFloor 起，每 interval 层一间 */
+  isBlacksmithFloor(floorId) {
+    const cfg = dataManager.mapGen.blacksmithLimit;
+    return floorId >= cfg.minFloor && (floorId - cfg.minFloor) % cfg.interval === 0;
   }
 };
 
@@ -1049,7 +1646,7 @@ var PathGenerator = class _PathGenerator {
       }));
     }
     const trunkCandidates = middle.filter((t) => t === "combat" || t === "elite");
-    const sideRooms = middle.filter((t) => t === "chest" || t === "merchant");
+    const sideRooms = middle.filter((t) => t === "chest" || t === "merchant" || t === "witch" || t === "blacksmith");
     const sorted = [...trunkCandidates];
     sorted.sort((a, b) => (a === "elite" ? 0 : 1) - (b === "elite" ? 0 : 1));
     const railA = [];
@@ -1062,7 +1659,7 @@ var PathGenerator = class _PathGenerator {
     if (railA.length === 0 && railB.length >= 2) railA.push(railB.pop());
     const trunkLen = railA.length + railB.length;
     const mounts = sideRooms.map((type) => {
-      const midOffset = type === "merchant" ? Math.floor(trunkLen / 2) : rng.randInt(Math.ceil(trunkLen / 2), trunkLen - 1);
+      const midOffset = type === "merchant" || type === "witch" || type === "blacksmith" ? Math.floor(trunkLen / 2) : rng.randInt(Math.ceil(trunkLen / 2), trunkLen - 1);
       return { type, mountIndex: Math.min(midOffset, trunkLen - 1) };
     });
     const chain = [{
@@ -1481,6 +2078,449 @@ var CorridorGenerator = class _CorridorGenerator {
 };
 
 // src/map/ContentFiller.ts
+var DIRS4 = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+var RoomFill = class {
+  room;
+  grid;
+  floorId;
+  spots;
+  taken = /* @__PURE__ */ new Set();
+  constructor(room, grid, floorId) {
+    this.room = room;
+    this.grid = grid;
+    this.floorId = floorId;
+    this.spots = this.computeSpots();
+  }
+  // ============ 基础 ============
+  /** 放置实体（不做占位校验；调用方用 freeAt / taken 自行判断） */
+  put(e) {
+    this.room.entities.push({ ...e, id: IdGenerator.next("ent") });
+    this.taken.add(`${e.x},${e.y}`);
+  }
+  /** 放置阻挡型装饰（柱子/大锅/药架）：实体 + 地形改为装饰格（阻挡通行） */
+  putBlocking(kind, x, y) {
+    this.put({ kind, x, y });
+    if (this.grid[y]?.[x] === 0) this.grid[y][x] = 2;
+  }
+  /** 该格是否可放主实体（空地 + 未被占 + 无既有实体） */
+  freeAt(x, y) {
+    if (this.grid[y]?.[x] !== 0) return false;
+    if (this.taken.has(`${x},${y}`)) return false;
+    return !this.room.entities.some((en) => en.x === x && en.y === y);
+  }
+  inRoom(x, y) {
+    return x >= this.room.x && x < this.room.x + this.room.width && y >= this.room.y && y < this.room.y + this.room.height;
+  }
+  monsterAt(id, isElite, p) {
+    this.put({ kind: "monster", monsterId: id, isElite, x: p.x, y: p.y });
+  }
+  // ============ 路径与几何（挡路型 / 守卫型 用） ============
+  /** 房间内自由点位 + 距入口（门）的 BFS 距离；无门房间以中心为入口 */
+  computeSpots() {
+    const entries = this.room.doors.map((d) => ({ x: d.x, y: d.y }));
+    if (entries.length === 0) entries.push({ x: this.room.centerX, y: this.room.centerY });
+    const dist = /* @__PURE__ */ new Map();
+    const queue = [];
+    for (const e of entries) {
+      if (this.inRoom(e.x, e.y) && this.grid[e.y]?.[e.x] === 0) {
+        dist.set(`${e.x},${e.y}`, 0);
+        queue.push(e);
+      }
+    }
+    while (queue.length > 0) {
+      const cur = queue.shift();
+      const d = dist.get(`${cur.x},${cur.y}`) ?? 0;
+      for (const [dx, dy] of DIRS4) {
+        const nx = cur.x + dx;
+        const ny = cur.y + dy;
+        const key = `${nx},${ny}`;
+        if (!this.inRoom(nx, ny)) continue;
+        if (this.grid[ny]?.[nx] !== 0) continue;
+        if (dist.has(key)) continue;
+        dist.set(key, d + 1);
+        queue.push({ x: nx, y: ny });
+      }
+    }
+    const spots = [];
+    for (let y = this.room.y + 1; y <= this.room.y + this.room.height - 2; y++) {
+      for (let x = this.room.x + 1; x <= this.room.x + this.room.width - 2; x++) {
+        if (this.grid[y][x] !== 0) continue;
+        spots.push({ x, y, dist: dist.get(`${x},${y}`) ?? 99 });
+      }
+    }
+    return spots;
+  }
+  /** 门朝向房间内侧的格 */
+  innerOfDoor(d) {
+    switch (d.direction) {
+      case "east":
+        return { x: d.x - 1, y: d.y };
+      case "west":
+        return { x: d.x + 1, y: d.y };
+      case "north":
+        return { x: d.x, y: d.y + 1 };
+      default:
+        return { x: d.x, y: d.y - 1 };
+    }
+  }
+  /**
+   * 入口→出口主路径（房间内格序列）。
+   * 入口/出口 = 房间门内侧格中相距最远的一对；单门时取「门 → 距门最远格」。
+   */
+  mainPath() {
+    const inners = this.room.doors.map((d) => this.innerOfDoor(d)).filter((p) => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 0);
+    if (inners.length === 0) return [{ x: this.room.centerX, y: this.room.centerY }];
+    if (inners.length === 1) return this.bfsPath(inners[0], this.farthestFrom(inners[0]));
+    let best = [inners[0], inners[1]];
+    let bestD = -1;
+    for (let i = 0; i < inners.length; i++) {
+      for (let j = i + 1; j < inners.length; j++) {
+        const d = Math.abs(inners[i].x - inners[j].x) + Math.abs(inners[i].y - inners[j].y);
+        if (d > bestD) {
+          bestD = d;
+          best = [inners[i], inners[j]];
+        }
+      }
+    }
+    const path = this.bfsPath(best[0], best[1]);
+    return path.length > 0 ? path : [best[0]];
+  }
+  /** 房间内 BFS 路径（只看地形，忽略实体） */
+  bfsPath(from, to) {
+    const key = (x, y) => `${x},${y}`;
+    const prev = /* @__PURE__ */ new Map();
+    const queue = [from];
+    prev.set(key(from.x, from.y), null);
+    while (queue.length > 0) {
+      const cur2 = queue.shift();
+      if (cur2.x === to.x && cur2.y === to.y) break;
+      for (const [dx, dy] of DIRS4) {
+        const nx = cur2.x + dx;
+        const ny = cur2.y + dy;
+        if (!this.inRoom(nx, ny)) continue;
+        if (this.grid[ny]?.[nx] !== 0) continue;
+        const k = key(nx, ny);
+        if (prev.has(k)) continue;
+        prev.set(k, key(cur2.x, cur2.y));
+        queue.push({ x: nx, y: ny });
+      }
+    }
+    const end = key(to.x, to.y);
+    if (!prev.has(end)) return [];
+    const out = [];
+    let cur = end;
+    while (cur) {
+      const [x, y] = cur.split(",").map(Number);
+      out.push({ x, y });
+      cur = prev.get(cur) ?? null;
+    }
+    return out.reverse();
+  }
+  /** 距 from 最远的可达格（BFS） */
+  farthestFrom(from) {
+    let best = from;
+    let bestD = -1;
+    for (const s of this.spots) {
+      if (s.dist > bestD) {
+        bestD = s.dist;
+        best = { x: s.x, y: s.y };
+      }
+    }
+    return best;
+  }
+  /** 房间内侧四角（贴墙的地面格） */
+  innerCorners() {
+    const r = this.room;
+    return [
+      { x: r.x + 1, y: r.y + 1 },
+      { x: r.x + r.width - 2, y: r.y + 1 },
+      { x: r.x + 1, y: r.y + r.height - 2 },
+      { x: r.x + r.width - 2, y: r.y + r.height - 2 }
+    ];
+  }
+  // ============ 阻塞模式（文档二） ============
+  /**
+   * 挡路型：在入口→出口主路径中段架一道横跨房间的屏障。
+   * 怪物占 N 格，其余格用柱子补满（barrier.fillWithPillars）→ 必须打掉至少 1 只怪才能通过。
+   * 返回实际放置的怪物数（0 = 无法架设，调用方需兜底）。
+   */
+  blockPath(count, pool, isElite) {
+    if (count <= 0 || pool.length === 0) return 0;
+    const path = this.mainPath();
+    if (path.length < 3) return 0;
+    const i = Math.floor(path.length / 2);
+    const cur = path[i];
+    const nxt = path[i + 1] ?? path[i - 1];
+    const alongX = cur.y === nxt.y;
+    const cells = [];
+    if (alongX) {
+      for (let y = this.room.y + 1; y <= this.room.y + this.room.height - 2; y++) {
+        if (this.grid[y]?.[cur.x] === 0) cells.push({ x: cur.x, y });
+      }
+    } else {
+      for (let x = this.room.x + 1; x <= this.room.x + this.room.width - 2; x++) {
+        if (this.grid[cur.y]?.[x] === 0) cells.push({ x, y: cur.y });
+      }
+    }
+    if (cells.length === 0) return 0;
+    const entry = path[0];
+    const usable = cells.filter((c) => Math.abs(c.x - entry.x) + Math.abs(c.y - entry.y) >= 2);
+    const line = usable.length > 0 ? usable : cells;
+    const chosen = rng.shuffle(line).slice(0, Math.min(count, line.length));
+    let placed = 0;
+    for (const c of chosen) {
+      if (this.taken.has(`${c.x},${c.y}`)) continue;
+      this.monsterAt(rng.pickWeighted(pool, (m) => m.weight).id, isElite, c);
+      placed++;
+    }
+    if (placed > 0 && dataManager.mapGen.content.barrier.fillWithPillars) {
+      for (const c of line) {
+        if (this.taken.has(`${c.x},${c.y}`)) continue;
+        this.put({ kind: "pillar", x: c.x, y: c.y });
+        this.grid[c.y][c.x] = 2;
+      }
+    }
+    return placed;
+  }
+  /** 围宝型 / 守卫型：在目标周围 radius 格内的空位放怪，返回实际数量 */
+  guardAround(cx, cy, count, pool, isElite, radius = 1) {
+    if (count <= 0 || pool.length === 0) return 0;
+    const cells = [];
+    for (let y = cy - radius; y <= cy + radius; y++) {
+      for (let x = cx - radius; x <= cx + radius; x++) {
+        if (x === cx && y === cy) continue;
+        if (!this.inRoom(x, y)) continue;
+        if (this.grid[y]?.[x] !== 0) continue;
+        if (this.taken.has(`${x},${y}`)) continue;
+        cells.push({ x, y });
+      }
+    }
+    const picked = rng.shuffle(cells).slice(0, Math.min(count, cells.length));
+    for (const c of picked) this.monsterAt(rng.pickWeighted(pool, (m) => m.weight).id, isElite, c);
+    return picked.length;
+  }
+  /** 守卫型：在目标（楼梯/Boss）朝向入口一侧 1-2 格放怪 */
+  guardStair(count, pool, isElite = false) {
+    if (count <= 0 || pool.length === 0) return 0;
+    const target = { x: this.room.centerX, y: this.room.centerY };
+    const entry = this.mainPath()[0] ?? { x: target.x, y: target.y + 1 };
+    const dx = Math.sign(entry.x - target.x);
+    const dy = Math.sign(entry.y - target.y);
+    const cand = [];
+    if (dx !== 0) cand.push({ x: target.x + dx, y: target.y }, { x: target.x + dx * 2, y: target.y });
+    if (dy !== 0) cand.push({ x: target.x, y: target.y + dy }, { x: target.x, y: target.y + dy * 2 });
+    let placed = 0;
+    for (const p of cand) {
+      if (placed >= count) break;
+      if (!this.freeAt(p.x, p.y)) continue;
+      this.monsterAt(rng.pickWeighted(pool, (m) => m.weight).id, isElite, p);
+      placed++;
+    }
+    return placed;
+  }
+  // ============ 物品与装饰 ============
+  /** 普通放置：距入口 ≥ monsterMinDistFromEntry 的空位随机放怪 */
+  placeMonsters(count, isElite, pool) {
+    if (count <= 0 || pool.length === 0) return 0;
+    const minDist = dataManager.mapGen.content.monsterMinDistFromEntry;
+    const far = this.spots.filter((s) => s.dist >= minDist && this.freeAt(s.x, s.y));
+    const use = far.length >= count ? far : this.spots.filter((s) => this.freeAt(s.x, s.y));
+    const picked = rng.shuffle(use).slice(0, count);
+    for (const s of picked) this.monsterAt(rng.pickWeighted(pool, (m) => m.weight).id, isElite, s);
+    return picked.length;
+  }
+  /** 宝箱放内侧四角；carpet=true 时首个宝箱下方铺地毯（房间身份感） */
+  placeCornerChests(count, carpet = false) {
+    const out = [];
+    if (count <= 0) return out;
+    const corners = this.innerCorners().filter((c) => this.freeAt(c.x, c.y));
+    const picked = rng.shuffle(corners).slice(0, Math.min(count, corners.length));
+    picked.forEach((c, i) => {
+      if (carpet && i === 0) this.put({ kind: "carpet", x: c.x, y: c.y });
+      this.put({ kind: "chest", chestTier: "normal", x: c.x, y: c.y });
+      out.push(c);
+    });
+    return out;
+  }
+  /** 药水：优先放入口附近（1-4 格），不足时用任意空位 */
+  placePotions(count) {
+    if (count <= 0) return 0;
+    const near = this.spots.filter((s) => s.dist >= 1 && s.dist <= 4 && this.freeAt(s.x, s.y));
+    const use = near.length >= count ? near : this.spots.filter((s) => this.freeAt(s.x, s.y));
+    const picked = rng.shuffle(use).slice(0, Math.min(count, use.length));
+    for (const s of picked) {
+      this.put({ kind: "potion", potionTier: this.pickPotionTier(), x: s.x, y: s.y });
+    }
+    return picked.length;
+  }
+  /** 按楼层挑选药水档次（低档权重更高） */
+  pickPotionTier() {
+    const all = dataManager.potions.potions;
+    const avail = all.filter((p) => this.floorId >= p.minFloor && this.floorId <= p.maxFloor);
+    const pool = avail.length > 0 ? avail : all;
+    const weighted = pool.map((p, i) => ({ tier: p.tier, weight: pool.length - i }));
+    return rng.pickWeighted(weighted, (w) => w.weight).tier;
+  }
+  /** 火把：按房间类型的数量，优先挂房间四角，再沿墙扩散 */
+  placeRoomTorches() {
+    const range = dataManager.mapGen.content.roomTorches[this.room.type];
+    if (!range) return;
+    const want = rng.randInt(range[0], range[1]);
+    if (want <= 0) return;
+    let placed = 0;
+    for (const p of this.wallRing()) {
+      if (placed >= want) break;
+      if (this.grid[p.y]?.[p.x] !== 1) continue;
+      if (this.room.entities.some((e) => e.x === p.x && e.y === p.y)) continue;
+      this.put({ kind: "torch", x: p.x, y: p.y });
+      placed++;
+    }
+  }
+  /** 房间边界墙格，按「距四角近」排序 */
+  wallRing() {
+    const r = this.room;
+    const pts = [];
+    for (let x = r.x; x < r.x + r.width; x++) {
+      pts.push({ x, y: r.y }, { x, y: r.y + r.height - 1 });
+    }
+    for (let y = r.y + 1; y < r.y + r.height - 1; y++) {
+      pts.push({ x: r.x, y }, { x: r.x + r.width - 1, y });
+    }
+    const corners = [
+      { x: r.x, y: r.y },
+      { x: r.x + r.width - 1, y: r.y },
+      { x: r.x, y: r.y + r.height - 1 },
+      { x: r.x + r.width - 1, y: r.y + r.height - 1 }
+    ];
+    const cd = (p) => Math.min(...corners.map((c) => Math.abs(p.x - c.x) + Math.abs(p.y - c.y)));
+    return pts.sort((a, b) => cd(a) - cd(b));
+  }
+  /** 装饰：宽≥7 的房间四角立柱子（阻挡通行） */
+  placePillars() {
+    if (this.room.width - 2 < dataManager.mapGen.decor.pillarMinRoomWidth) return;
+    for (const c of this.innerCorners()) {
+      if (!this.freeAt(c.x, c.y)) continue;
+      this.put({ kind: "pillar", x: c.x, y: c.y });
+      this.grid[c.y][c.x] = 2;
+    }
+  }
+  /**
+   * 女巫酿药间（安全房）：中央女巫 + 朝门一侧的熬药大锅 + 两侧药架 + 角落治疗泉。
+   * 女巫提供特殊药水交易，治疗泉提供治疗服务（交互在世界层处理）。
+   */
+  placeWitchRoom(shelves) {
+    const cx = this.room.centerX;
+    const cy = this.room.centerY;
+    const entry = this.mainPath()[0] ?? { x: cx, y: cy + 1 };
+    if (this.freeAt(cx, cy)) {
+      this.put({ kind: "npc", npcId: "npc_witch", x: cx, y: cy });
+    } else {
+      const fallback = [...this.spots].filter((s) => this.freeAt(s.x, s.y)).sort((a, b) => b.dist - a.dist)[0];
+      if (fallback) this.put({ kind: "npc", npcId: "npc_witch", x: fallback.x, y: fallback.y });
+    }
+    const dx = Math.sign(entry.x - cx);
+    const dy = Math.sign(entry.y - cy);
+    const cauldron = dx !== 0 ? { x: cx + dx, y: cy } : { x: cx, y: cy + (dy || 1) };
+    if (this.freeAt(cauldron.x, cauldron.y)) this.putBlocking("cauldron", cauldron.x, cauldron.y);
+    const perp = dx !== 0 ? [{ x: 0, y: 1 }, { x: 0, y: -1 }] : [{ x: 1, y: 0 }, { x: -1, y: 0 }];
+    let placed = 0;
+    for (const p of perp) {
+      if (placed >= shelves) break;
+      const sx = cx + p.x * 2;
+      const sy = cy + p.y * 2;
+      if (this.freeAt(sx, sy)) {
+        this.putBlocking("shelf", sx, sy);
+        placed++;
+      }
+    }
+    if (placed < shelves) {
+      for (const c of rng.shuffle(this.innerCorners())) {
+        if (placed >= shelves) break;
+        if (this.freeAt(c.x, c.y)) {
+          this.putBlocking("shelf", c.x, c.y);
+          placed++;
+        }
+      }
+    }
+    const corners = rng.shuffle(this.innerCorners()).sort((a, b) => Math.abs(b.x - entry.x) + Math.abs(b.y - entry.y) - (Math.abs(a.x - entry.x) + Math.abs(a.y - entry.y)));
+    for (const c of corners) {
+      if (this.freeAt(c.x, c.y)) {
+        this.put({ kind: "fountain", x: c.x, y: c.y });
+        break;
+      }
+    }
+  }
+  /** 战斗房按深度取档位（文档五 深度与难度对应） */
+  bandFor(bands) {
+    const depth = this.room.depth;
+    return bands.find((b) => depth <= b.maxDepth) ?? bands[bands.length - 1];
+  }
+  // ============ 内容验证（文档六 6.1） ============
+  /**
+   * 验证并就地修复：
+   *   战斗不可绕过 —— 把怪物/柱子当障碍后入口仍能到出口/楼梯 = 可绕过 → 主路径中点补怪
+   *   宝箱被守护   —— 宝箱 guard.chestRadius 格内无怪 → 邻格补怪
+   *   楼梯被守护   —— 楼梯 guard.stairRadius 格内无怪 → 楼梯前补怪
+   *   无重叠/可到达 —— 放置阶段已由 freeAt 保证（装饰地毯除外）
+   * 返回未修复的失败项（调用方记日志）。
+   */
+  validate(roomType, pool) {
+    const issues = [];
+    const g = dataManager.mapGen.content.guard;
+    const hasMonster = () => this.room.entities.some((e) => e.kind === "monster" || e.kind === "boss");
+    if ((roomType === "combat" || roomType === "elite") && pool.length > 0) {
+      if (!hasMonster() || this.canBypass()) {
+        const path = this.mainPath();
+        const mid = path[Math.floor(path.length / 2)] ?? { x: this.room.centerX, y: this.room.centerY };
+        if (this.freeAt(mid.x, mid.y)) {
+          this.monsterAt(rng.pickWeighted(pool, (m) => m.weight).id, false, mid);
+        } else {
+          issues.push("\u53EF\u7ED5\u8FC7\u4E14\u65E0\u7A7A\u4F4D\u8865\u602A");
+        }
+      }
+    }
+    for (const chest2 of this.room.entities.filter((e) => e.kind === "chest")) {
+      const guarded = this.room.entities.some((e) => (e.kind === "monster" || e.kind === "boss") && Math.abs(e.x - chest2.x) + Math.abs(e.y - chest2.y) <= g.chestRadius);
+      if (!guarded && pool.length > 0) {
+        if (this.guardAround(chest2.x, chest2.y, 1, pool, false, 1) === 0) issues.push("\u5B9D\u7BB1\u65E0\u5B88\u62A4\u4E14\u65E0\u7A7A\u4F4D");
+      }
+    }
+    for (const stair of this.room.entities.filter((e) => e.kind === "stair")) {
+      const guarded = this.room.entities.some((e) => (e.kind === "monster" || e.kind === "boss") && Math.abs(e.x - stair.x) + Math.abs(e.y - stair.y) <= g.stairRadius);
+      if (!guarded && pool.length > 0) {
+        if (this.guardStair(1, pool) === 0) issues.push("\u697C\u68AF\u65E0\u5B88\u62A4\u4E14\u65E0\u7A7A\u4F4D");
+      }
+    }
+    return issues;
+  }
+  /** 把怪物/柱子视为障碍后，入口仍能走到出口/楼梯 → 说明挡路不成立 */
+  canBypass() {
+    const path = this.mainPath();
+    const target = this.room.entities.find((e) => e.kind === "stair") ?? path[path.length - 1];
+    const entry = path[0];
+    if (!target || !entry) return false;
+    const blocked = new Set(
+      this.room.entities.filter((e) => e.kind === "monster" || e.kind === "boss" || e.kind === "pillar").map((e) => `${e.x},${e.y}`)
+    );
+    const seen = /* @__PURE__ */ new Set([`${entry.x},${entry.y}`]);
+    const queue = [entry];
+    while (queue.length > 0) {
+      const cur = queue.shift();
+      if (cur.x === target.x && cur.y === target.y) return true;
+      for (const [dx, dy] of DIRS4) {
+        const nx = cur.x + dx;
+        const ny = cur.y + dy;
+        const k = `${nx},${ny}`;
+        if (!this.inRoom(nx, ny)) continue;
+        if (this.grid[ny]?.[nx] !== 0) continue;
+        if (blocked.has(k) || seen.has(k)) continue;
+        seen.add(k);
+        queue.push({ x: nx, y: ny });
+      }
+    }
+    return false;
+  }
+};
 var ContentFiller = class _ContentFiller {
   static instance;
   constructor() {
@@ -1490,92 +2530,105 @@ var ContentFiller = class _ContentFiller {
     return _ContentFiller.instance;
   }
   fill(rooms, corridors, grid, floorId, kind) {
-    const ccfg = dataManager.mapGen.content;
-    const monsterPool = dataManager.monsters.monsters.filter(
-      (m) => m.category === "normal" && floorId >= m.floorMin && floorId <= m.floorMax
-    );
+    const c = dataManager.mapGen.content;
+    const all = dataManager.monsters.monsters.filter((m) => m.category === "normal");
+    const avail = all.filter((m) => floorId >= m.floorMin && floorId <= m.floorMax);
+    const pool = (avail.length > 0 ? avail : all).map((m) => ({ id: m.id, weight: m.weight }));
     for (const room of rooms) {
-      const spots = this.freeSpots(room, grid);
-      const taken = /* @__PURE__ */ new Set();
-      const put = (e) => {
-        room.entities.push({ ...e, id: IdGenerator.next("ent") });
-        taken.add(`${e.x},${e.y}`);
-      };
-      const freeAt = (x, y) => grid[y]?.[x] === 0 && !taken.has(`${x},${y}`) && !room.entities.some((en) => en.x === x && en.y === y);
+      const rf = new RoomFill(room, grid, floorId);
       switch (room.type) {
-        case "start":
+        case "start": {
           if (kind === "initial") {
-            put({ kind: "npc", npcId: "npc_guide", x: room.centerX, y: room.y + 1 });
+            rf.put({ kind: "npc", npcId: "npc_guide", x: room.centerX, y: room.y + 1 });
           }
+          rf.placePotions(rng.randInt(c.startRoom.potions[0], c.startRoom.potions[1]));
           break;
+        }
         case "end": {
-          put({ kind: "stair", x: room.centerX, y: room.centerY, targetFloor: floorId + 1 });
-          if (kind === "initial") {
-            put({ kind: "chest", chestTier: "normal", x: room.x + 1, y: room.y + 1 });
-            const far = spots.filter((s) => s.dist >= ccfg.monsterMinDistFromEntry && !taken.has(`${s.x},${s.y}`));
-            if (far.length > 0) {
-              const pick = far[Math.floor(far.length / 2)];
-              put({ kind: "monster", monsterId: "slime", x: pick.x, y: pick.y });
-            }
-          } else if (kind === "boss") {
-            put({ kind: "chest", chestTier: "grand", x: room.x + 1, y: room.y + 1 });
-            put({ kind: "chest", chestTier: "grand", x: room.x + room.width - 2, y: room.y + room.height - 2 });
-          } else if (rng.chance(ccfg.otherRoomChestChance)) {
-            this.placeCornerChest(room, put, freeAt);
+          const ax = room.centerX - 1;
+          const ay = room.centerY - 1;
+          const span2 = [0, 1].flatMap((dz) => [0, 1].map((dx) => ({ x: ax + dx, y: ay + dz })));
+          if (span2.every((p) => rf.freeAt(p.x, p.y))) {
+            rf.put({ kind: "stair", x: ax, y: ay, targetFloor: floorId + 1, stairSpan: 2 });
+            rf.put({ kind: "stair", x: ax + 1, y: ay, targetFloor: floorId + 1, stairSpan: 1 });
+            rf.put({ kind: "stair", x: ax, y: ay + 1, targetFloor: floorId + 1, stairSpan: 1 });
+            rf.put({ kind: "stair", x: ax + 1, y: ay + 1, targetFloor: floorId + 1, stairSpan: 1 });
+          } else {
+            rf.put({ kind: "stair", x: room.centerX, y: room.centerY, targetFloor: floorId + 1 });
           }
+          if (kind === "initial") {
+            rf.put({ kind: "chest", chestTier: "normal", x: room.x + 1, y: room.y + 1 });
+            rf.guardStair(1, pool);
+          } else if (kind === "boss") {
+            rf.put({ kind: "chest", chestTier: "grand", x: room.x + 1, y: room.y + 1 });
+            rf.put({ kind: "chest", chestTier: "grand", x: room.x + room.width - 2, y: room.y + room.height - 2 });
+          } else {
+            rf.guardStair(rng.randInt(c.exitRoom.guards[0], c.exitRoom.guards[1]), pool);
+            rf.placeCornerChests(rng.randInt(c.exitRoom.chests[0], c.exitRoom.chests[1]));
+          }
+          rf.placePotions(rng.randInt(c.exitRoom.potions[0], c.exitRoom.potions[1]));
           break;
         }
         case "rest":
           break;
         case "merchant": {
-          put({ kind: "npc", npcId: "npc_merchant", x: room.centerX, y: room.centerY });
-          if (rng.chance(ccfg.otherRoomChestChance)) this.placeCornerChest(room, put, freeAt);
+          rf.put({ kind: "npc", npcId: "npc_merchant", x: room.centerX, y: room.centerY });
+          rf.placePotions(rng.randInt(c.merchantRoom.potions[0], c.merchantRoom.potions[1]));
+          rf.placeCornerChests(rng.randInt(c.merchantRoom.chests[0], c.merchantRoom.chests[1]));
+          break;
+        }
+        case "blacksmith": {
+          rf.put({ kind: "npc", npcId: "npc_blacksmith", x: room.centerX, y: room.centerY });
+          break;
+        }
+        case "witch": {
+          rf.placeWitchRoom(rng.randInt(c.witchRoom.shelves[0], c.witchRoom.shelves[1]));
           break;
         }
         case "chest": {
-          const count = rng.randInt(ccfg.chestRoomMin, ccfg.chestRoomMax);
-          const corners = this.innerCorners(room).filter((c) => freeAt(c.x, c.y));
-          const chosen = rng.shuffle(corners).slice(0, count);
-          chosen.forEach((c, i) => {
-            if (i === 0) put({ kind: "carpet", x: c.x, y: c.y });
-            put({ kind: "chest", chestTier: "normal", x: c.x, y: c.y });
-          });
+          const chests = rf.placeCornerChests(rng.randInt(c.treasureRoom.chests[0], c.treasureRoom.chests[1]), true);
+          let guards = rng.randInt(c.treasureRoom.monsters[0], c.treasureRoom.monsters[1]);
+          for (const ch of chests) {
+            if (guards <= 0) break;
+            guards -= rf.guardAround(ch.x, ch.y, 1, pool, false, 1);
+          }
+          rf.placePotions(rng.randInt(c.treasureRoom.potions[0], c.treasureRoom.potions[1]));
           break;
         }
         case "combat": {
+          const band = rf.bandFor(c.combatByDepth);
           const cap = this.densityCap(room);
-          const count = rng.randInt(Math.ceil(cap / 2), cap);
-          this.placeMonsters(room, grid, count, false, monsterPool, put, taken, spots);
-          if (rng.chance(ccfg.otherRoomChestChance)) this.placeCornerChest(room, put, freeAt);
+          const want = Math.max(1, Math.min(rng.randInt(band.monsters[0], band.monsters[1]), cap));
+          if (rf.blockPath(want, pool, false) === 0) rf.placeMonsters(want, false, pool);
+          const elites = rng.randInt(band.elites[0], band.elites[1]);
+          if (elites > 0) rf.placeMonsters(elites, true, pool);
+          rf.placeCornerChests(rng.randInt(band.chests[0], band.chests[1]));
+          rf.placePotions(rng.randInt(band.potions[0], band.potions[1]));
           break;
         }
         case "elite": {
-          const eliteCount = rng.randInt(ccfg.eliteRoomEliteMin, ccfg.eliteRoomEliteMax);
-          this.placeMonsters(room, grid, eliteCount, true, monsterPool, put, taken, spots);
-          if (rng.chance(0.5)) this.placeMonsters(room, grid, 1, false, monsterPool, put, taken, spots);
+          if (rf.blockPath(1, pool, true) === 0) rf.placeMonsters(1, true, pool);
+          rf.placeMonsters(rng.randInt(c.eliteRoom.monsters[0], c.eliteRoom.monsters[1]), false, pool);
+          const chests = rf.placeCornerChests(rng.randInt(c.eliteRoom.chests[0], c.eliteRoom.chests[1]), true);
+          for (const ch of chests) rf.guardAround(ch.x, ch.y, 1, pool, false, 1);
+          rf.placePotions(rng.randInt(c.eliteRoom.potions[0], c.eliteRoom.potions[1]));
           break;
         }
         case "boss": {
-          put({ kind: "carpet", x: room.centerX, y: room.centerY });
-          put({ kind: "boss", monsterId: "ancient_dragon", x: room.centerX, y: room.centerY });
-          const adds = rng.randInt(ccfg.bossRoomAddsMin, ccfg.bossRoomAddsMax);
-          if (adds > 0) this.placeMonsters(room, grid, adds, false, monsterPool, put, taken, spots);
+          rf.put({ kind: "carpet", x: room.centerX, y: room.centerY });
+          rf.put({ kind: "boss", monsterId: "ancient_dragon", x: room.centerX, y: room.centerY });
+          rf.guardAround(room.centerX, room.centerY, rng.randInt(c.bossRoom.elites[0], c.bossRoom.elites[1]), pool, true, 2);
+          rf.placeCornerChests(rng.randInt(c.bossRoom.chests[0], c.bossRoom.chests[1]));
+          rf.placePotions(rng.randInt(c.bossRoom.potions[0], c.bossRoom.potions[1]));
           break;
         }
       }
-      if (room.width - 2 >= dataManager.mapGen.decor.pillarMinRoomWidth) {
-        for (const c of this.innerCorners(room)) {
-          if (grid[c.y][c.x] === 0 && !room.entities.some((en) => en.x === c.x && en.y === c.y)) {
-            put({ kind: "pillar", x: c.x, y: c.y });
-            grid[c.y][c.x] = 2;
-          }
-        }
-      }
-      for (const door of room.doors) {
-        for (const side of this.doorSideTiles(room, door.x, door.y, door.direction)) {
-          if (grid[side.y]?.[side.x] === 1 && !room.entities.some((en) => en.x === side.x && en.y === side.y)) {
-            put({ kind: "torch", x: side.x, y: side.y });
-          }
+      rf.placeRoomTorches();
+      if (room.type !== "witch") rf.placePillars();
+      if (!(room.type === "end" && (kind === "initial" || kind === "boss"))) {
+        const issues = rf.validate(room.type, pool);
+        if (issues.length > 0) {
+          console.warn(`[ContentFiller] \u623F\u95F4 ${room.id}(${room.type}) \u5185\u5BB9\u9A8C\u8BC1\u672A\u901A\u8FC7\uFF1A${issues.join("\u3001")}`);
         }
       }
     }
@@ -1598,83 +2651,6 @@ var ContentFiller = class _ContentFiller {
     if (area <= c.smallAreaMax) return c.density.small;
     if (area <= c.mediumAreaMax) return c.density.medium;
     return c.density.large;
-  }
-  /** 放置怪物：距入口≥3格，从合法点位随机挑选，不与已有实体重叠 */
-  placeMonsters(room, grid, count, isElite, pool, put, taken, spots) {
-    if (pool.length === 0) return;
-    const minDist = dataManager.mapGen.content.monsterMinDistFromEntry;
-    const candidates = spots.filter((s) => s.dist >= minDist);
-    const use = candidates.length > 0 ? candidates : spots;
-    const picked = rng.shuffle(use).slice(0, count);
-    for (const spot of picked) {
-      if (taken.has(`${spot.x},${spot.y}`)) continue;
-      const monsterId = rng.pickWeighted(pool, (m) => m.weight).id;
-      put({ kind: "monster", monsterId, isElite, x: spot.x, y: spot.y });
-    }
-  }
-  /** 宝箱放房间角落 */
-  placeCornerChest(room, put, freeAt) {
-    const corners = this.innerCorners(room).filter((c2) => freeAt(c2.x, c2.y));
-    if (corners.length === 0) return;
-    const c = rng.pick(corners);
-    put({ kind: "chest", chestTier: "normal", x: c.x, y: c.y });
-  }
-  /** 房间内侧四角 */
-  innerCorners(room) {
-    return [
-      { x: room.x + 1, y: room.y + 1 },
-      { x: room.x + room.width - 2, y: room.y + 1 },
-      { x: room.x + 1, y: room.y + room.height - 2 },
-      { x: room.x + room.width - 2, y: room.y + room.height - 2 }
-    ];
-  }
-  /** 门两侧的墙砖（用于挂火把） */
-  doorSideTiles(room, dx, dy, dir) {
-    if (dir === "east" || dir === "west") {
-      return [{ x: dx, y: dy - 1 }, { x: dx, y: dy + 1 }];
-    }
-    return [{ x: dx - 1, y: dy }, { x: dx + 1, y: dy }];
-  }
-  /**
-   * 计算房间内自由点位及其距入口（门）的BFS距离。
-   * 入口=房间所有门的位置；无门房间以中心为入口。
-   */
-  freeSpots(room, grid) {
-    const entries = room.doors.map((d) => ({ x: d.x, y: d.y }));
-    if (entries.length === 0) entries.push({ x: room.centerX, y: room.centerY });
-    const dist = /* @__PURE__ */ new Map();
-    const queue = [];
-    for (const e of entries) {
-      if (this.inRoom(room, e.x, e.y)) {
-        dist.set(`${e.x},${e.y}`, 0);
-        queue.push(e);
-      }
-    }
-    while (queue.length > 0) {
-      const cur = queue.shift();
-      const d = dist.get(`${cur.x},${cur.y}`) ?? 0;
-      for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
-        const nx = cur.x + dx;
-        const ny = cur.y + dy;
-        const key = `${nx},${ny}`;
-        if (!this.inRoom(room, nx, ny)) continue;
-        if (grid[ny][nx] !== 0) continue;
-        if (dist.has(key)) continue;
-        dist.set(key, d + 1);
-        queue.push({ x: nx, y: ny });
-      }
-    }
-    const spots = [];
-    for (let y = room.y + 1; y <= room.y + room.height - 2; y++) {
-      for (let x = room.x + 1; x <= room.x + room.width - 2; x++) {
-        if (grid[y][x] !== 0) continue;
-        spots.push({ x, y, dist: dist.get(`${x},${y}`) ?? 99 });
-      }
-    }
-    return spots;
-  }
-  inRoom(room, x, y) {
-    return x >= room.x && x < room.x + room.width && y >= room.y && y < room.y + room.height;
   }
   entityAt(rooms, x, y) {
     return rooms.some((r) => r.entities.some((e) => e.x === x && e.y === y));

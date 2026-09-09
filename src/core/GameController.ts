@@ -242,12 +242,8 @@ export class GameController {
         break;
       }
       case 'chest': {
-        confirm.ask(
-          '🎁 开启宝箱',
-          entity.chestTier === 'grand' ? '确定开启<b>大宝箱</b>吗？' : '确定开启宝箱吗？<br/><span class="dim">可能获得金币 / 装备 / 药水</span>',
-          () => this.doOpenChest(entity),
-          '🎁 开启',
-        );
+        // 直接开箱（不再二次确认）；战利品由 toast 弹窗提示
+        this.doOpenChest(entity);
         break;
       }
       case 'npc': {
@@ -288,7 +284,7 @@ export class GameController {
     // 死亡复活由 playerDied 事件统一处理
   }
 
-  /** 确认后执行：开宝箱 */
+  /** 直接执行：开宝箱（无确认），战利品逐项 toast 提示后自动收回 */
   private doOpenChest(entity: MapEntity): void {
     const world = WorldManager.getInstance();
     const room = world.getRoomAt(entity.x, entity.y);
@@ -297,6 +293,23 @@ export class GameController {
     if (rewards.potion) text += ` +${dataManager.getPotion(rewards.potion)?.name ?? '药水'}`;
     if (rewards.equipment) text += ' +装备';
     ParticleSystem.getInstance().floatText(entity.x, entity.y, text, '#ffdd44');
+    // 获得提示（右上角 toast，2.8s 自动收回）
+    if (rewards.gold > 0) {
+      eventBus.emit('notification', { message: `获得 ${rewards.gold} 金币`, type: 'success', icon: '💰' });
+    }
+    if (rewards.equip) {
+      const qName = dataManager.equipment.quality[rewards.equip.quality]?.name;
+      eventBus.emit('notification', {
+        message: `获得 ${rewards.equip.name}${qName ? `（${qName}）` : ''}`,
+        type: 'success', icon: '⚔️',
+      });
+    }
+    if (rewards.potion) {
+      eventBus.emit('notification', {
+        message: `获得 ${dataManager.getPotion(rewards.potion)?.name ?? '药水'}`,
+        type: 'success', icon: '🧪',
+      });
+    }
   }
 
   // ============ 房间/楼层事件 ============

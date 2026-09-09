@@ -3,6 +3,7 @@
  * 更新顺序：摄像机 → 输入 → 控制器（寻路/交互） → 粒子 → 渲染 → UI悬浮。
  */
 import { CameraController } from './CameraController';
+import { gameState } from './GameState';
 import { InputManager } from './InputManager';
 import { GameController } from './GameController';
 import { ParticleSystem } from '../effects/ParticleSystem';
@@ -15,6 +16,8 @@ export class GameLoop {
   private running = false;
   private lastTime = 0;
   private lastProcessedTime = 0;
+  /** 上一帧实际渲染时刻（帧率限制用） */
+  private lastRenderTime = 0;
   /** rAF 停摆兜底（自动化/后台标签页）：帧超时未更新则由定时器驱动 */
   private watchdog: number | null = null;
 
@@ -48,6 +51,15 @@ export class GameLoop {
     if (!this.running) return;
     if (time <= this.lastProcessedTime) return; // 帧去重（watchdog与rAF竞态）
     this.lastProcessedTime = time;
+
+    // 帧率限制：未到下帧时刻则跳过本次更新（渲染/逻辑/输入统一降频，省电降温）
+    const cap = gameState.settings.fpsCap;
+    if (cap > 0 && time - this.lastRenderTime < 1000 / cap - 1.5) {
+      requestAnimationFrame(t => this.frame(t));
+      return;
+    }
+    this.lastRenderTime = time;
+
     const deltaTime = Math.min(50, time - this.lastTime);
     this.lastTime = time;
 

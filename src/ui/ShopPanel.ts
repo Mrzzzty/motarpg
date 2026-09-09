@@ -66,12 +66,15 @@ export class ShopPanel {
         : entry.kind === 'potion' && entry.tier
           ? ` data-hover-potion="${entry.tier}"`
           : '';
+      const iconHtml = entry.kind === 'potion' && entry.tier
+        ? dataManager.potionIconImg(entry.tier)
+        : entry.icon;
       return `<div class="shop-row shop-item ${soldOut ? 'soldout' : ''}"${hoverAttr}>
         <div>
-          <div>${entry.icon} ${entry.name} <span class="dim">×${entry.quantity === -1 ? '∞' : entry.quantity}</span></div>
+          <div>${iconHtml} ${entry.name} <span class="dim">×${entry.quantity === -1 ? '∞' : entry.quantity}</span></div>
           ${sub}
         </div>
-        <button data-buy="${i}" ${soldOut || !afford ? 'disabled' : ''}>${entry.price} 🪙</button>
+        <button data-buy="${i}" ${soldOut || !afford ? 'disabled' : ''}>${entry.price} 💰</button>
       </div>`;
     }).join('');
 
@@ -92,7 +95,7 @@ export class ShopPanel {
             <div><span style="color:${q.color}">${e.name}</span> <span class="dim">Lv.${e.level}</span> ${tags}</div>
             <div class="dim">${e.slot === 'weapon' ? '🗡️ 武器' : '🛡️ 胸甲'} · ⚔️${e.attack} 🛡️${e.defense}</div>
           </div>
-          <button data-sell="${e.id}" ${locked ? 'disabled' : ''}>+${e.sellPrice} 🪙</button>
+          <button data-sell="${e.id}" ${locked ? 'disabled' : ''}>+${e.sellPrice} 💰</button>
         </div>`;
       }).join('');
 
@@ -101,7 +104,7 @@ export class ShopPanel {
         <div class="op-head"><span>${isWitch ? '🧪 女巫·薇薇安' : '🛒 商人·老古'}</span><button class="op-close">✕</button></div>
         <div class="op-body">
           <div class="shop-header">
-            <div class="shop-gold">持有金币：🪙 ${player.state.gold}</div>
+            <div class="shop-gold">持有金币：💰 ${player.state.gold}</div>
             <div class="shop-tabs">
               <button class="inv-tab ${tab === 'buy' ? 'active' : ''}" data-shoptab="buy">${isWitch ? '🧪 秘药' : '🛒 购买'}</button>
               ${isWitch ? '' : `<button class="inv-tab ${tab === 'sell' ? 'active' : ''}" data-shoptab="sell">💰 回收</button>`}
@@ -148,9 +151,9 @@ export class ShopPanel {
       if (!def) return;
       this.bindHover(row as HTMLElement, () => `
         <div class="hover-card">
-          <div class="tt-title">${def.icon} ${def.name}</div>
+          <div class="tt-title"><img class="potion-icon" src="${dataManager.potionIconSrc((row as HTMLElement).dataset.hoverPotion!)}" alt=""> ${def.name}</div>
           <div>❤️ 回复 ${Math.round(def.healPct * 100)}% 最大生命</div>
-          <div class="dim">售价：${def.price} 🪙（可拖入底部快捷栏）</div>
+          <div class="dim">售价：${def.price} 💰（可拖入底部快捷栏）</div>
         </div>`);
     });
   }
@@ -180,7 +183,7 @@ export class ShopPanel {
             return `<div class="affix-row">✦ ${a.name} ${def?.description?.replace('{v}', String(a.value)) ?? `+${a.value}`}</div>`;
           }).join('')}</div>`
         : '<div class="dim">无词条</div>'}
-      <div class="dim">回收价 ${e.sellPrice} 🪙</div>
+      <div class="dim">回收价 ${e.sellPrice} 💰</div>
     </div>`;
   }
 

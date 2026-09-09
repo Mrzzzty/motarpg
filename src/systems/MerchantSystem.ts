@@ -1,11 +1,12 @@
 /**
  * 商人系统：商人NPC库存（药水/钥匙/装备）与购买。库存按楼层刷新。
  */
-import type { Equipment, PotionTier } from '../types';
+import type { Equipment, PotionTier, Quality } from '../types';
 import { dataManager } from '../core/DataManager';
 import { Player } from '../entities/Player';
 import { eventBus } from '../core/EventBus';
 import { EquipmentGenerator } from './EquipmentGenerator';
+import { AchievementSystem, UNLOCK } from './AchievementSystem';
 import { rng } from '../utils/MathUtils';
 
 export interface ShopEntry {
@@ -43,11 +44,18 @@ export class MerchantSystem {
     return stock;
   }
 
-  /** 女巫·薇薇安：只卖秘制药水（当前楼层可用档位中的最高两档，数量少而精） */
+  /** 女巫·薇薇安：只卖秘制药水（当前楼层可用档位中的最高两档，数量少而精）；高阶档位同样需要成就解锁 */
   private buildWitchStock(floorId: number): ShopEntry[] {
     const cfg = dataManager.config.witch;
+    const ach = AchievementSystem.getInstance();
+    const tierGate: Partial<Record<PotionTier, string>> = {
+      quality: UNLOCK.POTION_QUALITY,
+      strong: UNLOCK.POTION_STRONG,
+      holy: UNLOCK.POTION_HOLY,
+    };
     const tiers = dataManager.potions.potions
       .filter(p => floorId >= p.minFloor && floorId <= p.maxFloor)
+      .filter(p => !tierGate[p.tier] || ach.isUnlocked(tierGate[p.tier]!))
       .sort((a, b) => b.healPct - a.healPct);
     const pool = tiers.length > 0 ? tiers : dataManager.potions.potions;
     return pool.slice(0, 2).map(p => ({
@@ -64,9 +72,17 @@ export class MerchantSystem {
     const player = Player.getInstance();
     const stock: ShopEntry[] = [];
 
-    // 药水：当前楼层对应品质（可用档位中最高与次高各备一些）
+    // 药水：当前楼层对应品质（可用档位中最高与次高各备一些）；
+    // 优质/强效/圣药需成就解锁购买权（物品获取权门槛）
+    const ach = AchievementSystem.getInstance();
+    const tierGate: Partial<Record<PotionTier, string>> = {
+      quality: UNLOCK.POTION_QUALITY,
+      strong: UNLOCK.POTION_STRONG,
+      holy: UNLOCK.POTION_HOLY,
+    };
     const tiers = dataManager.potions.potions
       .filter(p => floorId >= p.minFloor && floorId <= p.maxFloor)
+      .filter(p => !tierGate[p.tier] || ach.isUnlocked(tierGate[p.tier]!))
       .sort((a, b) => b.healPct - a.healPct);
     const top = tiers[0];
     if (top) {
@@ -93,10 +109,21 @@ export class MerchantSystem {
       desc: '开启上锁的宝箱',
     });
 
-    // 装备：1-2件，品质按楼层概率
+    // 装备：1-2件，品质按楼层概率；稀有/史诗需成就解锁（超出上限的强制回落到允许的最高品质）
+    const ach2 = AchievementSystem.getInstance();
+    const order = dataManager.equipment.qualityOrder as Quality[];
+    let capRank = 1; // 默认上限：普通之上即优秀(fine)
+    if (ach2.isUnlocked(UNLOCK.EQUIP_RARE)) capRank = Math.max(capRank, order.indexOf('rare'));
+    if (ach2.isUnlocked(UNLOCK.EQUIP_EPIC)) capRank = Math.max(capRank, order.indexOf('epic'));
     const equipCount = rng.randInt(cfg.equipmentCountMin, cfg.equipmentCountMax);
     for (let i = 0; i < equipCount; i++) {
-      const equip = EquipmentGenerator.getInstance().generate('merchant', { floorId });
+      let equip = EquipmentGenerator.getInstance().generate('merchant', { floorId });
+      let tries = 0;
+      while (order.indexOf(equip.quality) > capRank && tries++ < 4) {
+        equip = EquipmentGenerator.getInstance().generate('merchant', {
+          floorId, forcedQuality: order[Math.max(0, Math.min(capRank, order.length - 1))],
+        });
+      }
       stock.push({
         kind: 'equipment', name: equip.name, icon: equip.slot === 'weapon' ? '🗡️' : '🛡️',
         price: equip.buyPrice, quantity: 1, equipment: equip,

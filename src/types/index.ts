@@ -23,7 +23,8 @@ export type AffixType =
 export type PotionTier = 'crude' | 'normal' | 'quality' | 'strong' | 'holy';
 
 /** 房间类型：起点/终点/战斗/精英/宝箱/商人/女巫/Boss/休整 */
-export type RoomType = 'start' | 'end' | 'combat' | 'elite' | 'chest' | 'merchant' | 'witch' | 'boss' | 'rest';
+/** 房间类型：起点/终点/战斗/精英/宝箱/商人/女巫/铁匠/Boss/休整 */
+export type RoomType = 'start' | 'end' | 'combat' | 'elite' | 'chest' | 'merchant' | 'witch' | 'blacksmith' | 'boss' | 'rest';
 
 /** 楼层类型：初始层(第1层固定) / Boss层(每5层) / 普通层 */
 export type FloorKind = 'initial' | 'boss' | 'normal';
@@ -55,6 +56,8 @@ export interface MapEntity {
   potionTier?: PotionTier;
   /** 楼梯目标楼层 */
   targetFloor?: number;
+  /** 楼梯跨度：2 = 2×2 主实体（渲染整座阶梯）；1 = 2×2 占位从属格（只阻挡/触发，不渲染）；缺省 = 旧版单格 */
+  stairSpan?: number;
 }
 
 /** 房间数据（文档二 4.3 输出） */
@@ -89,6 +92,8 @@ export interface RoomData {
   /** 门（墙上开口，世界格坐标 + 朝向 + 通向房间） */
   doors: RoomDoor[];
   entities: MapEntity[];
+  /** 内容布局模式（战斗/精英房由 ContentFiller 填充时记录：barrier/double/arena/scattered/throne） */
+  layout?: string;
 }
 
 export interface RoomDoor {
@@ -321,6 +326,8 @@ export interface NpcDef {
   lines: string[];
   /** 商人NPC标记 */
   isMerchant?: boolean;
+  /** 铁匠标记（锻造服务） */
+  isBlacksmith?: boolean;
   /** 女巫NPC标记（特殊药水交易） */
   isWitch?: boolean;
 }
@@ -381,6 +388,8 @@ export interface SaveData {
   player: PlayerState;
   quests: QuestState[];
   bestiary: Record<string, number>;
+  /** 成就解锁表（成就ID → true） */
+  achievements: Record<string, boolean>;
   /** 当前楼层完整布局（无种子系统，地图需整体序列化） */
   floor: FloorMap;
   entityStates: Record<string, EntityRuntimeState>;
@@ -397,10 +406,11 @@ export interface SaveData {
 
 export interface GameSettings {
   autoSave: boolean;
+  /** 帧率上限（每秒渲染帧数；0 = 不限制） */
+  fpsCap: number;
 }
 
 // ============ 事件总线载荷 ============
-
 export interface GameEventMap {
   gameStarted: Record<string, never>;
   floorChanged: { fromFloor: number; toFloor: number };
@@ -424,6 +434,7 @@ export interface GameEventMap {
   potionPurchased: { tier: PotionTier; price: number };
   keyPurchased: { price: number };
   merchantOpened: { npcId: string; roomId: string };
+  blacksmithOpened: { npcId: string; roomId: string };
   /** 女巫治疗泉：消耗金币回满生命（每层一次） */
   fountainUsed: { cost: number; healed: number };
   npcTalked: { npcId: string; name: string };
@@ -433,6 +444,8 @@ export interface GameEventMap {
   questUpdated: { questId: string; progress: number; total: number };
   questCompleted: { questId: string; name: string };
   saveCompleted: { trigger: 'auto' | 'manual' };
+  achievementUnlocked: { id: string; name: string; unlock: string };
+  returnToTitle: Record<string, never>;
   saveLoaded: Record<string, never>;
   saveCleared: Record<string, never>;
   settingsChanged: { key: string; value: unknown };
@@ -441,4 +454,15 @@ export interface GameEventMap {
   panelToggled: { panel: string; open: boolean };
   floatText: { x: number; y: number; text: string; color: string };
   gameRestarted: Record<string, never>;
+}
+
+// ============ 桌面端（Electron preload 暴露的能力） ============
+declare global {
+  interface Window {
+    motaDesktop?: {
+      isDesktop: boolean;
+      setDisplayMode(opts: { mode: 'windowed' | 'fullscreen' | 'borderless'; resolution: string }): void;
+      quit(): void;
+    };
+  }
 }

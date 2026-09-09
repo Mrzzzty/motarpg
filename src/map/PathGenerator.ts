@@ -51,9 +51,9 @@ export class PathGenerator {
       }));
     }
 
-    // 1. 分类：战斗/精英 → 主干候选；宝箱 → 灵活（本实现挂为主干填充或侧室）；商人 → 侧室
+    // 1. 分类：战斗/精英 → 主干候选；宝箱 → 灵活（本实现挂为主干填充或侧室）；商人/女巫/铁匠 → 侧室
     const trunkCandidates: RoomType[] = middle.filter(t => t === 'combat' || t === 'elite');
-    const sideRooms: RoomType[] = middle.filter(t => t === 'chest' || t === 'merchant' || t === 'witch');
+    const sideRooms: RoomType[] = middle.filter(t => t === 'chest' || t === 'merchant' || t === 'witch' || t === 'blacksmith');
 
     // 2. 主干候选排序：精英靠前（分配给路径A），再轮流分配
     const sorted = [...trunkCandidates];
@@ -71,8 +71,8 @@ export class PathGenerator {
     // 3. 侧室挂载：挂在主干中间节点上（宝箱偏向主干尾部，商人偏向主干中部）
     const trunkLen = railA.length + railB.length;
     const mounts = sideRooms.map(type => {
-      const midOffset = (type === 'merchant' || type === 'witch')
-        ? Math.floor(trunkLen / 2)            // 商人/女巫挂主干正中
+      const midOffset = (type === 'merchant' || type === 'witch' || type === 'blacksmith')
+        ? Math.floor(trunkLen / 2)            // 商人/女巫/铁匠挂主干正中
         : rng.randInt(Math.ceil(trunkLen / 2), trunkLen - 1); // 宝箱挂主干后半段
       return { type, mountIndex: Math.min(midOffset, trunkLen - 1) };
     });

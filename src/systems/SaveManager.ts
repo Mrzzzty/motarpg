@@ -14,6 +14,7 @@ import { CameraController } from '../core/CameraController';
 import { Player } from '../entities/Player';
 import { QuestManager } from './QuestManager';
 import { BestiaryManager } from './BestiaryManager';
+import { AchievementSystem } from './AchievementSystem';
 import { GuidanceSystem } from './GuidanceSystem';
 import { Logger } from '../utils/Logger';
 
@@ -59,6 +60,7 @@ export class SaveManager {
       entityStates: world.exportEntityStates(),
       guidance: GuidanceSystem.getInstance().export(),
       settings: { ...gameState.settings },
+      achievements: AchievementSystem.getInstance().export(),
       stats: { ...this.stats },
     };
     try {
@@ -95,8 +97,10 @@ export class SaveManager {
       QuestManager.getInstance().restoreStates(data.quests, data.player.currentFloor);
       BestiaryManager.getInstance().restore(data.bestiary);
       GuidanceSystem.getInstance().restore(data.guidance);
-      gameState.settings = { ...data.settings };
+      // 旧存档兼容：缺省的设置项用默认值补齐（如新增的 fpsCap）
+      gameState.settings = { ...dataManager.settings.defaults, ...data.settings };
       this.stats = { ...data.stats };
+      AchievementSystem.getInstance().restore(data.achievements ?? {}, this.stats);
       CameraController.getInstance().snapToPlayer();
       eventBus.emit('saveLoaded', {});
       Logger.info(`[Save] 读档完成（楼层${data.floor.floorId}）`);

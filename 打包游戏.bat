@@ -1,38 +1,37 @@
 @echo off
-chcp 65001 >nul
-title 无尽之塔 · 打包发布版
+title Mota RPG - Build dist
 cd /d "%~dp0"
 
 echo ========================================
-echo    打包游戏（生成 dist 文件夹）
+echo    Build game (generates the dist folder)
 echo ========================================
 echo.
 
 where node >nul 2>nul
 if errorlevel 1 (
-    echo [错误] 未检测到 Node.js，请先安装：https://nodejs.org/
+    echo [ERROR] Node.js not found. Install it from https://nodejs.org/
     pause
     exit /b 1
 )
 
 if not exist "node_modules" (
-    echo [首次运行] 正在安装依赖...
+    echo [first run] Installing dependencies...
     call npm install || (pause & exit /b 1)
 )
 
 call npm run build
 if errorlevel 1 (
-    echo [错误] 打包失败。
+    echo [ERROR] Build failed.
     pause
     exit /b 1
 )
 
 echo.
-echo [完成] 游戏已打包到 dist 文件夹（约 230 KB）。
-echo        - 直接双击 dist\index.html 多数浏览器可直接玩
-echo        - 或将整个 dist 文件夹发给朋友 / 部署到任意网站
+echo [DONE] Game built into the dist folder (~230 KB).
+echo        - Double-click dist\index.html to play in most browsers
+echo        - Or send the whole dist folder to friends / deploy it anywhere
 echo.
-set /p open=是否立即本地预览？(Y/N)：
+set /p open=Preview locally now? (Y/N):
 if /i "%open%"=="Y" (
     start "" http://127.0.0.1:4173/
     call npm run preview

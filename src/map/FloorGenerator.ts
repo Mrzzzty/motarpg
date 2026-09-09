@@ -116,6 +116,17 @@ export class FloorGenerator {
       }
     }
 
+    // 铁匠铺：与女巫同类的安全房（张力-1），按间隔安排且与女巫楼层错开
+    if (this.isBlacksmithFloor(floorId) && !this.isWitchFloor(floorId)) {
+      const idx = result.findIndex(t => t === 'chest');
+      const target = idx >= 0 ? idx : result.length - 1;
+      if (target >= 0) {
+        tension -= (weights[result[target]] ?? 0);
+        result[target] = 'blacksmith';
+        tension += (weights.blacksmith ?? 0);
+      }
+    }
+
     Logger.debug(`[FloorGen] 楼层${floorId} 类型分配=${result.join(',')} 终态Tension=${tension}`);
     return result;
   }
@@ -123,6 +134,12 @@ export class FloorGenerator {
   /** 女巫酿药间出现楼层：最早 minFloor 起，每 interval 层一间（5~8 层区间内） */
   private isWitchFloor(floorId: number): boolean {
     const cfg = dataManager.mapGen.witchLimit;
+    return floorId >= cfg.minFloor && (floorId - cfg.minFloor) % cfg.interval === 0;
+  }
+
+  /** 铁匠铺出现楼层：最早 minFloor 起，每 interval 层一间 */
+  private isBlacksmithFloor(floorId: number): boolean {
+    const cfg = dataManager.mapGen.blacksmithLimit;
     return floorId >= cfg.minFloor && (floorId - cfg.minFloor) % cfg.interval === 0;
   }
 }

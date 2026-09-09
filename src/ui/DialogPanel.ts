@@ -42,6 +42,7 @@ export class DialogPanel {
         <div class="dialog-text">“${line}”</div>
         <div class="dialog-actions">
           ${def.isWitch ? '<button id="dlg-shop" class="btn-primary">🧪 秘药</button>'
+            : def.isBlacksmith ? '<button id="dlg-forge" class="btn-primary">⚒️ 锻造</button>'
             : def.isMerchant ? '<button id="dlg-shop" class="btn-primary">🛒 交易</button>' : ''}
           ${hasMore ? '<button id="dlg-next">继续 ▶</button>' : '<button id="dlg-close" class="btn-primary">结束对话</button>'}
         </div>
@@ -56,6 +57,11 @@ export class DialogPanel {
       const player = Player.getInstance();
       this.close();
       eventBus.emit('merchantOpened', { npcId: this.npcId, roomId: player.state.currentRoomId });
+    });
+    this.el.querySelector('#dlg-forge')?.addEventListener('click', () => {
+      const player = Player.getInstance();
+      this.close();
+      eventBus.emit('blacksmithOpened', { npcId: this.npcId, roomId: player.state.currentRoomId });
     });
   }
 

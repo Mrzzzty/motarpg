@@ -1,6 +1,6 @@
 /**
  * 小地图（当前层级房间类型概览）：
- * 居中区域右上角，每个房间 = 灰色正方形 + 类型图标（初始↑ 敌怪☠ 精英❗ 商人$ 宝币🪙 Boss💀 出口↓ 休整♨），
+ * 居中区域右上角，每个房间 = 灰色正方形 + 类型图标（初始↑ 敌怪☠ 精英❗ 商人$ 宝币💰 Boss💀 出口↓ 休整♨），
  * 房间连接以线段同步显示，主角所在房间用金色方框高亮。
  */
 import { eventBus } from '../core/EventBus';
@@ -14,8 +14,9 @@ const ROOM_ICONS: Record<RoomType, { icon: string; color: string }> = {
   combat: { icon: '☠', color: '#ff9999' },
   elite: { icon: '!', color: '#ff3344' },
   merchant: { icon: '$', color: '#55dd77' },
+  blacksmith: { icon: '⚒️', color: '#ffb060' },
   witch: { icon: '🧪', color: '#c78cff' },
-  chest: { icon: '🪙', color: '#ffdd44' },
+  chest: { icon: '💰', color: '#ffdd44' },
   boss: { icon: '💀', color: '#ff5555' },
   end: { icon: '↓', color: '#aaddff' },
   rest: { icon: '♨', color: '#ffaa66' },

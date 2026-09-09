@@ -12,6 +12,7 @@ import { QuestManager } from '../systems/QuestManager';
 import { BestiaryManager } from '../systems/BestiaryManager';
 import { SaveManager } from '../systems/SaveManager';
 import { MerchantSystem } from '../systems/MerchantSystem';
+import { AchievementSystem } from '../systems/AchievementSystem';
 import { GameController } from '../core/GameController';
 
 const QUALITY_RANK: Record<Quality, number> = {
@@ -76,6 +77,7 @@ export class Panels {
   private character: CharacterPanelImpl;
   private quest: QuestPanelImpl;
   private bestiary: BestiaryPanelImpl;
+  private achievements: AchievementPanelImpl;
   private settings: SettingsPanelImpl;
   private battleLog: BattleLogPanelImpl;
 
@@ -84,6 +86,7 @@ export class Panels {
     this.character = new CharacterPanelImpl(layer);
     this.quest = new QuestPanelImpl(layer);
     this.bestiary = new BestiaryPanelImpl(layer);
+    this.achievements = new AchievementPanelImpl(layer);
     this.settings = new SettingsPanelImpl(layer);
     this.battleLog = new BattleLogPanelImpl(layer);
   }
@@ -94,6 +97,7 @@ export class Panels {
       case 'character': this.character.open(); break;
       case 'quest': this.quest.open(); break;
       case 'bestiary': this.bestiary.open(); break;
+      case 'achievements': this.achievements.open(); break;
       case 'settings': this.settings.open(); break;
       default: break;
     }
@@ -167,7 +171,7 @@ class InventoryPanelImpl extends OverlayPanel {
       const count = player.getPotionCount(tier as never);
       return `<div class="potion-row" draggable="${count > 0}" data-tier="${tier}"
                   title="${count > 0 ? '拖到底部快捷栏绑定；点击使用' : '数量为0'}">
-        <span>${def.icon} ${def.name}</span>
+        <span class="potion-name">${dataManager.potionIconImg(tier as never)} ${def.name}</span>
         <span>×${count} <span class="dim">(${Math.round(def.healPct * 100)}%)</span></span>
         <button class="potion-use" data-tier-use="${tier}" ${count === 0 ? 'disabled' : ''}>使用</button>
       </div>`;
@@ -343,7 +347,7 @@ class InventoryPanelImpl extends OverlayPanel {
         <div class="dim">回收价：${e.sellPrice} 金币</div>
         <div class="eq-actions">
           <button data-act="equip" class="btn-primary">${current ? '替换穿戴（旧装回背包）' : '穿戴'}</button>
-          <button data-act="sell" ${e.isFavorite ? 'disabled title="已收藏的装备无法回收"' : ''}>出售 +${e.sellPrice}🪙</button>
+          <button data-act="sell" ${e.isFavorite ? 'disabled title="已收藏的装备无法回收"' : ''}>出售 +${e.sellPrice}💰</button>
         </div>
       </div>
     `;
@@ -382,7 +386,7 @@ class CharacterPanelImpl extends OverlayPanel {
         ${stats.goldBonus > 0 ? `<div>贪婪</div><div>+${stats.goldBonus}%</div>` : ''}
         ${stats.expBonus > 0 ? `<div>博学</div><div>+${stats.expBonus}%</div>` : ''}
         ${stats.bossDamage > 0 ? `<div>屠龙</div><div>+${stats.bossDamage}%</div>` : ''}
-        <div>金币</div><div>🪙 ${player.state.gold}</div>
+        <div>金币</div><div>💰 ${player.state.gold}</div>
         <div>钥匙</div><div>🗝️ ${player.state.keys}</div>
         <div>楼层</div><div>第 ${player.state.currentFloor} 层</div>
       </div>
@@ -457,6 +461,33 @@ class BestiaryPanelImpl extends OverlayPanel {
   }
 }
 
+// ============ 成就（解锁物品获取权） ============
+
+class AchievementPanelImpl extends OverlayPanel {
+  constructor(layer: HTMLElement) {
+    super(layer, 'achievements', '🏆 成就');
+    eventBus.on('achievementUnlocked', () => { if (this.isOpen) this.render(); });
+  }
+
+  protected onOpen(): void { this.render(); }
+
+  private render(): void {
+    const rows = AchievementSystem.getInstance().list().map(a => `
+      <div class="quest-row ${a.done ? 'done' : ''} achievement-row">
+        <div class="quest-name">${a.done ? '🏆' : '🔒'} ${a.name}</div>
+        <div class="dim">${a.desc}</div>
+        <div class="${a.done ? 'ok' : 'dim'}">🎁 ${a.unlock}${a.done ? '（已生效）' : ''}</div>
+      </div>
+    `).join('');
+    const doneCount = AchievementSystem.getInstance().list().filter(a => a.done).length;
+    this.body.innerHTML = `
+      <div class="dim" style="margin-bottom:8px">达成进度：${doneCount} / ${AchievementSystem.getInstance().list().length}。
+      达成成即可解锁商人/女巫的高阶物品获取权。</div>
+      ${rows}
+    `;
+  }
+}
+
 // ============ 设置 ============
 
 class SettingsPanelImpl extends OverlayPanel {
@@ -471,11 +502,42 @@ class SettingsPanelImpl extends OverlayPanel {
           <span>自动存档（到达新楼层时）</span>
           <input type="checkbox" id="opt-autosave" ${gameState.settings.autoSave ? 'checked' : ''} />
         </label>
-        <div class="setting-row dim">手动存档：任意时刻按 K 键（或 Ctrl+S）或点击 💾 按钮</div>
+        <label class="setting-row">
+          <span>帧率限制（省电/降温）</span>
+          <select id="opt-fpscap" class="fps-select">
+            <option value="0" ${gameState.settings.fpsCap === 0 ? 'selected' : ''}>不限制</option>
+            <option value="60" ${gameState.settings.fpsCap === 60 ? 'selected' : ''}>60 FPS</option>
+            <option value="45" ${gameState.settings.fpsCap === 45 ? 'selected' : ''}>45 FPS</option>
+            <option value="30" ${gameState.settings.fpsCap === 30 ? 'selected' : ''}>30 FPS</option>
+          </select>
+        </label>
+        <div class="setting-row dim">手动存档：任意时刻按 S 键或点击 💾 按钮</div>
+      </div>
+      <h3 class="sub-title">显示</h3>
+      <div class="settings-rows">
+        <label class="setting-row">
+          <span>显示模式</span>
+          <select id="opt-display" class="fps-select">
+            <option value="windowed">窗口化</option>
+            <option value="fullscreen">全屏</option>
+            <option value="borderless">无边框窗口</option>
+          </select>
+        </label>
+        <label class="setting-row">
+          <span>分辨率（窗口尺寸）</span>
+          <select id="opt-resolution" class="fps-select">
+            <option value="1280x720">1280 × 720</option>
+            <option value="1600x900">1600 × 900</option>
+            <option value="1920x1080">1920 × 1080</option>
+            <option value="2560x1440">2560 × 1440</option>
+          </select>
+        </label>
+        <div class="setting-row dim" id="display-hint">全屏可随时用 F11 或改回窗口化退出；无边框窗口切换会自动存档并重载游戏。</div>
       </div>
       <div class="eq-actions">
         <button id="opt-save" class="btn-primary">💾 手动存档</button>
         <button id="opt-load">📂 读取存档</button>
+        <button id="opt-title" class="btn-danger">🏠 回到首页</button>
         <button id="opt-clear" class="btn-danger">🗑️ 清除存档</button>
         <button id="opt-restart" class="btn-danger">🔄 重新开始</button>
       </div>
@@ -490,6 +552,12 @@ class SettingsPanelImpl extends OverlayPanel {
     autosave.addEventListener('change', () => {
       gameState.setSetting('autoSave', autosave.checked);
     });
+    const fpsCap = this.body.querySelector('#opt-fpscap') as HTMLSelectElement;
+    fpsCap.addEventListener('change', () => {
+      gameState.setSetting('fpsCap', parseInt(fpsCap.value, 10));
+    });
+    // 显示设置：桌面端走 Electron 主进程；浏览器端仅支持 HTML5 全屏
+    this.initDisplaySettings();
     this.body.querySelector('#opt-save')!.addEventListener('click', () => SaveManager.getInstance().save('manual'));
     this.body.querySelector('#opt-load')!.addEventListener('click', () => {
       if (SaveManager.getInstance().load()) this.close();
@@ -497,12 +565,56 @@ class SettingsPanelImpl extends OverlayPanel {
     this.body.querySelector('#opt-clear')!.addEventListener('click', () => {
       if (window.confirm('确定清除存档？不可恢复。')) SaveManager.getInstance().clear();
     });
+    this.body.querySelector('#opt-title')!.addEventListener('click', () => {
+      if (window.confirm('回到首页？当前进度将自动存档。')) {
+        this.close();
+        eventBus.emit('returnToTitle', {});
+      }
+    });
     this.body.querySelector('#opt-restart')!.addEventListener('click', () => {
       if (window.confirm('确定重新开始？当前进度将丢失（请先存档）。')) {
         GameController.getInstance().restart();
         this.close();
       }
     });
+  }
+
+  /** 显示设置：读写 localStorage（motarpg_display），桌面端经 Electron 应用；无边框切换需重建窗口（先存档） */
+  private initDisplaySettings(): void {
+    const displaySel = this.body.querySelector('#opt-display') as HTMLSelectElement;
+    const resSel = this.body.querySelector('#opt-resolution') as HTMLSelectElement;
+    const hint = this.body.querySelector('#display-hint') as HTMLElement;
+    const desktop = window.motaDesktop;
+
+    let saved: { mode: string; resolution: string } = { mode: 'windowed', resolution: '1600x900' };
+    try {
+      saved = { ...saved, ...JSON.parse(localStorage.getItem('motarpg_display') || '{}') };
+    } catch { /* 忽略损坏的显示配置 */ }
+    displaySel.value = saved.mode;
+    resSel.value = saved.resolution;
+    if (!desktop) {
+      hint.textContent = '浏览器环境：仅支持全屏/退出全屏（无边框窗口与分辨率为桌面版功能）。';
+    }
+
+    const apply = (): void => {
+      const mode = displaySel.value as 'windowed' | 'fullscreen' | 'borderless';
+      const resolution = resSel.value;
+      localStorage.setItem('motarpg_display', JSON.stringify({ mode, resolution }));
+      if (desktop) {
+        // 无边框需重建窗口：先存档再切（窗口重载后从标题屏「继续冒险」接回）
+        if (mode === 'borderless' && saved.mode !== 'borderless') {
+          SaveManager.getInstance().save('manual');
+        }
+        desktop.setDisplayMode({ mode, resolution });
+      } else if (mode === 'fullscreen') {
+        document.documentElement.requestFullscreen?.().catch(() => { /* 用户拒绝或不可用 */ });
+      } else if (document.fullscreenElement) {
+        document.exitFullscreen?.().catch(() => { /* 忽略 */ });
+      }
+      saved = { mode, resolution };
+    };
+    displaySel.addEventListener('change', apply);
+    resSel.addEventListener('change', apply);
   }
 }
 

@@ -87,6 +87,60 @@ export class EquipmentGenerator {
     return this.generate('tutorial', { forcedQuality: 'poor', slot: 'weapon', floorId: 1 });
   }
 
+  // ============ 铁匠服务（BlacksmithPanel 调用） ============
+
+  /** 重铸词条：同品质同等级重掷词条与命名（保底：poor/common 无词条则无变化） */
+  reforge(e: Equipment): Equipment {
+    return this.rebuild(e, { affixes: this.rollAffixes(e.quality, e.level) });
+  }
+
+  /** 锤炼升级：等级 +1（上限50），基础值与词条按新等级重掷 */
+  upgradeLevel(e: Equipment): Equipment | null {
+    if (e.level >= 50) return null;
+    const level = e.level + 1;
+    return this.rebuild(e, {
+      level,
+      value: this.rollBaseValue(e.slot, e.quality, level),
+      affixes: this.rollAffixes(e.quality, level),
+    });
+  }
+
+  /** 淬火提品质：向上一档（仅限史诗以下，稀有可到史诗）；到顶返回 null */
+  upgradeQuality(e: Equipment): Equipment | null {
+    const order = dataManager.equipment.qualityOrder as Quality[];
+    const i = order.indexOf(e.quality);
+    const next = order[i + 1];
+    if (!next || i + 1 > order.indexOf('epic')) return null;
+    return this.rebuild(e, {
+      quality: next,
+      value: this.rollBaseValue(e.slot, next, e.level),
+      affixes: this.rollAffixes(next, e.level),
+    });
+  }
+
+  /** 以原装备为基底重建（保留 id/slot/source，可覆盖品质/等级/基础值/词条，并重算名称与价格） */
+  private rebuild(
+    e: Equipment,
+    over: { quality?: Quality; level?: number; value?: number; affixes?: AffixInstance[] },
+  ): Equipment {
+    const quality = over.quality ?? e.quality;
+    const level = over.level ?? e.level;
+    const value = over.value ?? (e.slot === 'weapon' ? e.attack : e.defense);
+    const affixes = over.affixes ?? e.affixes;
+    const q = dataManager.equipment.quality[quality];
+    const name = this.buildName(q.prefix, e.baseName, affixes);
+    const sellPrice = Math.round(q.basePrice * (1 + level * 0.05) * (1 + affixes.length * 0.15));
+    const rule = dataManager.equipment.buyPriceRule;
+    const buyPrice = Math.max(rule.min, Math.min(rule.max, Math.round(sellPrice * rule.sellMultiplier)));
+    return {
+      ...e,
+      name, level, quality, affixes,
+      attack: e.slot === 'weapon' ? value : 0,
+      defense: e.slot === 'armor' ? value : 0,
+      sellPrice, buyPrice,
+    };
+  }
+
   /** 基础数值：等级段×品质范围；空缺(null)回退到更低的可用品质；神话=传说×1.43 */
   private rollBaseValue(slot: EquipSlot, quality: Quality, level: number): number {
     const table = slot === 'weapon' ? dataManager.equipment.weaponTable : dataManager.equipment.armorTable;

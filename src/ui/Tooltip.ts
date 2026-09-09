@@ -94,7 +94,7 @@ export class Tooltip {
         return `
           <div class="tt-title" style="color:#8ff0ff">治疗泉${used ? '（已枯竭）' : ''}</div>
           ${used ? '<div class="dim">泉水已干涸</div>'
-            : `<div class="dim">回复全部生命（🪙 ${cost}）</div>`}
+            : `<div class="dim">回复全部生命（💰 ${cost}）</div>`}
           ${used ? '' : `<div class="tt-hint">（${hints.heal ?? '左键治疗'}）</div>`}
         `;
       }
