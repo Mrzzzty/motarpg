@@ -26,6 +26,7 @@ import { buildPrefabFloor } from './map/PrefabMap';
 import { Logger } from './utils/Logger';
 import { loadPotionArts } from './render/PotionArt';
 import { loadHeroAtlas } from './render/HeroAtlas';
+import { loadNpcPortraits } from './render/NpcArt';
 
 async function bootstrap(): Promise<void> {
   // 0. 预加载魔法瓶美术图（失败回退占位盒，不阻塞）
@@ -33,6 +34,9 @@ async function bootstrap(): Promise<void> {
 
   // 0b. 预加载主角精灵图集（失败回退烘焙纹理，不阻塞）
   try { await loadHeroAtlas(); } catch (e) { console.warn('[main] 主角图集加载失败，回退烘焙纹理', e); }
+
+  // 0c. 预加载 NPC 立绘（3D 纸片人用，失败回退占位模型，不阻塞）
+  try { await loadNpcPortraits(); } catch (e) { console.warn('[main] NPC 立绘加载失败，回退占位模型', e); }
 
   // 1. 数据加载
   dataManager.loadAll();

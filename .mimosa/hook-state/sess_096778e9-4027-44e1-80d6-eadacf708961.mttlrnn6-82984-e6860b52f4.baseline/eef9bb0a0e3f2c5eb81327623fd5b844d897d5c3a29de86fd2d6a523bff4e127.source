@@ -1,0 +1,176 @@
+/**
+ * 世界管理器：持有当前楼层地图与实体运行时状态，提供格子级查询。
+ * 单例；地图无种子（Math.random），存档时整体序列化当前楼层。
+ */
+import type { EntityRuntimeState, FloorMap, MapEntity, RoomData } from '../types';
+import { Logger } from '../utils/Logger';
+
+export class WorldManager {
+  private static instance: WorldManager;
+  private floor: FloorMap | null = null;
+  private states = new Map<string, EntityRuntimeState>();
+  /** Boss 铁门：Boss 存活时锁闭的格子（key "x,y"） */
+  private gateKeys = new Set<string>();
+
+  private constructor() {}
+  static getInstance(): WorldManager {
+    if (!WorldManager.instance) WorldManager.instance = new WorldManager();
+    return WorldManager.instance;
+  }
+
+  loadFloor(floor: FloorMap, states?: Record<string, EntityRuntimeState>): void {
+    this.floor = floor;
+    this.states.clear();
+    if (states) {
+      for (const [id, st] of Object.entries(states)) this.states.set(id, st);
+    }
+    this.recomputeGates();
+    Logger.info(`[World] 进入楼层${floor.floorId}（${floor.kind}） ${floor.rooms.length}个房间`);
+  }
+
+  get currentFloor(): FloorMap | null { return this.floor; }
+
+  inBounds(x: number, y: number): boolean {
+    if (!this.floor) return false;
+    return x >= 0 && x < this.floor.width && y >= 0 && y < this.floor.height;
+  }
+
+  /** 可通行：空地格（0）；墙(1)/装饰(2)阻挡；未开启的 Boss 铁门阻挡 */
+  isWalkable(x: number, y: number): boolean {
+    if (!this.floor || !this.inBounds(x, y)) return false;
+    if (this.floor.grid[y][x] !== 0) return false;
+    if (this.gateKeys.has(`${x},${y}`)) return false;
+    return true;
+  }
+
+  /** 地形编码 */
+  tileAt(x: number, y: number): number | null {
+    if (!this.inBounds(x, y)) return null;
+    return this.floor!.grid[y][x];
+  }
+
+  getRoomAt(x: number, y: number): RoomData | null {
+    if (!this.floor) return null;
+    for (const room of this.floor.rooms) {
+      if (x >= room.x && x < room.x + room.width && y >= room.y && y < room.y + room.height) {
+        return room;
+      }
+    }
+    return null; // 走廊
+  }
+
+  getRoom(roomId: string): RoomData | null {
+    return this.floor?.rooms.find(r => r.id === roomId) ?? null;
+  }
+
+  getEntityState(id: string): EntityRuntimeState {
+    return this.states.get(id) ?? {};
+  }
+
+  private setState(id: string, patch: EntityRuntimeState): void {
+    this.states.set(id, { ...this.getEntityState(id), ...patch });
+  }
+
+  markDefeated(id: string): void {
+    this.setState(id, { isAlive: false });
+    this.recomputeGates(); // 若击败的是 Boss → 铁门自动解锁
+  }
+  markOpened(id: string): void { this.setState(id, { isOpened: true }); }
+  markTalked(id: string): void { this.setState(id, { isTalked: true }); }
+  markUsed(id: string): void { this.setState(id, { isUsed: true }); }
+
+  /** 重新计算锁闭的 Boss 铁门（换层 / Boss 被击败时调用） */
+  private recomputeGates(): void {
+    this.gateKeys.clear();
+    if (!this.floor || this.floor.kind !== 'boss') return;
+    const bossRoom = this.floor.rooms.find(r => r.type === 'boss');
+    if (!bossRoom) return;
+    const bossAlive = bossRoom.entities.some(e => e.kind === 'boss' && this.isEntityAlive(e));
+    if (!bossAlive) return; // Boss 已击败 → 铁门保持开启
+    for (const d of bossRoom.doors) {
+      if (this.getRoom(d.toRoomId)?.type !== 'end') continue;
+      this.gateKeys.add(`${d.x},${d.y}`);
+    }
+  }
+
+  /** 该格是否为未开启的铁门（阻挡通行） */
+  isGateLocked(x: number, y: number): boolean {
+    return this.gateKeys.has(`${x},${y}`);
+  }
+
+  /** Boss 铁门列表（渲染层用）：Boss 房通向终点房的门，含开启状态 */
+  getGates(): { x: number; y: number; direction: string; opened: boolean }[] {
+    if (!this.floor || this.floor.kind !== 'boss') return [];
+    const bossRoom = this.floor.rooms.find(r => r.type === 'boss');
+    if (!bossRoom) return [];
+    return bossRoom.doors
+      .filter(d => this.getRoom(d.toRoomId)?.type === 'end')
+      .map(d => ({
+        x: d.x,
+        y: d.y,
+        direction: d.direction,
+        opened: !this.gateKeys.has(`${d.x},${d.y}`),
+      }));
+  }
+
+  isEntityAlive(entity: MapEntity): boolean {
+    if (entity.kind === 'monster' || entity.kind === 'boss') return this.getEntityState(entity.id).isAlive !== false;
+    return true;
+  }
+
+  isChestOpened(entity: MapEntity): boolean {
+    return this.getEntityState(entity.id).isOpened === true;
+  }
+
+  /** 位置上的活跃实体（怪物/宝箱/NPC/楼梯；装饰不算） */
+  getEntityAt(x: number, y: number): MapEntity | null {
+    if (!this.floor) return null;
+    for (const room of this.floor.rooms) {
+      if (x < room.x - 1 || x > room.x + room.width || y < room.y - 1 || y > room.y + room.height) continue;
+      for (const e of room.entities) {
+        if (e.x !== x || e.y !== y) continue;
+        if (e.kind === 'monster' || e.kind === 'boss') {
+          if (!this.isEntityAlive(e)) continue;
+        } else if (e.kind === 'chest') {
+          if (this.isChestOpened(e)) continue;
+        } else if (e.kind === 'potion' || e.kind === 'fountain') {
+          if (this.getEntityState(e.id).isUsed === true) continue;
+        }
+        if (e.kind === 'pillar' || e.kind === 'carpet' || e.kind === 'torch'
+          || e.kind === 'cauldron' || e.kind === 'shelf') continue;
+        return e;
+      }
+    }
+    return null;
+  }
+
+  /** 是否有可交互实体占据该格（阻挡移动，走上去触发交互） */
+  hasBlockingEntity(x: number, y: number): boolean {
+    return this.getEntityAt(x, y) !== null;
+  }
+
+  /** 全楼层活跃实体（渲染/光源用） */
+  allEntities(): { entity: MapEntity; room: RoomData }[] {
+    const result: { entity: MapEntity; room: RoomData }[] = [];
+    if (!this.floor) return result;
+    for (const room of this.floor.rooms) {
+      for (const e of room.entities) {
+        if ((e.kind === 'monster' || e.kind === 'boss') && !this.isEntityAlive(e)) continue;
+        if ((e.kind === 'potion' || e.kind === 'fountain') && this.getEntityState(e.id).isUsed === true) continue;
+        result.push({ entity: e, room });
+      }
+    }
+    return result;
+  }
+
+  /** 存档导出 */
+  exportEntityStates(): Record<string, EntityRuntimeState> {
+    return Object.fromEntries(this.states);
+  }
+
+  /** 重生：恢复本层怪物与宝箱？——不恢复（ defeated 保持），仅位置重置由上层处理 */
+  reset(): void {
+    this.floor = null;
+    this.states.clear();
+  }
+}

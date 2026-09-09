@@ -785,13 +785,43 @@ button:disabled:hover { transform: none; box-shadow: none; border-color: var(--p
 
 /* 对话 */
 .dialog-box {
-  background: var(--panel-bg);
+  position: relative;
+  isolation: isolate; /* 让立绘 z-index:-1 只沉到本盒之下，不被遮罩盖住 */
+  background: rgba(11, 15, 23, 0.985);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
   padding: 18px 22px;
   min-width: 400px;
   max-width: 560px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.6), var(--panel-glow);
+}
+
+/* NPC 立绘：立在对话框左侧，右半部分被对话框遮挡 */
+.dialog-portrait {
+  position: absolute;
+  left: -175px;
+  bottom: -30px;
+  height: clamp(260px, 44vh, 400px);
+  z-index: -1;
+  pointer-events: none;
+  filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 30px rgba(120, 200, 160, 0.12));
+  animation: portraitIn 0.32s var(--ease-pop), portraitFloat 3.4s ease-in-out 0.4s infinite alternate;
+  transform-origin: bottom center;
+}
+@keyframes portraitIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes portraitFloat {
+  from { transform: translateY(0); }
+  to { transform: translateY(-7px); }
+}
+/* 窄屏：立绘缩小并更多藏进对话框后 */
+@media (max-width: 1100px) {
+  .dialog-portrait { left: -120px; height: clamp(240px, 46vh, 360px); opacity: 0.9; }
+}
+@media (max-width: 860px) {
+  .dialog-portrait { display: none; }
 }
 .dialog-name { font-weight: bold; font-size: 15px; margin-bottom: 8px; }
 .dialog-text { line-height: 1.8; margin-bottom: 14px; min-height: 54px; }

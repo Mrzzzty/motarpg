@@ -22,6 +22,7 @@ import { textureGen } from '../render/TextureGenerator';
 import { getHeroAtlas } from '../render/HeroAtlas';
 import { HeroAnimator, type HeroAction } from '../render/HeroAnimator';
 import { canvasTexture, brickTexture } from './ThreeTextures';
+import { getNpcPortrait } from './NpcArt';
 import { ParticleSystem } from './ParticleSystem';
 import { ThreeParticleSystem } from './ThreeParticleSystem';
 import { postProcessing } from './PostProcessing';
@@ -151,6 +152,14 @@ export class ThreeRenderer {
   private torchLights = new Map<string, THREE.PointLight>();
   /** 氛围点光源（宝箱/Boss/楼梯），不投影 */
   private glowLights = new Map<string, THREE.PointLight>();
+  /**
+   * 灯光池：场景内点光源数量恒定，火把/氛围光只复用池中灯（改位置/颜色/强度）。
+   * 动态增删 PointLight 会触发 Three 全场景着色器重编译 → 开宝箱/战斗后明显卡顿。
+   */
+  private torchPool: THREE.PointLight[] = [];
+  private glowPool: THREE.PointLight[] = [];
+  private torchCursor = 0;
+  private glowCursor = 0;
   /** 自发光脉动精灵（精英/Boss/未开宝箱/楼梯），由 render 每帧驱动 */
   private glowSprites: { sprite: THREE.Sprite; base: number; speed: number; phase: number }[] = [];
   /** 丁达尔飘尘（火把光锥内缓慢上升的浮尘） */
@@ -286,6 +295,24 @@ export class ThreeRenderer {
     this.playerTorch.shadow.mapSize.set(1024, 1024);
     this.playerTorch.shadow.bias = -0.002;
     this.scene.add(this.playerTorch);
+
+    // 灯光池：一次性建满，运行时只改参数（数量恒定 → 永不触发着色器重编译）
+    for (let i = 0; i < MAX_TORCH_LIGHTS; i++) {
+      const l = new THREE.PointLight(0xff9040, 0, 8);
+      l.decay = 1.6;
+      if (i < MAX_SHADOW_TORCH) {
+        l.castShadow = true;
+        l.shadow.mapSize.set(512, 512);
+        l.shadow.bias = -0.002;
+      }
+      this.scene.add(l);
+      this.torchPool.push(l);
+    }
+    for (let i = 0; i < MAX_GLOW_LIGHTS; i++) {
+      const l = new THREE.PointLight(0xffffff, 0, 6);
+      this.scene.add(l);
+      this.glowPool.push(l);
+    }
   }
 
   /** 星空：随机球壳分布的闪烁星点（ShaderMaterial 逐星相位闪烁，加色混合） */
@@ -785,10 +812,13 @@ export class ThreeRenderer {
       return;
     }
     this.clearGroup(this.entityGroup);
-    for (const light of this.torchLights.values()) this.scene?.remove(light);
+    // 灯光池归零复用（不增删灯光 → 不触发着色器重编译）
+    this.torchCursor = 0;
+    this.glowCursor = 0;
     this.torchLights.clear();
-    for (const light of this.glowLights.values()) this.scene?.remove(light);
     this.glowLights.clear();
+    for (const l of this.torchPool) l.intensity = 0;
+    for (const l of this.glowPool) l.intensity = 0;
     this.glowSprites = []; // 精灵已随 clearGroup 释放，此处只清引用
     this.dustItems = [];
     this.playerSprite = null;
@@ -923,13 +953,13 @@ export class ThreeRenderer {
         });
       }
 
-      if (this.torchLights.size < MAX_TORCH_LIGHTS) {
-        const light = new THREE.PointLight(ROOM_LIGHT_COLORS[room.type] ?? 0xff9040, 1.0, 8);
-        light.decay = 1.6; // 衰减放缓：墙上不再出现生硬的圆形光斑
+      // 从灯光池取灯（数量恒定，无重编译）
+      if (this.torchCursor < this.torchPool.length) {
+        const light = this.torchPool[this.torchCursor++];
+        light.color.setHex(ROOM_LIGHT_COLORS[room.type] ?? 0xff9040);
+        light.intensity = 1.0;
+        light.distance = 8;
         light.position.set(tx, 0.95, tz);
-        light.castShadow = this.torchLights.size < MAX_SHADOW_TORCH;
-        if (light.castShadow) light.shadow.mapSize.set(512, 512);
-        this.scene?.add(light);
         this.torchLights.set(entity.id, light);
       }
       return;
@@ -1074,6 +1104,21 @@ export class ThreeRenderer {
       return;
     }
 
+    // 配了立绘的 NPC（如引导者·艾登）：直接用立绘作为 3D 纸片人，替换占位方块
+    if (entity.kind === 'npc') {
+      const npcDef = dataManager.getNpc(entity.npcId ?? '');
+      const portraitCanvas = npcDef?.portrait ? getNpcPortrait(npcDef.portrait) : null;
+      if (portraitCanvas) {
+        const scale = 2.1;
+        const sprite = this.makePaperSprite(portraitCanvas, scale);
+        sprite.userData.footRatio = 6 / portraitCanvas.height; // 立绘底部 6px 余量
+        sprite.position.set(cx, this.footedY(sprite), cz);
+        this.entityGroup.add(sprite);
+        this.addGroundShadow(cx, cz, scale * 0.26);
+        return;
+      }
+    }
+
     // 玩家/怪物/NPC/其他 → 纸片人 Sprite（始终面向摄像机）
     const canvas = textureGen.entity(entity, room, def, heightPx, opened);
     // 整体放大：3D 内原尺寸过小；同时保留 普通 < 精英 < Boss 的体型差
@@ -1130,16 +1175,17 @@ export class ThreeRenderer {
     this.entityGroup.add(lip);
   }
 
-  /** 氛围点光源（不投影，受 MAX_GLOW_LIGHTS 限制，避免过多点光源拖慢着色） */
+  /** 氛围点光源：从灯光池获取（不投影；池耗尽则跳过），颜色/强度/位置原地更新 */
   private addGlowLight(
     id: string, color: number, intensity: number, distance: number,
     x: number, y: number, z: number,
   ): void {
-    if (this.glowLights.has(id) || this.glowLights.size >= MAX_GLOW_LIGHTS) return;
-    const light = new THREE.PointLight(color, intensity, distance);
+    if (this.glowLights.has(id) || this.glowCursor >= this.glowPool.length) return;
+    const light = this.glowPool[this.glowCursor++];
+    light.color.setHex(color);
+    light.intensity = intensity;
+    light.distance = distance;
     light.position.set(x, y, z);
-    light.castShadow = false;
-    this.scene?.add(light);
     this.glowLights.set(id, light);
   }
 
