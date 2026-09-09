@@ -1,0 +1,76 @@
+/**
+ * NPC对话面板：引导者台词轮播；商人提供"打开商店"入口。
+ */
+import { dataManager } from '../core/DataManager';
+import { eventBus } from '../core/EventBus';
+import { gameState } from '../core/GameState';
+import { Player } from '../entities/Player';
+
+export class DialogPanel {
+  private el: HTMLElement;
+  private npcId = '';
+  private lineIndex = 0;
+
+  constructor(layer: HTMLElement) {
+    this.el = document.createElement('div');
+    this.el.className = 'overlay-panel hidden dialog-panel';
+    layer.appendChild(this.el);
+    eventBus.on('npcTalked', p => this.show(p.npcId));
+    // Esc 关闭对话
+    window.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !this.el.classList.contains('hidden')) this.close();
+    });
+  }
+
+  private show(npcId: string): void {
+    const def = dataManager.getNpc(npcId);
+    if (!def) return;
+    this.npcId = npcId;
+    this.lineIndex = 0;
+    gameState.pushModal();
+    this.el.classList.remove('hidden');
+    this.render();
+  }
+
+  private render(): void {
+    const def = dataManager.getNpc(this.npcId)!;
+    const line = def.lines[this.lineIndex] ?? def.lines[def.lines.length - 1];
+    const hasMore = this.lineIndex < def.lines.length - 1;
+    const portrait = def.portrait
+      ? `<img class="dialog-portrait" src="${def.portrait}" alt="${def.name}" draggable="false">`
+      : '';
+    this.el.innerHTML = `
+      <div class="dialog-box">
+        ${portrait}
+        <div class="dialog-name" style="color:${def.color}">${def.name}</div>
+        <div class="dialog-text">“${line}”</div>
+        <div class="dialog-actions">
+          ${def.isWitch ? '<button id="dlg-shop" class="btn-primary">🧪 秘药</button>'
+            : def.isBlacksmith ? '<button id="dlg-forge" class="btn-primary">⚒️ 锻造</button>'
+            : def.isMerchant ? '<button id="dlg-shop" class="btn-primary">🛒 交易</button>' : ''}
+          ${hasMore ? '<button id="dlg-next">继续 ▶</button>' : '<button id="dlg-close" class="btn-primary">结束对话</button>'}
+        </div>
+      </div>
+    `;
+    this.el.querySelector('#dlg-next')?.addEventListener('click', () => {
+      this.lineIndex++;
+      this.render();
+    });
+    this.el.querySelector('#dlg-close')?.addEventListener('click', () => this.close());
+    this.el.querySelector('#dlg-shop')?.addEventListener('click', () => {
+      const player = Player.getInstance();
+      this.close();
+      eventBus.emit('merchantOpened', { npcId: this.npcId, roomId: player.state.currentRoomId });
+    });
+    this.el.querySelector('#dlg-forge')?.addEventListener('click', () => {
+      const player = Player.getInstance();
+      this.close();
+      eventBus.emit('blacksmithOpened', { npcId: this.npcId, roomId: player.state.currentRoomId });
+    });
+  }
+
+  private close(): void {
+    this.el.classList.add('hidden');
+    gameState.popModal();
+  }
+}

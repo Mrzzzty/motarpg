@@ -1,0 +1,296 @@
+/**
+ * 区段标题卡 + 通用提示（游戏文案+美术规格 v1 §2 [已确认] / §6 [推荐稿]）：
+ *
+ * 标题卡：跨入区段起点楼层（1/16/41/61/81/101）→ 屏幕中央全屏艺术字卡：
+ *   区段小字 + 大字（占屏 40–60%）+ 一句氛围文案 + 区段主题配色光晕，
+ *   字体风格随区段变化；淡入光晕、数秒后透明度渐变消隐（非切黑）；
+ *   不显示任何 UI 按钮、不阻塞操作。
+ *
+ * 提示：进层「第 N 层」顶部居中小字 + 区段主色下划线，1.5s 消隐；
+ *   区段起点额外一行「进入【区段名】」（字号略大）。
+ * 低语：引导者在画面边缘的半透明手写体呢喃（可选，无背景框）。
+ *
+ * 同时把区段主题色写入 CSS 变量（--accent/--accent-cool），
+ * 战斗面板等 UI 随层级配色（§5）。
+ */
+import { eventBus } from '../core/EventBus';
+import { gameState } from '../core/GameState';
+import { Player } from '../entities/Player';
+import { tierOfFloor, isTierStartFloor, type TierTheme } from '../data/tiers';
+
+/** 标题卡背景美术（Canvas → dataURL，程序化生成，无外部素材） */
+const bgArtCache = new Map<string, string>();
+function tierBgArt(tier: TierTheme): string {
+  const cached = bgArtCache.get(tier.id);
+  if (cached) return cached;
+  const w = 512;
+  const h = 288;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+  const bg = tier.titleCard.bg;
+
+  if (bg === 'brick') {
+    ctx.fillStyle = '#2b3a4a';
+    ctx.fillRect(0, 0, w, h);
+    for (let row = 0; row < h / 18; row++) {
+      for (let col = -1; col < w / 40 + 1; col++) {
+        const x = col * 40 + (row % 2) * 20;
+        const y = row * 18;
+        const v = 0.85 + ((row * 7 + col * 13) % 5) * 0.06;
+        ctx.fillStyle = `rgba(${Math.round(107 * v)},${Math.round(123 * v)},${Math.round(140 * v)},0.55)`;
+        ctx.fillRect(x + 1, y + 1, 38, 16);
+      }
+    }
+  } else if (bg === 'moss') {
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#1c2a1a');
+    grad.addColorStop(1, '#33200f');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(125,181,106,0.5)';
+    for (let i = 0; i < 6; i++) {
+      const x0 = 30 + i * 82;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x0, -4);
+      ctx.bezierCurveTo(x0 - 22, h * 0.4, x0 + 26, h * 0.7, x0 - 8, h + 6);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 24; i++) {
+      ctx.fillStyle = i % 3 === 0 ? 'rgba(255,176,96,0.75)' : 'rgba(154,217,122,0.7)';
+      ctx.fillRect((i * 61 + 13) % w, (i * 47 + 7) % h, 2.2, 2.2);
+    }
+  } else if (bg === 'book') {
+    const grad = ctx.createRadialGradient(w / 2, h * 0.62, 10, w / 2, h * 0.62, h);
+    grad.addColorStop(0, '#5c4630');
+    grad.addColorStop(1, '#241a10');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    // 翻开的书剪影
+    ctx.fillStyle = 'rgba(232,220,192,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(w / 2, h * 0.78);
+    ctx.bezierCurveTo(w * 0.32, h * 0.66, w * 0.22, h * 0.72, w * 0.14, h * 0.7);
+    ctx.lineTo(w * 0.14, h * 0.52);
+    ctx.bezierCurveTo(w * 0.24, h * 0.5, w * 0.36, h * 0.56, w / 2, h * 0.62);
+    ctx.bezierCurveTo(w * 0.64, h * 0.56, w * 0.76, h * 0.5, w * 0.86, h * 0.52);
+    ctx.lineTo(w * 0.86, h * 0.7);
+    ctx.bezierCurveTo(w * 0.78, h * 0.72, w * 0.68, h * 0.66, w / 2, h * 0.78);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(122,90,58,0.9)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(w / 2, h * 0.62);
+    ctx.lineTo(w / 2, h * 0.78);
+    ctx.stroke();
+  } else if (bg === 'stars') {
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#2e4a7a');
+    grad.addColorStop(1, '#5a3a7a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    for (let i = 0; i < 90; i++) {
+      const big = i % 11 === 0;
+      ctx.fillStyle = big ? '#ffffff' : 'rgba(230,238,255,0.8)';
+      const x = (i * 97 + 31) % w;
+      const y = (i * 53 + 17) % h;
+      ctx.fillRect(x, y, big ? 2.4 : 1.4, big ? 2.4 : 1.4);
+      if (big) {
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fillRect(x - 3, y + 0.6, 8, 0.8);
+        ctx.fillRect(x + 0.6, y - 3, 0.8, 8);
+      }
+    }
+  } else if (bg === 'gears') {
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#8d99a8');
+    grad.addColorStop(1, '#dfe6ec');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    const gear = (cx: number, cy: number, r: number, teeth: number): void => {
+      ctx.fillStyle = 'rgba(55,48,31,0.88)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      for (let i = 0; i < teeth; i++) {
+        const a = (Math.PI * 2 * i) / teeth;
+        ctx.save();
+        ctx.translate(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        ctx.rotate(a);
+        ctx.fillRect(-r * 0.1, -r * 0.1, r * 0.22, r * 0.2);
+        ctx.restore();
+      }
+      ctx.fillStyle = '#9aa6b4';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.34, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    gear(w * 0.3, h * 0.36, 52, 12);
+    gear(w * 0.68, h * 0.6, 36, 10);
+  } else {
+    // halo：塔顶留白，仅极淡光晕
+    const grad = ctx.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, h * 0.8);
+    grad.addColorStop(0, 'rgba(248,242,225,0.9)');
+    grad.addColorStop(1, 'rgba(196,189,166,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  // 通用暗角：让大字更聚焦
+  const vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, h * 0.95);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.66)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, w, h);
+
+  const url = canvas.toDataURL('image/png');
+  bgArtCache.set(tier.id, url);
+  return url;
+}
+
+export class TierTitle {
+  private el: HTMLElement;
+  private bgEl: HTMLElement;
+  private subEl: HTMLElement;
+  private bigEl: HTMLElement;
+  private vibeEl: HTMLElement;
+  private tipEl: HTMLElement;
+  private whisperEl: HTMLElement;
+  private timers: number[] = [];
+  /** 未开始游戏时到达的区段起点（新游戏第1层在构筑期触发） */
+  private pendingTier: TierTheme | null = null;
+
+  constructor(host: HTMLElement) {
+    const el = document.createElement('div');
+    el.id = 'tier-title';
+    el.className = 'hidden';
+    el.innerHTML = `
+      <div class="tt-bg"></div>
+      <div class="tt-body">
+        <div class="tt-sub"></div>
+        <div class="tt-big"></div>
+        <div class="tt-vibe"></div>
+      </div>`;
+    host.appendChild(el);
+    this.el = el;
+    this.bgEl = el.querySelector('.tt-bg')!;
+    this.subEl = el.querySelector('.tt-sub')!;
+    this.bigEl = el.querySelector('.tt-big')!;
+    this.vibeEl = el.querySelector('.tt-vibe')!;
+
+    const tip = document.createElement('div');
+    tip.id = 'floor-tip';
+    tip.className = 'hidden';
+    tip.innerHTML = '<div class="ft-section"></div><div class="ft-floor"></div>';
+    host.appendChild(tip);
+    this.tipEl = tip;
+
+    const whisper = document.createElement('div');
+    whisper.id = 'whisper';
+    whisper.className = 'hidden';
+    host.appendChild(whisper);
+    this.whisperEl = whisper;
+
+    eventBus.on('floorChanged', p => this.onFloorChanged(p.toFloor));
+    eventBus.on('gameStarted', () => {
+      // 新游戏第1层：构筑世界的遮罩散去后补播标题卡（含开场缓升镜头）
+      const floor = Player.getInstance().state.currentFloor;
+      if (this.pendingTier && floor === this.pendingTier.fromFloor) {
+        const tier = this.pendingTier;
+        this.pendingTier = null;
+        this.showCard(tier);
+        this.showTip(tier, floor, true);
+      }
+    });
+  }
+
+  private onFloorChanged(toFloor: number): void {
+    const tier = tierOfFloor(toFloor);
+    this.applyTierVars(tier);
+    if (!gameState.started) {
+      // 构筑期（新游戏）到达第1层：挂起等 gameStarted 再播
+      if (toFloor === 1) this.pendingTier = tier;
+      return;
+    }
+    this.showTip(tier, toFloor, isTierStartFloor(toFloor));
+    if (isTierStartFloor(toFloor)) this.showCard(tier);
+  }
+
+  /** 区段主题色 → CSS 变量（战斗面板等 UI 随层级配色，§5） */
+  private applyTierVars(tier: TierTheme): void {
+    const root = document.getElementById('game-root');
+    if (!root) return;
+    root.style.setProperty('--accent', tier.uiAccent);
+    root.style.setProperty('--accent-cool', tier.uiAccentCool);
+  }
+
+  /** 全屏艺术字标题卡：淡入光晕 → 停留 → 透明度渐变消隐；不阻塞操作 */
+  private showCard(tier: TierTheme): void {
+    this.clearTimers();
+    const t = tier.titleCard;
+    this.el.style.setProperty('--tt-main', t.main);
+    this.el.style.setProperty('--tt-sub2', t.sub);
+    this.el.style.setProperty('--tt-glow', t.glow);
+    this.bgEl.style.backgroundImage = `url(${tierBgArt(tier)})`;
+    this.bgEl.className = 'tt-bg';
+    if (t.bg === 'stars') this.bgEl.classList.add('tt-rotate-slow');
+    if (t.bg === 'gears') this.bgEl.classList.add('tt-rotate-slower');
+    this.subEl.textContent = tier.fullName;
+    this.bigEl.textContent = t.big;
+    this.bigEl.className = `tt-big ${t.fontClass}`;
+    this.bigEl.style.letterSpacing = t.letterSpacing != null ? `${t.letterSpacing}em` : '';
+    this.vibeEl.textContent = t.vibe;
+
+    this.el.classList.remove('hidden', 'tt-out');
+    this.el.classList.add('tt-in');
+    // 第1层给开场镜头留更长的驻留
+    const hold = tier.fromFloor === 1 ? 5200 : 3800;
+    this.timers.push(window.setTimeout(() => {
+      this.el.classList.remove('tt-in');
+      this.el.classList.add('tt-out');
+      this.timers.push(window.setTimeout(() => this.el.classList.add('hidden'), 950));
+    }, hold));
+
+    // 引导者低语（§6 [推荐稿]，可选）：标题卡消隐前后于画面边缘浮现
+    if (tier.whisper) {
+      this.timers.push(window.setTimeout(() => this.showWhisper(tier.whisper!), hold - 500));
+    }
+  }
+
+  /** 进层提示：顶部居中小字 + 区段主色下划线；区段起点一行「进入【…】」略大 */
+  private showTip(tier: TierTheme, floor: number, sectionEntry: boolean): void {
+    const sectionEl = this.tipEl.querySelector('.ft-section') as HTMLElement;
+    const floorEl = this.tipEl.querySelector('.ft-floor') as HTMLElement;
+    sectionEl.textContent = sectionEntry ? `进入【${tier.name}】` : '';
+    sectionEl.classList.toggle('hidden', !sectionEntry);
+    floorEl.textContent = `第 ${floor} 层`;
+    floorEl.style.setProperty('--ft-color', tier.uiAccent);
+    this.tipEl.classList.remove('hidden');
+    this.tipEl.classList.remove('ft-out');
+    // 淡入 → 1.5s 消隐（区段起点驻留稍长）
+    this.timers.push(window.setTimeout(() => {
+      this.tipEl.classList.add('ft-out');
+      this.timers.push(window.setTimeout(() => this.tipEl.classList.add('hidden'), 420));
+    }, sectionEntry ? 2400 : 1500));
+  }
+
+  /** 引导者低语：画面边缘半透明手写体，无背景框 */
+  private showWhisper(text: string): void {
+    this.whisperEl.textContent = text;
+    this.whisperEl.classList.remove('hidden', 'wh-out');
+    this.whisperEl.classList.add('wh-in');
+    this.timers.push(window.setTimeout(() => {
+      this.whisperEl.classList.remove('wh-in');
+      this.whisperEl.classList.add('wh-out');
+      this.timers.push(window.setTimeout(() => this.whisperEl.classList.add('hidden'), 1200));
+    }, 4200));
+  }
+
+  private clearTimers(): void {
+    for (const t of this.timers) window.clearTimeout(t);
+    this.timers = [];
+  }
+}

@@ -1,6 +1,7 @@
 {
   "defaults": {
     "autoSave": true,
-    "fpsCap": 0
+    "fpsCap": 0,
+    "battleMode": "auto"
   }
 }

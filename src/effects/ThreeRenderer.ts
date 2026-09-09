@@ -20,12 +20,14 @@ import { dataManager } from '../core/DataManager';
 import { projection } from '../render/Projection';
 import { textureGen } from '../render/TextureGenerator';
 import { getHeroAtlas } from '../render/HeroAtlas';
-import { HeroAnimator, type HeroAction } from '../render/HeroAnimator';
-import { canvasTexture, brickTexture } from './ThreeTextures';
-import { getNpcPortrait } from './NpcArt';
+import { HeroAnimator, type HeroAction, type HeroFacing } from '../render/HeroAnimator';
+import { canvasTexture, wallTexture, windowTexture, groundTexture } from './ThreeTextures';
+import { getNpcPortrait } from '../render/NpcArt';
 import { ParticleSystem } from './ParticleSystem';
 import { ThreeParticleSystem } from './ThreeParticleSystem';
+import { AmbientParticles } from './AmbientParticles';
 import { postProcessing } from './PostProcessing';
+import { tierOfFloor, isTierStartFloor, type TierTheme } from '../data/tiers';
 import type { MapEntity, MonsterDef, RoomData } from '../types';
 
 /**
@@ -55,8 +57,6 @@ const ROOM_LIGHT_COLORS: Record<string, number> = {
   rest: 0xffe9c4,     // 暖白
   corridor: 0xff8844, // 走廊默认暖橙
 };
-/** 点光源阴影为 6 面立方体贴图，开销大：仅最近的若干个投射阴影 */
-const MAX_SHADOW_TORCH = 4;
 /** 场景点光源总数上限（超出只保留最近的） */
 const MAX_TORCH_LIGHTS = 12;
 /** 氛围光（宝箱/Boss/楼梯）上限：不投影，只贡献颜色氛围 */
@@ -79,8 +79,14 @@ interface GateAnim {
 const FLOOR_THICKNESS = 0.1;
 /** 走廊地板厚度：让走廊呈现可供通行的实体桥感 */
 const CORRIDOR_THICKNESS = 0.55;
-/** 墙体向下延伸深度：塔身高耸入暗的截面感（只向下，不向上） */
-const TOWER_DEPTH = 16;
+/**
+ * 外部世界地面（设定：房间/走廊之外是正常世界）：
+ * 以地图边界外扩该格数为界平铺地面（单 InstancedMesh，一次 draw call——
+ * 有边界、非无限），顶面 y = GROUND_Y，略低于房间地板底（-0.1）。
+ */
+const GROUND_MARGIN = 16;
+const GROUND_Y = -0.12;
+const GROUND_THICKNESS = 0.24;
 
 export class ThreeRenderer {
   private static instance: ThreeRenderer;
@@ -112,10 +118,15 @@ export class ThreeRenderer {
   private heroAnimator: HeroAnimator | null = null;
   /** 主角基准宽度（scale.x 绝对值），镜像时仅翻转符号 */
   private heroBaseW = 1;
-  /** 主角朝向：图集动作帧原生朝左，向右移动时水平镜像（scale.x 取负） */
-  private heroFacesLeft = true;
+  /**
+   * 主角朝向。图集侧面帧（row8）原生朝右（放大目检确认）：
+   * 向右 = 不镜像，向左 = 水平镜像；上下行走用背面/正面行、不镜像。
+   */
+  private heroFacing: HeroFacing = 'down';
   /** 玩家贴地阴影 */
   private playerShadow: THREE.Mesh | null = null;
+  /** 主角 contact AO：更小更深的贴地暗斑（光影 v2 §3） */
+  private playerContact: THREE.Mesh | null = null;
   /** Boss 铁门（含开合动画进度） */
   private gates: GateAnim[] = [];
   /** 墙格 → InstancedMesh 实例（供"遮挡虚化"单独隐藏 / 恢复） */
@@ -160,12 +171,29 @@ export class ThreeRenderer {
   private glowPool: THREE.PointLight[] = [];
   private torchCursor = 0;
   private glowCursor = 0;
-  /** 自发光脉动精灵（精英/Boss/未开宝箱/楼梯），由 render 每帧驱动 */
+  /** 自发光光晕精灵（精英/Boss/未开宝箱/楼梯），亮度恒定（无逐帧驱动） */
   private glowSprites: { sprite: THREE.Sprite; base: number; speed: number; phase: number }[] = [];
+  /** 纸片人假受光登记（光影优化：Sprite 材质不受光，按周围光源逐帧调明暗） */
+  private litSprites: { sprite: THREE.Sprite }[] = [];
   /** 丁达尔飘尘（火把光锥内缓慢上升的浮尘） */
   private dustItems: {
     sprite: THREE.Sprite; baseX: number; baseZ: number; baseY: number; phase: number; speed: number;
   }[] = [];
+  /** 引导者灵体特效（第1层）：微光描边光晕 + 缓升灰白光点 + 呼吸浮动 */
+  private spiritFx: { halo: THREE.Sprite; sprite: THREE.Sprite; baseY: number } | null = null;
+  private spiritDots: { sprite: THREE.Sprite; baseX: number; baseZ: number; phase: number; speed: number }[] = [];
+  /** 塔顶反转：引导者虚影（淡入→光影形变「笑」→淡出） */
+  private phantoms: {
+    group: THREE.Group; sprite: THREE.Sprite | null; halo: THREE.Sprite;
+    t: number; state: 'in' | 'hold' | 'out'; flickTimer: number;
+  }[] = [];
+  /** 当前楼层区段主题（换层时更新；墙纹理/光照/粒子/后处理均读它） */
+  private currentTier: TierTheme = tierOfFloor(1);
+  /** 窗景云海 UV 滚动纹理（钟楼） */
+  private windowScrollers: { tex: THREE.Texture; speed: number }[] = [];
+  /** 相机演出：intro=开场缓升 / sway=标题卡缓推摇移 / wide=登顶广角 / dive=下摇俯冲 */
+  private camFx: { kind: 'intro' | 'sway' | 'wide' | 'dive'; t: number; dur: number; hold: boolean } | null = null;
+  private baseFov = 45;
 
   /** 初始化场景/相机/渲染器/光照（对应原 PixiRenderer.init） */
   async init(container: HTMLElement): Promise<void> {
@@ -180,6 +208,7 @@ export class ThreeRenderer {
     const cam3d = dataManager.config.camera3D;
     const camera = new THREE.PerspectiveCamera(cam3d.fov, w / h, 0.1, 200);
     this.camera = camera;
+    this.baseFov = cam3d.fov;
 
     let renderer: THREE.WebGLRenderer;
     try {
@@ -189,14 +218,16 @@ export class ThreeRenderer {
       container.innerHTML = '<div style="padding:24px;color:#ff8888">当前环境不支持 WebGL，无法启动游戏渲染。</div>';
       return;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, 1.5), 2)); // 抗锯齿②：1x 屏强制 1.5x SSAA 超采样
     renderer.setSize(w, h);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // VSM（光影 v2 §1）：月光柔影需要真正的模糊阴影——PCFSoft 下 radius 是死代码，
+    // VSM 下 radius + blurSamples 生效，二值硬边变为可见的软过渡带
+    renderer.shadowMap.type = THREE.VSMShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     // 电影感色调映射：高光柔和过渡（火把不再死白炸开），暗部保留细节
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.35; // 光影 v2 §4：1.15 → 1.35，补偿 ACES 中间调压暗
     renderer.domElement.id = 'game-canvas';
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
@@ -218,7 +249,16 @@ export class ThreeRenderer {
     this.ready = true;
     this.rebuildFloor();
 
-    eventBus.on('floorChanged', () => this.rebuildFloor());
+    eventBus.on('floorChanged', p => {
+      this.rebuildFloor();
+      // 标题卡期间相机缓推近并轻微摇移（§0 相机 [已确认]）；
+      // 第1层由 gameStarted 时的「地面缓升」开场镜头接管，不再叠加摇移
+      if (isTierStartFloor(p.toFloor) && p.toFloor !== 1) this.playTierSway();
+    });
+    // 新游戏第1层：镜头由地面缓升至半身（§1 引导者登场）
+    eventBus.on('gameStarted', () => {
+      if (WorldManager.getInstance().currentFloor?.floorId === 1) this.playIntroRise();
+    });
     eventBus.on('saveLoaded', () => this.rebuildFloor());
     eventBus.on('gameRestarted', () => this.rebuildFloor());
     eventBus.on('monsterDefeated', () => this.rebuildEntities());
@@ -260,7 +300,9 @@ export class ThreeRenderer {
     dir.shadow.camera.bottom = -d;
     dir.shadow.bias = -0.0006;
     dir.shadow.normalBias = 0.02;
-    dir.shadow.radius = 4; // 月光柔影
+    // VSM 模式下 radius/blurSamples 生效（PCFSoft 下 radius 是无效参数），toon 柔影
+    dir.shadow.radius = 6;
+    dir.shadow.blurSamples = 12;
     this.scene.add(dir);
     this.scene.add(dir.target);
     this.dirLight = dir;
@@ -289,22 +331,17 @@ export class ThreeRenderer {
     this.moonGroup.position.set(ThreeRenderer.MOON_OFFSET.x, ThreeRenderer.MOON_OFFSET.y, ThreeRenderer.MOON_OFFSET.z);
     this.scene.add(this.moonGroup);
 
-    this.playerTorch = new THREE.PointLight(0xff9a3d, 1.5, 10);
+    // 点光源不投影（光影 v2 §2）：点光是放射状投影，与月光平行投影方向冲突；
+    // 且 cube shadow map = 6 面 pass，开销极重。补光只保留颜色/强度，阴影统一由月光投射。
+    this.playerTorch = new THREE.PointLight(0xff9a3d, 1.7, 11);
     this.playerTorch.decay = 1.5;
-    this.playerTorch.castShadow = true;
-    this.playerTorch.shadow.mapSize.set(1024, 1024);
-    this.playerTorch.shadow.bias = -0.002;
+    this.playerTorch.castShadow = false;
     this.scene.add(this.playerTorch);
 
     // 灯光池：一次性建满，运行时只改参数（数量恒定 → 永不触发着色器重编译）
     for (let i = 0; i < MAX_TORCH_LIGHTS; i++) {
-      const l = new THREE.PointLight(0xff9040, 0, 8);
+      const l = new THREE.PointLight(0xff9040, 0, 10);
       l.decay = 1.6;
-      if (i < MAX_SHADOW_TORCH) {
-        l.castShadow = true;
-        l.shadow.mapSize.set(512, 512);
-        l.shadow.bias = -0.002;
-      }
       this.scene.add(l);
       this.torchPool.push(l);
     }
@@ -390,12 +427,13 @@ export class ThreeRenderer {
     this.scene?.add(mesh);
   }
 
-  /** 整层重建（换层/读档）：地板 + 墙/柱 + 实体 */
+  /** 整层重建（换层/读档）：地板 + 墙/柱 + 实体 + 区段主题 */
   private rebuildFloor(): void {
     if (!this.ready) return;
     const floor = WorldManager.getInstance().currentFloor;
     if (!floor) return;
     this.builtFloorId = floor.floorId;
+    this.applyTier(floor.floorId);
     this.focusInit = false; // 换层时相机直接定位，避免从旧楼层平滑"飞"过去
     this.heroVis.init = false; // 换层后主角直接落位（不做跨层插值）
 
@@ -404,10 +442,87 @@ export class ThreeRenderer {
     this.fadeCells.clear();
     this.clearGroup(this.floorGroup);
     this.clearGroup(this.wallGroup);
+    this.buildGround(floor);
     this.buildFloorTiles(floor);
     this.buildRoomCarpets(floor);
     this.buildWalls(floor);
+    this.buildWindows(floor);
     this.rebuildEntities();
+  }
+
+  /**
+   * 外部世界地面（设定：房间/走廊之外是正常世界，塔矗立在地面上）：
+   * 以地图边界外扩 GROUND_MARGIN 格为界平铺地砖（有边界、非无限渲染），
+   * 单 InstancedMesh + 一次 draw call；顶面 y=GROUND_Y 略低于房间地板底。
+   * 房间/走廊地板天然盖在其上（走廊呈 0.12 台基感）；
+   * 2×2 楼梯竖井处留洞（下行阶梯不地面封底）；承接月光 VSM 阴影。
+   */
+  private buildGround(floor: { grid: number[][]; width: number; height: number; rooms: RoomData[] }): void {
+    // 楼梯竖井留洞（与 buildFloorTiles 相同的挖空集合）
+    const holes = new Set<string>();
+    for (const room of floor.rooms) {
+      for (const e of room.entities) {
+        if (e.kind === 'stair' && e.stairSpan === 2) {
+          for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+            holes.add(`${e.x + dx},${e.y + dy}`);
+          }
+        }
+      }
+    }
+    const cells: [number, number][] = [];
+    for (let row = -GROUND_MARGIN; row < floor.height + GROUND_MARGIN; row++) {
+      for (let col = -GROUND_MARGIN; col < floor.width + GROUND_MARGIN; col++) {
+        const inside = row >= 0 && row < floor.height && col >= 0 && col < floor.width;
+        if (inside && holes.has(`${col},${row}`)) continue; // 楼梯井
+        cells.push([col, row]);
+      }
+    }
+    const mat = new THREE.MeshStandardMaterial({
+      map: groundTexture(), roughness: 0.92, metalness: 0.02,
+      color: this.currentTier.floorTint, // 与室内地板同一区段色温倾向
+    });
+    const inst = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(1, GROUND_THICKNESS, 1), mat, cells.length,
+    );
+    inst.receiveShadow = true; // 墙/栅栏的月光软影落在世界地面上
+    const dummy = new THREE.Object3D();
+    const jitter = new THREE.Color();
+    cells.forEach(([col, row], i) => {
+      dummy.position.set(col + 0.5, GROUND_Y - GROUND_THICKNESS / 2, row + 0.5);
+      dummy.updateMatrix();
+      inst.setMatrixAt(i, dummy.matrix);
+      // 与室内地板一致的 ±6% 逐格亮度抖动（posterize 后呈现自然块面）
+      const h = Math.sin(col * 127.1 + row * 311.7 + 7.7) * 43758.5453;
+      const frac = h - Math.floor(h);
+      jitter.setScalar(0.94 + frac * 0.12);
+      inst.setColorAt(i, jitter);
+    });
+    inst.instanceMatrix.needsUpdate = true;
+    if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+    this.floorGroup.add(inst);
+  }
+
+  /**
+   * 应用区段主题（§0/§3）：光照色/强度、虚空底色、星空可见性、
+   * 后处理色温+暗角、氛围粒子、地板色温倾向。墙/窗材质在各自 build 时读取 currentTier。
+   */
+  private applyTier(floorId: number): void {
+    const tier = tierOfFloor(floorId);
+    this.currentTier = tier;
+    if (this.ambient) {
+      this.ambient.color.setHex(tier.light.hemiSky);
+      this.ambient.groundColor.setHex(tier.light.hemiGround);
+      this.ambient.intensity = tier.light.hemiIntensity;
+    }
+    if (this.dirLight) this.dirLight.color.setHex(tier.light.dirColor);
+    if (this.dirLight) this.dirLight.intensity = tier.light.dirIntensity;
+    if (this.scene) this.scene.background = new THREE.Color(tier.bgColor);
+    // 离天更近的区段才看得见星空与月亮（§3：观星台/塔顶）
+    if (this.starField) this.starField.visible = tier.sky;
+    if (this.moonGroup) this.moonGroup.visible = tier.sky;
+    postProcessing.setTier(tier);
+    AmbientParticles.getInstance().configure(tier.particle);
+    this.windowScrollers = [];
   }
 
   /**
@@ -483,17 +598,25 @@ export class ThreeRenderer {
       const canvas = textureGen.floor(g.roomKey, g.checker);
       const mat = new THREE.MeshStandardMaterial({
         map: canvasTexture(canvas), roughness: 0.85, metalness: 0.05,
+        color: this.currentTier.floorTint, // 区段色温倾向（乘法叠加在房间配色上）
       });
       // 走廊地板加厚：呈现悬空栈道的体积感（顶面仍与房间地面平齐）
       const thick = g.roomKey === 'corridor' ? CORRIDOR_THICKNESS : FLOOR_THICKNESS;
       const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, thick, 1), mat, g.cells.length);
       inst.receiveShadow = true;
+      // 逐格亮度抖动（光影 v2 §7）：±6% 确定性抖动，posterize 后呈现块面色差而非平涂
+      const jitter = new THREE.Color();
       g.cells.forEach(([col, row], i) => {
         dummy.position.set(col + 0.5, -thick / 2, row + 0.5);
         dummy.updateMatrix();
         inst.setMatrixAt(i, dummy.matrix);
+        const h = Math.sin(col * 127.1 + row * 311.7) * 43758.5453;
+        const frac = h - Math.floor(h); // [0,1) 确定性伪随机（重渲染不跳变）
+        jitter.setScalar(0.94 + frac * 0.12);
+        inst.setColorAt(i, jitter);
       });
       inst.instanceMatrix.needsUpdate = true;
+      if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
       this.floorGroup.add(inst);
     }
   }
@@ -533,16 +656,19 @@ export class ThreeRenderer {
 
     const dummy = new THREE.Object3D();
     this.wallCells.clear();
+    // 区段主题墙面纹理（青砖/苔绿/书架/星岩/黄铜/白金，§2/§3）
+    const wallMat = new THREE.MeshStandardMaterial({
+      map: wallTexture(this.currentTier.wall), roughness: 0.8, metalness: 0.08,
+    });
     for (const g of wallGroups.values()) {
       // 砖缝纹理（文档 5.3：Canvas → Texture，无外部图片依赖）
-      const mat = new THREE.MeshStandardMaterial({
-        map: brickTexture(), roughness: 0.8, metalness: 0.08,
-      });
-      const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, g.h, 1), mat, g.cells.length);
+      const mat = wallMat;
+      const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, g.h + 0.16, 1), mat, g.cells.length);
       inst.castShadow = true;
       inst.receiveShadow = true;
       g.cells.forEach(([col, row], i) => {
-        dummy.position.set(col + 0.5, g.h / 2, row + 0.5);
+        // 向下多筑 0.16：底部沉入外部地面（-0.12）之下，避免墙脚悬空露缝
+        dummy.position.set(col + 0.5, (g.h - 0.16) / 2, row + 0.5);
         dummy.updateMatrix();
         inst.setMatrixAt(i, dummy.matrix);
         // 记录格子 → 实例，供"遮挡虚化"单独隐藏 / 恢复
@@ -551,20 +677,7 @@ export class ThreeRenderer {
       inst.instanceMatrix.needsUpdate = true;
       this.wallGroup.add(inst);
 
-      // 塔身填充：墙向下延伸入暗（高耸塔楼截面感；上方不加）
-      const shaft = new THREE.InstancedMesh(
-        new THREE.BoxGeometry(1, TOWER_DEPTH, 1),
-        new THREE.MeshStandardMaterial({ color: 0x2e3833, roughness: 0.9, metalness: 0.05 }),
-        g.cells.length,
-      );
-      shaft.receiveShadow = false;
-      g.cells.forEach(([col, row], i) => {
-        dummy.position.set(col + 0.5, -TOWER_DEPTH / 2, row + 0.5);
-        dummy.updateMatrix();
-        shaft.setMatrixAt(i, dummy.matrix);
-      });
-      shaft.instanceMatrix.needsUpdate = true;
-      this.wallGroup.add(shaft);
+      // 塔身截面已移除（改为外部世界地面，见 buildGround）
     }
     for (const g of pillarGroups.values()) {
       // 精细柱子：基座 + 收分柱身 + 柱冠（原为纯方盒）
@@ -580,7 +693,7 @@ export class ThreeRenderer {
         const cap = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.12, 0.48), stoneDark);
         cap.position.y = 0.14 + shaftH + 0.06;
         for (const m of [base, shaft, cap]) { m.castShadow = true; m.receiveShadow = true; pillar.add(m); }
-        pillar.position.set(col + 0.5, 0, row + 0.5);
+        pillar.position.set(col + 0.5, -0.14, row + 0.5); // 柱基沉入外部地面，避免悬空
         this.wallGroup.add(pillar);
       }
     }
@@ -610,7 +723,7 @@ export class ThreeRenderer {
 
     const strip = (list: [number, number][], vertical: boolean): void => {
       if (list.length === 0) return;
-      // 竖条：每格 2 根
+      // 竖条：每格 2 根（下移 0.13：栅脚沉入外部地面）
       const bars = new THREE.InstancedMesh(
         new THREE.BoxGeometry(0.08, barH, 0.08), mat, list.length * 2,
       );
@@ -621,7 +734,7 @@ export class ThreeRenderer {
         for (const off of [-0.24, 0.24]) {
           dummy.position.set(
             col + 0.5 + (vertical ? 0 : off),
-            barH / 2,
+            barH / 2 - 0.13,
             row + 0.5 + (vertical ? off : 0),
           );
           dummy.updateMatrix();
@@ -631,14 +744,14 @@ export class ThreeRenderer {
       bars.instanceMatrix.needsUpdate = true;
       this.wallGroup.add(bars);
 
-      // 顶部横梁：每格 1 根
+      // 顶部横梁：每格 1 根（随竖条下移）
       const beams = new THREE.InstancedMesh(
         new THREE.BoxGeometry(vertical ? 0.1 : 0.98, 0.08, vertical ? 0.98 : 0.1), mat, list.length,
       );
       beams.castShadow = true;
       let j = 0;
       for (const [col, row] of list) {
-        dummy.position.set(col + 0.5, barH * 0.86, row + 0.5);
+        dummy.position.set(col + 0.5, barH * 0.86 - 0.13, row + 0.5);
         dummy.updateMatrix();
         beams.setMatrixAt(j++, dummy.matrix);
       }
@@ -648,6 +761,84 @@ export class ThreeRenderer {
 
     strip(alongX, false);
     strip(alongZ, true);
+  }
+
+  /**
+   * 墙面开窗（§3 区段环境：窗外/远景）：房间环形墙朝内一面挂「窗景面片」，
+   * 内容为当前区段窗景纹理（雾层楼顶/藤蔓炉火/云雾柔光/星空/齿轮云海/纯光）。
+   * 位置由墙格坐标哈希决定（确定性，重渲染不跳变），每房至多 3 扇、隔 5 格选一。
+   */
+  private buildWindows(floor: { grid: number[][]; rooms: RoomData[] }): void {
+    const tier = this.currentTier;
+    const viewTex = windowTexture(tier.windowView);
+    if (tier.windowView === 'gears') {
+      this.windowScrollers.push({ tex: viewTex, speed: 0.012 }); // 云海缓慢 UV 滚动
+    }
+    // 窗景自发光（光影 v2 §6 [建议]）：Basic 材质不受光也不发光，
+    // 改为 emissiveMap + 区段冷/暖色自发光——窗自身发亮，经 bloom 向室内轻微溢光
+    const glowMat = new THREE.MeshStandardMaterial({
+      map: viewTex,
+      emissive: new THREE.Color(tier.windowGlow),
+      emissiveMap: viewTex,
+      emissiveIntensity: 0.75,
+      roughness: 0.9,
+    });
+    const frameMat = new THREE.MeshStandardMaterial({
+      color: tier.wall === 'brass' ? 0x8a6d3f : 0x4a3826,
+      roughness: 0.7, metalness: tier.wall === 'brass' ? 0.55 : 0.2,
+    });
+    const WIN_W = 0.72;
+    const WIN_H = 0.92;
+
+    for (const room of floor.rooms) {
+      if (room.width < 5) continue; // 小房间不开窗
+      let placed = 0;
+      for (let wy = room.y; wy < room.y + room.height && placed < 3; wy++) {
+        for (let wx = room.x; wx < room.x + room.width && placed < 3; wx++) {
+          const onRing = wx === room.x || wx === room.x + room.width - 1
+            || wy === room.y || wy === room.y + room.height - 1;
+          if (!onRing || floor.grid[wy]?.[wx] !== 1) continue;
+          // 确定性稀疏选取（同层同位置稳定）
+          if ((wx * 31 + wy * 17) % 5 !== 0) continue;
+          // 朝向：墙格的相邻房内地板方向
+          let dirX = 0;
+          let dirZ = 0;
+          if (floor.grid[wy + 1]?.[wx] === 0 && wy === room.y) dirZ = 1;        // 北墙朝南
+          else if (floor.grid[wy - 1]?.[wx] === 0 && wy === room.y + room.height - 1) dirZ = -1; // 南墙朝北
+          else if (floor.grid[wy]?.[wx + 1] === 0 && wx === room.x) dirX = 1;    // 西墙朝东
+          else if (floor.grid[wy]?.[wx - 1] === 0 && wx === room.x + room.width - 1) dirX = -1;  // 东墙朝西
+          else continue;
+
+          const cell = this.wallCells.get(`${wx},${wy}`);
+          const wallH = cell?.h ?? 2;
+          const cy = Math.min(wallH * 0.52, 1.85);
+          const g = new THREE.Group();
+          const plane = new THREE.Mesh(new THREE.PlaneGeometry(WIN_W, WIN_H), glowMat);
+          g.add(plane);
+          // 窗框：上下横梃 + 左右竖梃 + 中十字棂
+          const bar = 0.07;
+          const parts: [number, number, number, number, number][] = [
+            [0, WIN_H / 2 + bar / 2, WIN_W + bar * 2, bar, bar],
+            [0, -WIN_H / 2 - bar / 2, WIN_W + bar * 2, bar, bar],
+            [-WIN_W / 2 - bar / 2, 0, bar, WIN_H, bar],
+            [WIN_W / 2 + bar / 2, 0, bar, WIN_H, bar],
+            [0, 0, WIN_W, bar * 0.55, bar * 0.6],
+            [0, 0, bar * 0.55, WIN_H, bar * 0.6],
+          ];
+          for (const [ox, oy, sx, sy, sz] of parts) {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), frameMat);
+            m.position.set(ox, oy, 0.015);
+            m.castShadow = true;
+            g.add(m);
+          }
+          // 位置与朝向：贴墙内表面
+          g.position.set(wx + 0.5 + dirX * 0.545, cy, wy + 0.5 + dirZ * 0.545);
+          g.rotation.y = dirZ === 1 ? 0 : dirZ === -1 ? Math.PI : dirX === 1 ? Math.PI / 2 : -Math.PI / 2;
+          this.wallGroup.add(g);
+          placed++;
+        }
+      }
+    }
   }
 
   /**
@@ -776,7 +967,7 @@ export class ThreeRenderer {
         const mesh = new THREE.Mesh(
           new THREE.BoxGeometry(1, 1, 1),
           new THREE.MeshStandardMaterial({
-            map: brickTexture(), roughness: 0.8, metalness: 0.08,
+            map: wallTexture(this.currentTier.wall), roughness: 0.8, metalness: 0.08,
             transparent: true, opacity: 1, depthWrite: false,
           }),
         );
@@ -821,8 +1012,12 @@ export class ThreeRenderer {
     for (const l of this.glowPool) l.intensity = 0;
     this.glowSprites = []; // 精灵已随 clearGroup 释放，此处只清引用
     this.dustItems = [];
+    this.spiritFx = null; // 引导者灵体特效随实体重建（下方 addEntity 重新登记）
+    this.spiritDots = [];
     this.playerSprite = null;
     this.playerShadow = null;
+    this.playerContact = null;
+    this.litSprites = []; // 纸片人已随 clearGroup 释放，登记表一并清空
     const prevGates = this.gates; // 保留铁门开合进度，避免重建时瞬间跳变
     this.gates = [];
 
@@ -859,6 +1054,9 @@ export class ThreeRenderer {
     }
     this.heroBaseW = Math.abs(this.playerSprite.scale.x);
     this.playerShadow = this.addGroundShadow(0, 0, heroH * 0.28); // 位置由 syncPlayer 跟随
+    // 主角 contact AO（光影 v2 §3 [建议]）：点光源关闭投影后补偿体积感——更小更深一层
+    this.playerContact = this.addGroundShadow(
+      0, 0, heroH * 0.28 * 0.6, Math.min(0.85, dataManager.config.shadow.staticAlpha * 1.3));
     if (atlas) {
       const tex = this.playerSprite.material.map as THREE.Texture;
       this.heroAnimator = new HeroAnimator(tex);
@@ -867,6 +1065,7 @@ export class ThreeRenderer {
     }
     this.syncPlayer();
     this.entityGroup.add(this.playerSprite);
+    this.litSprites.push({ sprite: this.playerSprite });
 
     // Boss 铁门：Boss 存活时封锁出口，击败后自动开启
     this.buildGates(prevGates);
@@ -957,8 +1156,8 @@ export class ThreeRenderer {
       if (this.torchCursor < this.torchPool.length) {
         const light = this.torchPool[this.torchCursor++];
         light.color.setHex(ROOM_LIGHT_COLORS[room.type] ?? 0xff9040);
-        light.intensity = 1.0;
-        light.distance = 8;
+        light.intensity = 1.5; // 光影优化：火把是室内主光源
+        light.distance = 10;
         light.position.set(tx, 0.95, tz);
         this.torchLights.set(entity.id, light);
       }
@@ -1104,6 +1303,41 @@ export class ThreeRenderer {
       return;
     }
 
+    // 塔顶终点之门（§4 假终点）：白金石门 + 空莹门扉微光（第110层）
+    if (entity.kind === 'gate') {
+      const g = new THREE.Group();
+      const stoneMat = new THREE.MeshStandardMaterial({ color: 0xd8d2c0, roughness: 0.55, metalness: 0.12 });
+      const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4af6a, roughness: 0.32, metalness: 0.82 });
+      for (const px of [-0.62, 0.62]) {
+        const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.26, 2.7, 0.26), stoneMat);
+        pillar.position.set(px, 1.35, 0);
+        pillar.castShadow = true;
+        g.add(pillar);
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.12, 0.34), goldMat);
+        cap.position.set(px, 2.76, 0);
+        g.add(cap);
+      }
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.78, 0.28, 0.3), stoneMat);
+      lintel.position.set(0, 2.85, 0);
+      lintel.castShadow = true;
+      g.add(lintel);
+      const keystone = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.24, 0.26), goldMat);
+      keystone.position.set(0, 3.08, 0);
+      g.add(keystone);
+      // 门扉：纯光面（空无一物的暗示），微微透亮
+      const door = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.0, 2.42),
+        new THREE.MeshBasicMaterial({ color: 0xf7f2e2, transparent: true, opacity: 0.82 }),
+      );
+      door.position.set(0, 1.25, 0.02);
+      g.add(door);
+      g.position.set(cx, 0, cz);
+      this.entityGroup.add(g);
+      this.addGlowLight(entity.id, 0xfff0c8, 1.0, 7, cx, 1.5, cz);
+      this.addGlow('#fff2cf', 1.0, cx, 1.3, cz, 0.4);
+      return;
+    }
+
     // 配了立绘的 NPC（如引导者·艾登）：直接用立绘作为 3D 纸片人，替换占位方块
     if (entity.kind === 'npc') {
       const npcDef = dataManager.getNpc(entity.npcId ?? '');
@@ -1114,9 +1348,71 @@ export class ThreeRenderer {
         sprite.userData.footRatio = 6 / portraitCanvas.height; // 立绘底部 6px 余量
         sprite.position.set(cx, this.footedY(sprite), cz);
         this.entityGroup.add(sprite);
+        this.litSprites.push({ sprite }); // NPC 同样参与假受光
         this.addGroundShadow(cx, cz, scale * 0.26);
+
+        // 引导者灵质化（§1 [已确认]美术）：半透明灵质感 + 边缘微光描边 +
+        // 周身缓慢上浮的灰白光点（密度极低）+ 暖烛光与冷环境光对撞
+        if (entity.npcId === 'npc_guide') {
+          sprite.material.opacity = 0.85;
+          const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: canvasTexture(textureGen.glow('#9fc8d8')),
+            blending: THREE.AdditiveBlending,
+            transparent: true,
+            depthWrite: false,
+            opacity: 0.3,
+          }));
+          halo.scale.set(scale * 1.5, scale * 1.5, 1);
+          halo.position.set(cx, sprite.position.y + scale * 0.45, cz);
+          halo.renderOrder = 2;
+          this.entityGroup.add(halo);
+          this.spiritFx = { halo, sprite, baseY: sprite.position.y };
+          for (let i = 0; i < 5; i++) {
+            const dot = new THREE.Sprite(new THREE.SpriteMaterial({
+              map: canvasTexture(textureGen.glow('#e8f0f2')),
+              blending: THREE.AdditiveBlending,
+              transparent: true,
+              depthWrite: false,
+              opacity: 0,
+            }));
+            dot.scale.set(0.09, 0.09, 1);
+            dot.renderOrder = 3;
+            this.entityGroup.add(dot);
+            this.spiritDots.push({
+              sprite: dot, baseX: cx, baseZ: cz,
+              phase: Math.random(), speed: 0.1 + Math.random() * 0.08,
+            });
+          }
+          // 单一暖色烛光点光源（青砖长廊中的冷调环境光对撞，硬阴影拉长）
+          this.addGlowLight(`${entity.id}_candle`, 0xffb45e, 1.15, 8, cx + 1.1, 0.9, cz + 0.7);
+        }
         return;
       }
+    }
+
+    // 室内装饰柱：真实 3D 立柱（基座 + 收分柱身 + 柱冠，与墙柱同款语言）。
+    // 投真实月光 VSM 阴影（影随形）；不再用纸片人 + 圆形 AO 斑（影形不符）。
+    if (entity.kind === 'pillar') {
+      const totalH = Math.max(0.6, heightPx / ts);
+      const tint = new THREE.Color(this.currentTier.floorTint);
+      const stone = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0x77877c).multiply(tint), roughness: 0.72, metalness: 0.12,
+      });
+      const stoneDark = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0x5d6b62).multiply(tint), roughness: 0.8, metalness: 0.1,
+      });
+      const g = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.14, 0.52), stoneDark);
+      base.position.y = 0.07;
+      const shaftH = Math.max(0.2, totalH - 0.26);
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.19, shaftH, 10), stone);
+      shaft.position.y = 0.14 + shaftH / 2;
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.12, 0.48), stoneDark);
+      cap.position.y = 0.14 + shaftH + 0.06;
+      for (const m of [base, shaft, cap]) { m.castShadow = true; m.receiveShadow = true; g.add(m); }
+      g.position.set(cx, 0, cz);
+      this.entityGroup.add(g);
+      return;
     }
 
     // 玩家/怪物/NPC/其他 → 纸片人 Sprite（始终面向摄像机）
@@ -1126,8 +1422,14 @@ export class ThreeRenderer {
     const sprite = this.makePaperSprite(canvas, spriteScale);
     sprite.position.set(cx, this.footedY(sprite), cz); // 脚底贴地，避免悬空
     this.entityGroup.add(sprite);
-    // 贴地阴影：Sprite 无法投射真实阴影，用水平面片模拟
-    this.addGroundShadow(cx, cz, spriteScale * 0.3);
+    this.litSprites.push({ sprite }); // 假受光登记
+    // 贴地阴影：Sprite 无法投射真实阴影，用水平面片模拟。
+    // 光影 v2 §3：半径 0.3 → 0.42；主角/精英/Boss 叠一层更小更深的 contact AO 强化落地感
+    this.addGroundShadow(cx, cz, spriteScale * 0.42);
+    if (entity.kind === 'boss' || (entity.kind === 'monster' && entity.isElite)) {
+      const aoAlpha = Math.min(0.85, dataManager.config.shadow.staticAlpha * 1.3);
+      this.addGroundShadow(cx, cz, spriteScale * 0.42 * 0.6, aoAlpha);
+    }
 
     // Boss：暗红威胁光 + 缓慢脉动；精英：橙色自发光（不额外占点光源预算）
     if (entity.kind === 'boss') {
@@ -1323,12 +1625,14 @@ export class ThreeRenderer {
   /**
    * 贴地阴影：Sprite 不写深度、无法投射真实阴影，用水平面片 + 径向渐变模拟。
    * 水平放置后会随透视压缩成椭圆，比把阴影画在竖直贴图上自然得多。
+   * 默认不透明度取配置 shadow.staticAlpha（光影 v2 §3：0.2 → 0.45，此前配置未被消费）。
    */
-  private addGroundShadow(x: number, z: number, radius: number, opacity = 0.42): THREE.Mesh {
+  private addGroundShadow(x: number, z: number, radius: number, opacity?: number): THREE.Mesh {
+    const alpha = opacity ?? dataManager.config.shadow.staticAlpha;
     const mat = new THREE.MeshBasicMaterial({
       map: canvasTexture(textureGen.glow('#000000')),
       transparent: true,
-      opacity,
+      opacity: alpha,
       depthWrite: false,
     });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(radius * 2, radius * 2), mat);
@@ -1373,7 +1677,7 @@ export class ThreeRenderer {
       const baseX = g.x + 0.5;
       const baseZ = g.y + 0.5;
       const prevGate = prev?.find(o => o.baseX === baseX && o.baseZ === baseZ);
-      group.position.set(baseX, 0, baseZ);
+      group.position.set(baseX, -0.13, baseZ); // 铁门栅脚沉入外部地面
       this.entityGroup.add(group);
       this.gates.push({
         group,
@@ -1406,24 +1710,74 @@ export class ThreeRenderer {
     this.heroVis.z += (tz - this.heroVis.z) * k;
     this.playerSprite.position.set(this.heroVis.x, this.footedY(this.playerSprite), this.heroVis.z);
     if (this.playerShadow) this.playerShadow.position.set(this.heroVis.x, 0.015, this.heroVis.z);
-    // 朝向：以「目标格 - 视觉位置」的水平分量为准，向右移动时水平镜像（图集帧原生朝左）
+    if (this.playerContact) this.playerContact.position.set(this.heroVis.x, 0.02, this.heroVis.z);
+    // 朝向：以「目标格 - 视觉位置」的位移向量判定四向（侧面行原生朝右）
     const dx = tx - this.heroVis.x;
-    if (dx > 0.005) this.heroFacesLeft = false;
-    else if (dx < -0.005) this.heroFacesLeft = true;
-    this.playerSprite.scale.x = this.heroFacesLeft ? this.heroBaseW : -this.heroBaseW;
-    // 主角动作自动切换：视觉位移中 → 行走帧，到位静止 → 静止帧（attack/hurt/death 不被覆盖）
+    const dz = tz - this.heroVis.z;
+    let newFacing: HeroFacing | null = null;
+    if (Math.abs(dx) > 0.005 || Math.abs(dz) > 0.005) {
+      if (Math.abs(dx) >= Math.abs(dz)) newFacing = dx > 0 ? 'right' : 'left';
+      else newFacing = dz > 0 ? 'down' : 'up';
+    }
+    if (newFacing) {
+      this.heroFacing = newFacing;
+      this.heroAnimator?.setFacing(newFacing);
+    }
+    // 侧面行镜像：原生朝右 → 向左才镜像；上下行保持正向
+    const mirrored = this.heroFacing === 'left';
+    this.playerSprite.scale.x = mirrored ? -this.heroBaseW : this.heroBaseW;
+    // 主角动作自动切换：视觉位移中 → 行走帧（按朝向取行），到位静止 → 呼吸待机
     if (this.heroAnimator) {
       const moving = dist > 0.02;
       const cur = this.heroAnimator.getAction();
-      if ((cur === 'idle' || cur === 'walk') && moving !== (cur === 'walk')) {
+      if ((cur === 'idle' || cur === 'walk' || cur === 'run') && moving !== (cur === 'walk' || cur === 'run')) {
         this.setHeroAction(moving ? 'walk' : 'idle');
       }
     }
   }
 
+  /**
+   * 纸片人假受光（光影优化）：SpriteMaterial 不参与光照，角色此前在黑暗中"自发光"。
+   * 按「环境基准 + 玩家火炬/墙壁火把的距离衰减」逐帧计算明暗系数（0.4~1.0），
+   * 火光本身的闪烁会同步反映在角色身上。
+   */
+  private updateSpriteLighting(): void {
+    if (!this.playerTorch) return;
+    const base = 0.56; // 月光冷环境 + 半球环境合计的基准亮度
+    const pt = this.playerTorch;
+    const px = pt.position.x;
+    const pz = pt.position.z;
+    for (const { sprite } of this.litSprites) {
+      const sx = sprite.position.x;
+      const sz = sprite.position.z;
+      let light = base;
+      const dp = Math.hypot(sx - px, sz - pz);
+      light += pt.intensity * 0.85 * Math.pow(Math.max(0, 1 - dp / 11), 1.5);
+      for (const l of this.torchLights.values()) {
+        if (l.intensity <= 0.01) continue;
+        const d = Math.hypot(sx - l.position.x, sz - l.position.z);
+        light += l.intensity * 0.85 * Math.pow(Math.max(0, 1 - d / 10), 1.5);
+      }
+      const f = Math.min(1, Math.max(0.4, light));
+      (sprite.material as THREE.SpriteMaterial).color.setScalar(f);
+    }
+  }
+
   /** 每帧：相机跟随 + 光源跟随 + 悬浮高亮 + 渲染 */
+  /** 上一帧使用的容器尺寸（检测"进入游戏时容器才获得实际尺寸"的变化） */
+  private lastContainerW = 0;
+  private lastContainerH = 0;
+
   render(timeMs: number): void {
     if (!this.ready || !this.renderer || !this.scene || !this.camera) return;
+    // 容器尺寸变化即同步（进入游戏时 game-root 才显示，首帧前容器尺寸为 0/窗口兜底值 → 歪斜根因）
+    const cw = this.container?.clientWidth ?? 0;
+    const ch = this.container?.clientHeight ?? 0;
+    if (cw > 0 && ch > 0 && (cw !== this.lastContainerW || ch !== this.lastContainerH)) {
+      this.lastContainerW = cw;
+      this.lastContainerH = ch;
+      this.resize();
+    }
     const floor = WorldManager.getInstance().currentFloor;
     if (!floor) return;
     if (floor.floorId !== this.builtFloorId) this.rebuildFloor();
@@ -1473,6 +1827,9 @@ export class ThreeRenderer {
     this.camera.position.set(this.focusX, cam3d.height, this.focusZ + cam3d.distance);
     this.camera.lookAt(this.focusX, 0, this.focusZ);
 
+    // 相机演出（开场缓升 / 标题卡缓推摇移 / 登顶广角 / 反转俯冲）覆盖机位
+    this.applyCamFx(dt, cam3d);
+
     // 星空跟随相机（无穷远天空，无视差）+ 推进闪烁时间
     if (this.starField && this.starMat) {
       this.starField.position.copy(this.camera.position);
@@ -1491,29 +1848,15 @@ export class ThreeRenderer {
       this.moonGroup.position.set(this.focusX + mo.x, mo.y, this.focusZ + mo.z);
     }
 
-    // 玩家火炬跟随（p 已在注视点计算处定义）：多频叠加的火焰跳动 + 位置微颤
+    // 玩家火炬跟随（p 已在注视点计算处定义）：恒定强度与位置（去除律动）
     this.syncPlayer(dt);
     if (this.heroAnimator) this.heroAnimator.update(dt);
     if (this.playerTorch) {
-      const tSec = timeMs / 1000;
-      const flick = 0.84
-        + 0.10 * Math.sin(tSec * 9.3)
-        + 0.05 * Math.sin(tSec * 23.7 + 1.3)
-        + 0.04 * Math.sin(tSec * 4.1 + 0.5);
-      this.playerTorch.intensity = 1.5 * flick;
-      this.playerTorch.position.set(
-        p.x + 0.5 + Math.sin(tSec * 7.1) * 0.035,
-        1.5 + Math.sin(tSec * 5.3 + 2.0) * 0.025,
-        p.y + 0.5 + Math.cos(tSec * 6.2) * 0.035,
-      );
+      this.playerTorch.intensity = 1.7;
+      this.playerTorch.position.set(p.x + 0.5, 1.5, p.y + 0.5);
     }
-
-    // 墙壁火把闪烁（避免每帧改 uniform，直接调 intensity）
-    let i = 0;
-    for (const light of this.torchLights.values()) {
-      light.intensity = 1.0 * (0.85 + 0.15 * Math.sin(timeMs / 130 + i * 1.7));
-      i++;
-    }
+    // 纸片人假受光（在火炬/火把强度更新后计算）
+    this.updateSpriteLighting();
 
     // 悬浮格高亮
     if (this.hoverMesh) {
@@ -1528,14 +1871,9 @@ export class ThreeRenderer {
     ParticleSystem.getInstance().syncTo(this.particleGroup);
     ThreeParticleSystem.getInstance().syncTo(this.particleGroup);
 
-    // 自发光脉动（精英 / Boss / 未开宝箱 / 楼梯）
     const tSec = timeMs / 1000;
-    for (const g of this.glowSprites) {
-      const k = 0.72 + 0.28 * Math.sin(tSec * g.speed + g.phase);
-      (g.sprite.material as THREE.SpriteMaterial).opacity = k;
-      const s = g.base * (0.88 + 0.12 * k);
-      g.sprite.scale.set(s, s, 1);
-    }
+    // 自发光光晕（精英/Boss/未开宝箱/楼梯/喷泉/药水）：恒定亮度与尺寸（去除脉动），
+    // 保持创建时 addGlow 设置的 opacity 与 scale，无需逐帧驱动
 
     // 丁达尔飘尘：沿火把光锥缓慢上升并循环（中段最亮，两端淡出）
     for (const d of this.dustItems) {
@@ -1547,6 +1885,36 @@ export class ThreeRenderer {
       );
       (d.sprite.material as THREE.SpriteMaterial).opacity = Math.sin(t * Math.PI) * 0.3;
     }
+
+    // 窗景云海 UV 滚动（钟楼：巨型齿轮轮廓在云海缓转的横移感）
+    for (const sc of this.windowScrollers) sc.tex.offset.x = (sc.tex.offset.x + sc.speed * dt / 1000) % 1;
+
+    // 区段氛围粒子（孢子/火星、暖尘、星屑+流星、冷蓝光斑）
+    AmbientParticles.getInstance().syncTo(this.particleGroup);
+    AmbientParticles.getInstance().update(dt / 1000, this.focusX, this.focusZ, tSec);
+
+    // 引导者灵体：轻微悬浮 + 恒定微光（光晕呼吸已去除）+ 灰白光点缓慢上浮
+    if (this.spiritFx) {
+      const bob = Math.sin(tSec * 1.3) * 0.05;
+      this.spiritFx.sprite.position.y = this.spiritFx.baseY + bob;
+      this.spiritFx.halo.position.y = this.spiritFx.baseY + bob + 0.95;
+      (this.spiritFx.halo.material as THREE.SpriteMaterial).opacity = 0.28;
+    }
+    for (const dot of this.spiritDots) {
+      const t = (tSec * dot.speed + dot.phase) % 1;
+      dot.sprite.position.set(
+        dot.baseX + Math.sin(dot.phase * 8.5 + t * 4) * 0.55,
+        0.25 + t * 2.1,
+        dot.baseZ + Math.cos(dot.phase * 6.2 + t * 3.4) * 0.4,
+      );
+      (dot.sprite.material as THREE.SpriteMaterial).opacity = Math.sin(t * Math.PI) * 0.5;
+    }
+
+    // 塔顶虚影：淡入 → 光影形变「笑」（明暗抖动+纵向颤动）→ 淡出
+    for (const ph of [...this.phantoms]) this.updatePhantom(ph, dt, tSec);
+
+    // 后处理色温/暗角逐帧过渡（区段基线 ⇄ 演出骤冷）
+    postProcessing.tick(dt);
 
     // Boss 铁门开合：击败 Boss 后 target 变 1，门沿墙面滑入墙体
     for (const gt of this.gates) {
@@ -1562,6 +1930,154 @@ export class ThreeRenderer {
     // 后期处理可用时走 composer（辉光/暗角/调色），否则回退直接渲染
     if (postProcessing.ready) postProcessing.render();
     else this.renderer.render(this.scene, this.camera);
+  }
+
+  // ============ 相机演出（§0/§1/§4） ============
+
+  /** 新游戏第1层：镜头由地面缓升至半身（引导者登场） */
+  playIntroRise(): void {
+    this.camFx = { kind: 'intro', t: 0, dur: 2400, hold: false };
+  }
+
+  /** 标题卡期间：相机缓推近并轻微摇移（数秒后归位） */
+  playTierSway(): void {
+    this.camFx = { kind: 'sway', t: 0, dur: 2800, hold: false };
+  }
+
+  /** 登顶广角拉远：空旷白金平台上的孤独感；hold 到 dive/clear */
+  playSummitWide(): void {
+    this.camFx = { kind: 'wide', t: 0, dur: 2200, hold: true };
+  }
+
+  /** 反转俯冲：镜头猛然下摇穿透塔基（快速缩放 + 下坠） */
+  playSummitDive(): void {
+    this.camFx = { kind: 'dive', t: 0, dur: 1700, hold: false };
+    this.shake(0.3, 1700);
+  }
+
+  /** 结束一切相机演出（恢复默认机位与 fov） */
+  clearCamFx(): void {
+    this.camFx = null;
+    if (this.camera) {
+      this.camera.fov = this.baseFov;
+      this.camera.updateProjectionMatrix();
+    }
+  }
+
+  /** 每帧应用相机演出偏移（在默认机位/lookAt 之后调用） */
+  private applyCamFx(dt: number, cam3d: { fov: number; distance: number; height: number }): void {
+    const fx = this.camFx;
+    if (!fx || !this.camera) return;
+    fx.t += dt;
+    const p = Math.min(1, fx.t / fx.dur);
+    const easeOut = 1 - Math.pow(1 - p, 3);
+    const easeIn = p * p;
+    if (fx.kind === 'intro') {
+      // 地面(1.5m) → 标准机位；末端轻微摇移收敛
+      this.camera.position.y = 1.5 + (cam3d.height - 1.5) * easeOut;
+      this.camera.position.z = this.focusZ + cam3d.distance * (0.42 + 0.58 * easeOut);
+      this.camera.position.x += Math.sin(p * Math.PI * 2) * 0.3 * (1 - p);
+      this.camera.lookAt(this.focusX, 0, this.focusZ);
+    } else if (fx.kind === 'sway') {
+      // 缓推近（距离×0.88）+ 轻微左右摇移，中段最强、两端归零
+      const s = Math.sin(p * Math.PI);
+      const dist = cam3d.distance * (1 - 0.12 * s);
+      this.camera.position.z = this.focusZ + dist;
+      this.camera.position.x += Math.sin(p * Math.PI * 2) * 0.45 * s;
+      this.camera.lookAt(this.focusX, 0, this.focusZ);
+    } else if (fx.kind === 'wide') {
+      // 广角拉远并轻微升高（孤独感），hold 保持
+      const dist = cam3d.distance * (1 + 0.62 * easeOut);
+      const h = cam3d.height * (1 + 0.32 * easeOut);
+      this.camera.position.z = this.focusZ + dist;
+      this.camera.position.y = h;
+      this.camera.lookAt(this.focusX, 0, this.focusZ);
+    } else if (fx.kind === 'dive') {
+      // 快速缩放（fov 拉大）+ 下坠穿透塔基 + 视点压向地底
+      this.camera.fov = this.baseFov + 24 * easeIn;
+      this.camera.updateProjectionMatrix();
+      this.camera.position.y = cam3d.height * (1 - easeIn) - 22 * easeIn;
+      this.camera.position.z = this.focusZ + cam3d.distance * (1 - 0.45 * easeIn);
+      this.camera.lookAt(this.focusX, -14 * easeIn, this.focusZ);
+    }
+    if (p >= 1 && !fx.hold) this.clearCamFx();
+  }
+
+  // ============ 塔顶虚影（§4 反转：引导者虚影浮现并「笑」） ============
+
+  /**
+   * 在玩家身旁浮现引导者虚影（半透明 + 青灰光晕；「笑」用光影形变表现：
+   * 明暗抖动 + 纵向颤动，非写实表情）。淡入完成后保持，等 fadeOutPhantoms()。
+   */
+  spawnGuidePhantom(): void {
+    if (!this.scene) return;
+    const p = Player.getInstance().pos;
+    const px = p.x + 0.5 + 1.6;
+    const pz = p.y + 0.5 - 0.4;
+    const group = new THREE.Group();
+    const npcDef = dataManager.getNpc('npc_guide');
+    const portrait = npcDef?.portrait ? getNpcPortrait(npcDef.portrait) : null;
+    let sprite: THREE.Sprite | null = null;
+    if (portrait) {
+      sprite = this.makePaperSprite(portrait, 2.6);
+      sprite.material.opacity = 0;
+      group.add(sprite);
+    }
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: canvasTexture(textureGen.glow('#9fc8d8')),
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+      opacity: 0,
+    }));
+    halo.scale.set(4.2, 4.2, 1);
+    halo.position.y = 1.2;
+    group.add(halo);
+    group.position.set(px, 0.15, pz);
+    this.scene.add(group);
+    this.phantoms.push({ group, sprite, halo, t: 0, state: 'in', flickTimer: 0 });
+  }
+
+  /** 虚影开始淡出（演出收尾） */
+  fadeOutPhantoms(): void {
+    for (const ph of this.phantoms) ph.state = 'out';
+  }
+
+  private updatePhantom(
+    ph: { group: THREE.Group; sprite: THREE.Sprite | null; halo: THREE.Sprite; t: number; state: 'in' | 'hold' | 'out'; flickTimer: number },
+    dt: number, tSec: number,
+  ): void {
+    ph.t += dt;
+    const mat = ph.sprite?.material as THREE.SpriteMaterial | undefined;
+    const haloMat = ph.halo.material as THREE.SpriteMaterial;
+    if (ph.state === 'in') {
+      const k = Math.min(1, ph.t / 1300);
+      if (mat) mat.opacity = 0.55 * k;
+      haloMat.opacity = 0.4 * k;
+      if (k >= 1) ph.state = 'hold';
+    } else if (ph.state === 'hold') {
+      // 「笑」：光影形变——明暗抖动 + 纵向颤动 + 光晕胀缩
+      ph.flickTimer -= dt;
+      if (ph.flickTimer <= 0) ph.flickTimer = 110 + Math.random() * 90;
+      const jitter = ph.flickTimer < 60 ? 1 : 0.62;
+      if (mat) mat.opacity = (0.42 + Math.random() * 0.22) * jitter + 0.12;
+      haloMat.opacity = 0.3 + 0.18 * Math.sin(tSec * 7.3);
+      const sy = 1 + Math.sin(tSec * 18) * 0.035;
+      if (ph.sprite) ph.sprite.scale.y = 2.6 * sy;
+      ph.halo.scale.setScalar(4.2 * (1 + Math.sin(tSec * 5.1) * 0.08));
+    } else {
+      const k = Math.max(0, 1 - ph.t / 900);
+      if (mat) mat.opacity = 0.55 * k;
+      haloMat.opacity = 0.4 * k;
+      if (k <= 0) {
+        this.scene?.remove(ph.group);
+        ph.group.traverse(obj => {
+          const s = obj as THREE.Sprite;
+          s.material?.dispose();
+        });
+        this.phantoms.splice(this.phantoms.indexOf(ph), 1);
+      }
+    }
   }
 
   /**
@@ -1629,6 +2145,7 @@ export class ThreeRenderer {
     if (!this.ready || !this.renderer || !this.camera || !this.container) return;
     const w = this.container.clientWidth || window.innerWidth;
     const h = this.container.clientHeight || window.innerHeight;
+    if (w <= 0 || h <= 0) return;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);

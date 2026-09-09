@@ -962,3 +962,538 @@ button:disabled:hover { transform: none; box-shadow: none; border-color: var(--p
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #3a4356; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-cool); }
+
+/* ===== 构筑世界（世界生成加载层） ===== */
+.worldgen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 50% 30%, #2a3a55 0%, #14181f 65%),
+    #14181f;
+  animation: uiBackdrop 0.25s ease-out;
+}
+.worldgen-stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 22%, rgba(255,255,255,0.8) 50%, transparent 51%),
+    radial-gradient(1px 1px at 28% 68%, rgba(255,255,255,0.6) 50%, transparent 51%),
+    radial-gradient(2px 2px at 44% 15%, rgba(255,240,205,0.8) 50%, transparent 51%),
+    radial-gradient(1px 1px at 63% 47%, rgba(255,255,255,0.7) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 77% 74%, rgba(255,255,255,0.6) 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 28%, rgba(255,240,205,0.75) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 94% 60%, rgba(255,255,255,0.65) 50%, transparent 51%),
+    radial-gradient(1px 1px at 8% 80%, rgba(255,255,255,0.55) 50%, transparent 51%);
+  animation: worldgenTwinkle 2.6s ease-in-out infinite alternate;
+}
+@keyframes worldgenTwinkle {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}
+.worldgen-box {
+  position: relative;
+  text-align: center;
+  width: min(460px, 86vw);
+  animation: uiPop 0.3s var(--ease-pop);
+}
+.worldgen-icon {
+  font-size: 52px;
+  margin-bottom: 10px;
+  animation: worldgenFloat 2.4s ease-in-out infinite alternate;
+}
+@keyframes worldgenFloat {
+  from { transform: translateY(0); }
+  to { transform: translateY(-8px); }
+}
+.worldgen-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--accent);
+  letter-spacing: 6px;
+  text-shadow: 0 0 24px rgba(240, 201, 106, 0.35);
+  margin-bottom: 22px;
+}
+.worldgen-bar {
+  height: 14px;
+  background: #20242e;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+.worldgen-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #b8860b, var(--gold) 55%, #fff3c4);
+  box-shadow: 0 0 14px rgba(255, 221, 68, 0.55);
+  border-radius: 999px;
+  transition: width 0.25s var(--ease-pop);
+}
+.worldgen-status { margin-top: 12px; font-size: 13px; }
+.worldgen-tip { margin-top: 6px; font-size: 12px; }
+
+/* ===== 区段标题卡（文案规格 §2 [已确认]） ===== */
+#tier-title {
+  position: absolute;
+  inset: 0;
+  z-index: 160;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.95s ease-in;
+}
+#tier-title.hidden { display: none !important; opacity: 0; }
+#tier-title.tt-in { animation: ttIn 0.7s ease-out both; }
+#tier-title.tt-out { opacity: 0; }
+@keyframes ttIn {
+  from { opacity: 0; transform: scale(1.045); }
+  to { opacity: 1; transform: none; }
+}
+.tt-bg {
+  position: absolute;
+  inset: -4%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.5;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 30%, transparent 78%);
+  mask-image: radial-gradient(ellipse at 50% 50%, #000 30%, transparent 78%);
+}
+.tt-bg.tt-rotate-slow { animation: ttSway 26s ease-in-out infinite alternate; }
+.tt-bg.tt-rotate-slower { animation: ttSway 40s ease-in-out infinite alternate; }
+@keyframes ttSway {
+  from { transform: rotate(-1.6deg) scale(1.05); }
+  to { transform: rotate(1.6deg) scale(1.05); }
+}
+.tt-body {
+  position: relative;
+  text-align: center;
+  padding: 30px 48px;
+  max-width: 86%;
+}
+.tt-sub {
+  font-size: clamp(13px, 1.5vw, 17px);
+  letter-spacing: 0.6em;
+  text-indent: 0.6em;
+  color: var(--tt-sub2, #9aa3b5);
+  margin-bottom: 18px;
+  opacity: 0.9;
+}
+.tt-big {
+  font-size: clamp(56px, 11.5vw, 148px);
+  line-height: 1.15;
+  font-weight: 900;
+  color: var(--tt-main, #e8eaf0);
+  text-shadow: 0 0 34px var(--tt-glow, rgba(255,255,255,0.4)), 0 0 90px var(--tt-glow, rgba(255,255,255,0.2));
+}
+.tt-vibe {
+  margin-top: 26px;
+  font-size: clamp(13px, 1.6vw, 18px);
+  letter-spacing: 0.18em;
+  color: rgba(226,232,240,0.82);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+  opacity: 0;
+}
+#tier-title.tt-in .tt-vibe { animation: ttVibe 1.1s ease-out 0.9s both; }
+@keyframes ttVibe { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* 区段字体风格（§2：字体风格随区段变化） */
+.tt-big.tt-stone {
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-weight: 900;
+  /* 凿刻阴影：硬偏移暗影 + 冷白光晕 */
+  text-shadow: 3px 3px 0 rgba(10,16,22,0.9), 6px 6px 0 rgba(10,16,22,0.55),
+    0 0 34px rgba(223,233,244,0.5), 0 0 90px rgba(223,233,244,0.22);
+}
+.tt-big.tt-vine {
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-weight: 700;
+  background: linear-gradient(165deg, #9ad97a 15%, #d9722e 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(2px 3px 0 rgba(12,20,8,0.85)) drop-shadow(0 0 30px rgba(255,217,160,0.55));
+}
+.tt-big.tt-serif {
+  font-family: "Noto Serif SC", "SimSun", "Songti SC", serif;
+  font-weight: 700;
+  /* 烫金描边：金色渐变字 + 米金描影 */
+  background: linear-gradient(180deg, #f5e7c0 5%, #d4af6a 55%, #a8823f 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(1px 2px 0 rgba(40,26,10,0.9)) drop-shadow(0 0 34px rgba(255,233,189,0.5));
+}
+.tt-big.tt-star {
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-weight: 300;
+  background: linear-gradient(180deg, #cfe0ff 10%, #8fb0e8 55%, #8d7ad0 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 28px rgba(184,200,255,0.6));
+}
+.tt-big.tt-brass {
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-weight: 900;
+  position: relative;
+  background: linear-gradient(180deg, #f0d9a8 8%, #d9b878 50%, #8a6d3f 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(2px 3px 0 rgba(30,24,12,0.9)) drop-shadow(0 0 30px rgba(255,226,168,0.5));
+}
+/* 工业感铆钉装饰 */
+.tt-big.tt-brass::before, .tt-big.tt-brass::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffe9bd, #8a6d3f 70%);
+  box-shadow: 0 0 0 2px rgba(30,24,12,0.75), 0 0 12px rgba(255,226,168,0.5);
+}
+.tt-big.tt-brass::before { left: -0.85em; }
+.tt-big.tt-brass::after { right: -0.85em; }
+.tt-big.tt-minimal {
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-weight: 200;
+  color: var(--tt-main, #f0e9d8);
+  text-shadow: 0 0 46px rgba(255,247,224,0.55), 0 0 120px rgba(212,175,106,0.3);
+}
+
+/* ===== 进层/区段切换提示（§6） ===== */
+#floor-tip {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 155;
+  text-align: center;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+#floor-tip.ft-out { opacity: 0; }
+.ft-section {
+  font-size: 19px;
+  font-weight: bold;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--accent, #f0c96a);
+  text-shadow: 0 0 16px rgba(0,0,0,0.9), 0 0 24px var(--accent, transparent);
+  margin-bottom: 4px;
+  animation: ttVibe 0.5s ease-out both;
+}
+.ft-floor {
+  display: inline-block;
+  font-size: 14px;
+  letter-spacing: 0.25em;
+  text-indent: 0.25em;
+  color: rgba(232,234,240,0.92);
+  padding: 2px 10px 3px;
+  border-bottom: 2px solid var(--ft-color, var(--accent, #f0c96a));
+  text-shadow: 0 1px 5px rgba(0,0,0,0.9);
+  animation: ttVibe 0.5s ease-out both;
+}
+
+/* ===== 引导者低语（§6：画面边缘半透明手写体，无背景框） ===== */
+#whisper {
+  position: absolute;
+  left: 4.5%;
+  bottom: 9%;
+  z-index: 158;
+  max-width: 34%;
+  pointer-events: none;
+  font-family: "KaiTi", "STKaiti", "楷体", "Noto Serif SC", serif;
+  font-size: 17px;
+  letter-spacing: 0.14em;
+  color: rgba(205,220,230,0.62);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.85);
+  transform: rotate(-2deg);
+}
+#whisper.wh-in { animation: whIn 1.3s ease-out both; }
+#whisper.wh-out { animation: whOut 1.2s ease-in both; }
+@keyframes whIn { from { opacity: 0; transform: rotate(-2deg) translateY(10px); } to { opacity: 1; transform: rotate(-2deg); } }
+@keyframes whOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* ===== 战斗选项 UI（§5 [已确认]：3渲2 同调 + 随层级配色） ===== */
+.battle-box {
+  background: var(--panel-bg);
+  border: 2px solid var(--accent, #f0c96a);
+  border-radius: 14px;
+  min-width: 480px;
+  max-width: min(620px, 94vw);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 0 26px color-mix(in srgb, var(--accent, #f0c96a) 22%, transparent),
+    0 10px 40px rgba(0,0,0,0.6);
+  animation: uiPop 0.24s var(--ease-pop);
+  pointer-events: auto;
+  overflow: hidden;
+}
+.battle-mode-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 7px 12px;
+  background: rgba(10, 13, 20, 0.55);
+  border-bottom: 1px dashed var(--panel-border);
+  opacity: 0.88;
+}
+.bms-label { font-size: 12px; color: var(--text-dim); letter-spacing: 0.2em; }
+.seg-control { display: inline-flex; border: 1px solid var(--panel-border); border-radius: 999px; overflow: hidden; }
+.seg-control button {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 4px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.seg-control button:hover { color: var(--text); }
+.seg-control button.on {
+  background: var(--accent, #f0c96a);
+  color: #10131a;
+  font-weight: bold;
+  animation: segPop 0.3s var(--ease-pop);
+}
+@keyframes segPop {
+  0% { transform: scale(0.82); }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.battle-title {
+  text-align: center;
+  font-size: 17px;
+  font-weight: bold;
+  color: var(--accent, #f0c96a);
+  letter-spacing: 0.1em;
+  padding: 12px 16px 4px;
+}
+.battle-bars { padding: 8px 20px 4px; }
+.bb-row {
+  display: grid;
+  grid-template-columns: 76px 1fr 96px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.bb-name { font-size: 13px; color: var(--text-dim); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-bar {
+  height: 15px;
+  background: #20252f;
+  border: 1px solid #000;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.bb-fill { height: 100%; width: 100%; transition: width 0.16s ease-out; }
+/* 卡通阶跃血条：绿≥60% / 黄≥30% / 红<30%（硬切换非平滑） */
+.bb-fill.bb-ok { background: #58c858; box-shadow: inset 0 2px 0 rgba(255,255,255,0.22), 0 0 8px rgba(88,200,88,0.35); }
+.bb-fill.bb-mid { background: #e0b83a; box-shadow: inset 0 2px 0 rgba(255,255,255,0.22), 0 0 8px rgba(224,184,58,0.35); }
+.bb-fill.bb-low { background: #e05050; box-shadow: inset 0 2px 0 rgba(255,255,255,0.22), 0 0 10px rgba(224,80,80,0.5); }
+.bb-num { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.bb-row.bb-danger .bb-bar { animation: bbDanger 0.9s ease-in-out infinite; }
+@keyframes bbDanger {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(224,80,80,0.6); }
+  50% { box-shadow: 0 0 0 2px rgba(224,80,80,0.95), 0 0 14px rgba(224,80,80,0.5); }
+}
+.battle-log {
+  height: 168px;
+  overflow-y: auto;
+  margin: 8px 20px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(122,138,168,0.18);
+  border-radius: 8px;
+  /* 回合日志：等宽字体（§5） */
+  font-family: Consolas, "Courier New", "Microsoft YaHei", monospace;
+  font-size: 13px;
+  line-height: 1.75;
+}
+.battle-actions {
+  display: flex;
+  gap: 10px;
+  padding: 10px 20px 6px;
+}
+.battle-actions button {
+  flex: 1;
+  padding: 10px 8px;
+  font-size: 15px;
+  background: linear-gradient(180deg, #2c3342 0%, #232936 100%);
+  border: 2px solid var(--panel-border);
+  border-radius: 10px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-pop);
+}
+.battle-actions button:hover:not(:disabled) {
+  border-color: var(--accent, #f0c96a);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.4), 0 0 12px color-mix(in srgb, var(--accent, #f0c96a) 18%, transparent);
+}
+.battle-actions button:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+.battle-actions.bp-waiting button { pointer-events: none; opacity: 0.55; }
+.battle-actions .bp-warn {
+  border-color: rgba(224,80,80,0.7);
+  animation: bbDanger 0.9s ease-in-out infinite;
+}
+.bp-warn-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #e05050;
+  color: #fff;
+  font-size: 11px;
+}
+.battle-foot { display: flex; justify-content: center; padding: 8px 20px 16px; }
+.battle-foot .btn-primary {
+  min-width: 180px;
+  padding: 9px 22px;
+  border-radius: 10px;
+  border: 2px solid rgba(240,201,106,0.6);
+  background: linear-gradient(180deg, #2c3342 0%, #232936 100%);
+  color: #ffe9ad;
+  font-size: 15px;
+  cursor: pointer;
+}
+/* 托管战斗结果面板顶部的模式条（静态展示 + 快捷切微操） */
+.battle-mode-strip.static { opacity: 0.75; margin: -2px 0 10px; }
+
+/* ===== 登顶反转演出（§4） ===== */
+#summit-cinematic {
+  position: absolute;
+  inset: 0;
+  z-index: 420;
+  /* 演出期间可点击跳过（输入已被模态屏蔽，覆盖层接住点击） */
+  pointer-events: auto;
+  cursor: pointer;
+}
+.sc-skip {
+  position: absolute;
+  right: 16px;
+  top: 12px;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: rgba(205,220,230,0.55);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
+.sc-subtitle {
+  position: absolute;
+  left: 50%;
+  bottom: 11%;
+  transform: translateX(-50%);
+  max-width: 78%;
+  text-align: center;
+  font-size: clamp(18px, 2.6vw, 30px);
+  font-family: "KaiTi", "STKaiti", "楷体", "Noto Serif SC", serif;
+  letter-spacing: 0.22em;
+  color: #d5e2ec;
+  text-shadow: 0 0 18px rgba(120,170,210,0.55), 0 2px 6px rgba(0,0,0,0.9);
+  min-height: 1.6em;
+}
+.sc-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  mix-blend-mode: difference;
+  opacity: 0;
+  transition: opacity 0.14s ease-out;
+}
+.sc-flash.on { opacity: 1; }
+.sc-black {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #04050a;
+  pointer-events: auto;
+  animation: uiBackdrop 1.1s ease-out;
+}
+.sc-card { text-align: center; animation: uiPop 0.6s var(--ease-pop) 0.4s both; }
+.sc-act {
+  font-size: clamp(34px, 5vw, 58px);
+  font-weight: 200;
+  letter-spacing: 0.55em;
+  text-indent: 0.55em;
+  color: #f0e9d8;
+  text-shadow: 0 0 40px rgba(212,175,106,0.45);
+  margin-bottom: 22px;
+}
+.sc-line { font-size: 17px; letter-spacing: 0.2em; color: rgba(226,232,240,0.85); margin-bottom: 10px; }
+.sc-tease { font-size: 13px; letter-spacing: 0.3em; color: rgba(154,163,181,0.75); margin-bottom: 34px; }
+.sc-actions { display: flex; gap: 14px; justify-content: center; }
+.sc-actions button {
+  min-width: 150px;
+  padding: 10px 20px;
+  font-size: 15px;
+  background: linear-gradient(180deg, #2a3142 0%, #222838 100%);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.18s var(--ease-pop);
+}
+.sc-actions button:hover { border-color: #d4af6a; transform: translateY(-2px); }
+.sc-actions .btn-primary { border-color: rgba(212,175,106,0.65); color: #f0e9d8; }
+
+/* ===== 调试控制台（`~` 开关） ===== */
+#debug-console {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 170;
+  background: rgba(8, 12, 18, 0.92);
+  border: 1px solid rgba(122, 138, 168, 0.4);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  color: #9fe8b0;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+  min-width: 240px;
+}
+#debug-console .dc-head {
+  font-weight: bold;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+  color: #6fe88a;
+  border-bottom: 1px dashed rgba(111,232,138,0.3);
+  padding-bottom: 4px;
+}
+#debug-console .dc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  cursor: default;
+}
+#debug-console .dc-label { width: 30px; }
+#debug-console input[type="number"] {
+  width: 70px;
+  background: #101820;
+  border: 1px solid #2c3a4c;
+  color: #9fe8b0;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-family: inherit;
+}
+#debug-console button {
+  background: #14231a;
+  border: 1px solid #2f5a3a;
+  color: #9fe8b0;
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+#debug-console button:hover { border-color: #6fe88a; }
+#debug-console input[type="checkbox"] { transform: scale(1.15); cursor: pointer; }

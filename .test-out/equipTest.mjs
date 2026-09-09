@@ -1,0 +1,3623 @@
+// src/data/gameConfig.json
+var gameConfig_default = {
+  playerBase: {
+    maxHp: 1e3,
+    attack: 30,
+    defense: 15,
+    critRate: 5,
+    dodgeRate: 3
+  },
+  expFormula: {
+    base: 20,
+    power: 1.5
+  },
+  growthTable: [
+    {
+      minLevel: 1,
+      maxLevel: 5,
+      hp: 125,
+      attack: 6,
+      defense: 3
+    },
+    {
+      minLevel: 6,
+      maxLevel: 10,
+      hp: 260,
+      attack: 10,
+      defense: 5
+    },
+    {
+      minLevel: 11,
+      maxLevel: 15,
+      hp: 250,
+      attack: 12,
+      defense: 6
+    },
+    {
+      minLevel: 16,
+      maxLevel: 20,
+      hp: 260,
+      attack: 14,
+      defense: 7
+    },
+    {
+      minLevel: 21,
+      maxLevel: 25,
+      hp: 100,
+      attack: 16,
+      defense: 8
+    },
+    {
+      minLevel: 26,
+      maxLevel: 30,
+      hp: 100,
+      attack: 18,
+      defense: 9
+    },
+    {
+      minLevel: 31,
+      maxLevel: 35,
+      hp: 230,
+      attack: 22,
+      defense: 11
+    },
+    {
+      minLevel: 36,
+      maxLevel: 40,
+      hp: 500,
+      attack: 26,
+      defense: 13
+    },
+    {
+      minLevel: 41,
+      maxLevel: 45,
+      hp: 1e3,
+      attack: 30,
+      defense: 15
+    },
+    {
+      minLevel: 46,
+      maxLevel: 50,
+      hp: 1e3,
+      attack: 34,
+      defense: 17
+    },
+    {
+      minLevel: 51,
+      maxLevel: 999,
+      hp: 1200,
+      attack: 38,
+      defense: 19
+    }
+  ],
+  floorAnchors: {
+    floors: [
+      1,
+      5,
+      10,
+      15,
+      20,
+      25,
+      30,
+      35,
+      40,
+      45,
+      50
+    ],
+    hp: [
+      165,
+      310,
+      485,
+      685,
+      900,
+      1175,
+      1500,
+      1900,
+      2400,
+      3100,
+      4150
+    ],
+    atk: [
+      40,
+      75,
+      120,
+      200,
+      280,
+      340,
+      420,
+      520,
+      680,
+      950,
+      1300
+    ],
+    def: [
+      7,
+      14,
+      21,
+      30,
+      40,
+      52,
+      66,
+      84,
+      106,
+      136,
+      183
+    ],
+    exp: [
+      15,
+      40,
+      100,
+      180,
+      280,
+      400,
+      550,
+      720,
+      900,
+      1100,
+      1350
+    ],
+    gold: [
+      20,
+      20,
+      45,
+      90,
+      90,
+      160,
+      160,
+      275,
+      275,
+      425,
+      425
+    ],
+    overflowPerFloor: {
+      hp: 0.08,
+      atk: 0.05,
+      def: 0.05,
+      exp: 0.08,
+      gold: 0.05
+    }
+  },
+  bossStatBonus: {
+    hp: 0,
+    atk: 0,
+    def: 0
+  },
+  battle: {
+    damageJitter: 0.1,
+    critMultiplier: 1.8,
+    maxTurns: 60,
+    minDamage: 1
+  },
+  chestRewards: {
+    goldBands: [
+      {
+        minFloor: 1,
+        maxFloor: 5,
+        min: 1,
+        max: 5
+      },
+      {
+        minFloor: 6,
+        maxFloor: 10,
+        min: 5,
+        max: 15
+      },
+      {
+        minFloor: 11,
+        maxFloor: 20,
+        min: 15,
+        max: 40
+      },
+      {
+        minFloor: 21,
+        maxFloor: 30,
+        min: 40,
+        max: 80
+      },
+      {
+        minFloor: 31,
+        maxFloor: 40,
+        min: 80,
+        max: 150
+      },
+      {
+        minFloor: 41,
+        maxFloor: 9999,
+        min: 150,
+        max: 250
+      }
+    ],
+    equipmentChance: 0.6,
+    potionChance: 0.15,
+    goldAlways: true
+  },
+  monsterDrops: {
+    equipmentChance: 0.03,
+    potionChance: 0.02
+  },
+  revive: {
+    goldPenaltyRate: 0.2,
+    hpRestorePct: 1
+  },
+  merchant: {
+    potionCountMin: 2,
+    potionCountMax: 4,
+    keyPriceBase: 50,
+    keyPricePer10Floors: 30,
+    keyCountMin: 1,
+    keyCountMax: 3,
+    equipmentCountMin: 1,
+    equipmentCountMax: 2
+  },
+  witch: {
+    potionCountMin: 2,
+    potionCountMax: 3,
+    fountainCostBase: 40,
+    fountainCostPerFloor: 12
+  },
+  render: {
+    tileWidth: 64,
+    tileHeight: 32,
+    vignetteMax: 0.3,
+    maxLights: 20,
+    maxParticles: 1e3,
+    gridLineWidth: 1
+  },
+  postProcess: {
+    bloom: {
+      enabled: true,
+      strength: 0.5,
+      radius: 0.45,
+      threshold: 0.82
+    },
+    vignette: {
+      enabled: true,
+      strength: 0.3,
+      offset: 1,
+      darkness: 1.1
+    },
+    adjustment: {
+      enabled: true,
+      gamma: 1.05,
+      contrast: 1.05,
+      saturation: 1.1,
+      brightness: 1
+    }
+  },
+  shadow: {
+    staticAlpha: 0.2,
+    staticOffset: 3,
+    baseOffset: 6,
+    maxDynamic: 20,
+    samples: 3,
+    penumbra: 6,
+    tyndall: {
+      length: 150,
+      width: 30,
+      alpha: 0.13,
+      dustMin: 5,
+      dustMax: 10
+    }
+  },
+  heights: {
+    player: 45,
+    monsterNormal: 38,
+    monsterElite: 52,
+    boss: 70,
+    chest: 18,
+    potion: 14,
+    torch: 55,
+    pillar: 70,
+    npc: 42,
+    stair: 10,
+    carpet: 4,
+    cauldron: 26,
+    shelf: 46,
+    fountain: 16,
+    wallByRoom: {
+      start: 60,
+      combat: 65,
+      elite: 75,
+      chest: 55,
+      merchant: 55,
+      witch: 58,
+      boss: 90,
+      rest: 55,
+      end: 60,
+      blacksmith: 65
+    },
+    corridorWall: 75
+  },
+  raycast: {
+    level: 2
+  },
+  camera: {
+    lerp: 0.12,
+    transitionMs: 400,
+    roomPaddingPx: 24
+  },
+  camera3D: {
+    fov: 45,
+    distance: 5,
+    height: 12.5
+  },
+  hover: {
+    showDelayMs: 200,
+    hideDelayMs: 300,
+    offsetX: 12,
+    offsetY: 12
+  },
+  save: {
+    key: "motarpg_v2_save",
+    version: "2.0.0",
+    autosaveDefault: true
+  },
+  input: {
+    moveRepeatMs: 110,
+    moveBufferMs: 120
+  }
+};
+
+// src/data/mapGeneration.json
+var mapGeneration_default = {
+  cellSpacingX: 13,
+  cellSpacingY: 11,
+  gridRadius: 2,
+  floorRoomCounts: [
+    {
+      minFloor: 2,
+      maxFloor: 5,
+      min: 4,
+      max: 6
+    },
+    {
+      minFloor: 6,
+      maxFloor: 10,
+      min: 4,
+      max: 8
+    },
+    {
+      minFloor: 11,
+      maxFloor: 20,
+      min: 6,
+      max: 8
+    },
+    {
+      minFloor: 21,
+      maxFloor: 9999,
+      min: 6,
+      max: 12
+    }
+  ],
+  maxRooms: 12,
+  bossFloorInterval: 5,
+  initialFloor: 1,
+  roomSpecs: {
+    start: {
+      width: 5,
+      height: 5
+    },
+    end: {
+      width: 6,
+      height: 5
+    },
+    combat: {
+      width: [
+        7,
+        9
+      ],
+      height: [
+        6,
+        7
+      ]
+    },
+    elite: {
+      width: [
+        9,
+        10
+      ],
+      height: [
+        7,
+        8
+      ]
+    },
+    chest: {
+      width: 5,
+      height: 5
+    },
+    merchant: {
+      width: 6,
+      height: 6
+    },
+    witch: {
+      width: [
+        7,
+        8
+      ],
+      height: [
+        6,
+        7
+      ]
+    },
+    boss: {
+      width: [
+        9,
+        10
+      ],
+      height: [
+        7,
+        8
+      ]
+    },
+    rest: {
+      width: 5,
+      height: 5
+    },
+    blacksmith: {
+      width: 6,
+      height: 6
+    }
+  },
+  minRoomWidth: 4,
+  minRoomHeight: 4,
+  tension: {
+    weights: {
+      combat: 1,
+      elite: 3,
+      chest: -1,
+      merchant: -2,
+      witch: -3,
+      blacksmith: -1
+    },
+    forcePositiveAt: 4,
+    forceNegativeAt: -3
+  },
+  merchantLimit: {
+    fewMaxRooms: 7,
+    fewCount: 1,
+    manyCount: 2
+  },
+  witchLimit: {
+    minFloor: 6,
+    interval: 6
+  },
+  path: {
+    maxLengthDiff: 2
+  },
+  corridor: {
+    extraChance: 0.25,
+    extraMax: 2,
+    adjacentManhattan: 1
+  },
+  content: {
+    monsterMinDistFromEntry: 3,
+    smallAreaMax: 30,
+    mediumAreaMax: 42,
+    largeAreaMax: 56,
+    density: {
+      small: 2,
+      medium: 3,
+      large: 4,
+      xlarge: 5
+    },
+    chestRoomMin: 2,
+    chestRoomMax: 3,
+    otherRoomChestChance: 0.35,
+    eliteRoomEliteMin: 1,
+    eliteRoomEliteMax: 2,
+    bossRoomAddsMin: 0,
+    bossRoomAddsMax: 2,
+    combatByDepth: [
+      {
+        maxDepth: 1,
+        monsters: [
+          1,
+          2
+        ],
+        elites: [
+          0,
+          0
+        ],
+        chests: [
+          0,
+          1
+        ],
+        potions: [
+          0,
+          1
+        ]
+      },
+      {
+        maxDepth: 2,
+        monsters: [
+          2,
+          2
+        ],
+        elites: [
+          0,
+          1
+        ],
+        chests: [
+          0,
+          1
+        ],
+        potions: [
+          1,
+          1
+        ]
+      },
+      {
+        maxDepth: 3,
+        monsters: [
+          2,
+          3
+        ],
+        elites: [
+          1,
+          1
+        ],
+        chests: [
+          1,
+          1
+        ],
+        potions: [
+          1,
+          1
+        ]
+      },
+      {
+        maxDepth: 9999,
+        monsters: [
+          3,
+          4
+        ],
+        elites: [
+          1,
+          1
+        ],
+        chests: [
+          1,
+          1
+        ],
+        potions: [
+          1,
+          1
+        ]
+      }
+    ],
+    eliteRoom: {
+      elites: [
+        1,
+        1
+      ],
+      monsters: [
+        1,
+        2
+      ],
+      chests: [
+        1,
+        2
+      ],
+      potions: [
+        1,
+        1
+      ]
+    },
+    treasureRoom: {
+      chests: [
+        2,
+        3
+      ],
+      monsters: [
+        1,
+        2
+      ],
+      potions: [
+        1,
+        2
+      ]
+    },
+    merchantRoom: {
+      chests: [
+        0,
+        1
+      ],
+      potions: [
+        1,
+        2
+      ]
+    },
+    witchRoom: {
+      shelves: [
+        2,
+        2
+      ]
+    },
+    bossRoom: {
+      elites: [
+        0,
+        2
+      ],
+      chests: [
+        2,
+        3
+      ],
+      potions: [
+        2,
+        4
+      ]
+    },
+    exitRoom: {
+      guards: [
+        0,
+        1
+      ],
+      chests: [
+        0,
+        2
+      ],
+      potions: [
+        1,
+        1
+      ]
+    },
+    startRoom: {
+      potions: [
+        1,
+        1
+      ]
+    },
+    guard: {
+      chestRadius: 3,
+      stairRadius: 3
+    },
+    barrier: {
+      fillWithPillars: true
+    },
+    roomTorches: {
+      start: [
+        2,
+        4
+      ],
+      merchant: [
+        4,
+        4
+      ],
+      witch: [
+        4,
+        4
+      ],
+      boss: [
+        6,
+        8
+      ],
+      end: [
+        4,
+        4
+      ],
+      blacksmith: [
+        3,
+        3
+      ]
+    }
+  },
+  decor: {
+    torchCorridorEvery: 4,
+    pillarMinRoomWidth: 7,
+    carpetRooms: [
+      "chest",
+      "boss"
+    ]
+  },
+  generation: {
+    maxAttempts: 40
+  },
+  blacksmithLimit: {
+    minFloor: 4,
+    interval: 4
+  }
+};
+
+// src/data/monsters.json
+var monsters_default = {
+  monsters: [
+    {
+      id: "slime",
+      name: "\u53F2\u83B1\u59C6",
+      shape: "circle",
+      color: "#44cc44",
+      category: "normal",
+      floorMin: 1,
+      floorMax: 5,
+      weight: 30,
+      hpMul: 1,
+      atkMul: 0.9,
+      defMul: 0.8,
+      goldMul: 1,
+      expMul: 1,
+      height: 32,
+      description: "\u6700\u5F31\u5C0F\u7684\u9B54\u7269\uFF0C\u67D4\u8F6F\u65E0\u9AA8\u3002"
+    },
+    {
+      id: "bat",
+      name: "\u8759\u8760",
+      shape: "circle",
+      color: "#9955cc",
+      category: "normal",
+      floorMin: 1,
+      floorMax: 10,
+      weight: 25,
+      hpMul: 0.7,
+      atkMul: 1.1,
+      defMul: 0.5,
+      goldMul: 1,
+      expMul: 1,
+      height: 30,
+      description: "\u76D8\u65CB\u7684\u6697\u5F71\uFF0C\u653B\u51FB\u5201\u94BB\u3002"
+    },
+    {
+      id: "skeleton",
+      name: "\u9AB7\u9AC5\u5175",
+      shape: "square",
+      color: "#dddddd",
+      category: "normal",
+      floorMin: 3,
+      floorMax: 15,
+      weight: 25,
+      hpMul: 1.2,
+      atkMul: 1,
+      defMul: 1.2,
+      goldMul: 1.1,
+      expMul: 1.1,
+      height: 36,
+      description: "\u4E0D\u673D\u7684\u536B\u5175\uFF0C\u9AA8\u5934\u62FC\u6210\u7684\u6218\u8EAF\u3002"
+    },
+    {
+      id: "gargoyle",
+      name: "\u77F3\u50CF\u9B3C",
+      shape: "square",
+      color: "#888899",
+      category: "normal",
+      floorMin: 8,
+      floorMax: 25,
+      weight: 22,
+      hpMul: 1.5,
+      atkMul: 0.9,
+      defMul: 1.3,
+      goldMul: 1.2,
+      expMul: 1.2,
+      height: 42,
+      description: "\u77F3\u5316\u7684\u5B88\u536B\uFF0C\u76AE\u7CD9\u8089\u539A\u3002"
+    },
+    {
+      id: "shadow_wolf",
+      name: "\u6697\u5F71\u72FC",
+      shape: "square",
+      color: "#3344aa",
+      category: "normal",
+      floorMin: 12,
+      floorMax: 35,
+      weight: 22,
+      hpMul: 1.1,
+      atkMul: 1.4,
+      defMul: 0.8,
+      goldMul: 1.2,
+      expMul: 1.2,
+      height: 40,
+      description: "\u5F71\u4E2D\u75BE\u884C\u7684\u730E\u624B\uFF0C\u6495\u54AC\u81F4\u547D\u3002"
+    },
+    {
+      id: "hellhound",
+      name: "\u5730\u72F1\u72AC",
+      shape: "square",
+      color: "#ff6622",
+      category: "normal",
+      floorMin: 18,
+      floorMax: 45,
+      weight: 20,
+      hpMul: 1.3,
+      atkMul: 1.5,
+      defMul: 1,
+      goldMul: 1.3,
+      expMul: 1.3,
+      height: 44,
+      description: "\u71C3\u70E7\u7684\u6076\u72AC\uFF0C\u5410\u606F\u707C\u4EBA\u3002"
+    },
+    {
+      id: "dark_knight",
+      name: "\u6697\u9ED1\u9A91\u58EB",
+      shape: "square",
+      color: "#aa1133",
+      category: "normal",
+      floorMin: 25,
+      floorMax: 9999,
+      weight: 20,
+      hpMul: 1.8,
+      atkMul: 1.2,
+      defMul: 1.4,
+      goldMul: 1.4,
+      expMul: 1.4,
+      height: 48,
+      description: "\u5815\u843D\u7684\u9A91\u58EB\uFF0C\u653B\u9632\u517C\u5907\u3002"
+    },
+    {
+      id: "ancient_dragon",
+      name: "\u8FDC\u53E4\u5DE8\u9F99",
+      shape: "big_square",
+      color: "#cc1122",
+      category: "boss",
+      floorMin: 5,
+      floorMax: 9999,
+      weight: 0,
+      hpMul: 5,
+      atkMul: 0.95,
+      defMul: 1.2,
+      goldMul: 5,
+      expMul: 8,
+      height: 70,
+      description: "\u6C89\u7720\u4E8E\u5854\u5E95\u7684\u707E\u5384\uFF0C\u7FFC\u5F71\u853D\u65E5\u3002"
+    }
+  ],
+  eliteStatMultiplier: 1.25,
+  eliteGoldMultiplier: 2,
+  eliteExpMultiplier: 2.5
+};
+
+// src/data/potions.json
+var potions_default = {
+  potions: [
+    { tier: "crude", name: "\u52A3\u8D28\u836F\u6C34", healPct: 0.2, price: 20, color: "#dd6688", minFloor: 1, maxFloor: 5, icon: "\u{1F9EA}" },
+    { tier: "normal", name: "\u666E\u901A\u836F\u6C34", healPct: 0.3, price: 40, color: "#ee3344", minFloor: 3, maxFloor: 15, icon: "\u{1F9EA}" },
+    { tier: "quality", name: "\u4F18\u8D28\u836F\u6C34", healPct: 0.45, price: 100, color: "#bb1133", minFloor: 10, maxFloor: 30, icon: "\u{1F9EA}" },
+    { tier: "strong", name: "\u5F3A\u6548\u836F\u6C34", healPct: 0.6, price: 250, color: "#990033", minFloor: 25, maxFloor: 40, icon: "\u2697\uFE0F" },
+    { tier: "holy", name: "\u5723\u836F", healPct: 0.8, price: 600, color: "#ffdd44", minFloor: 40, maxFloor: 9999, icon: "\u2697\uFE0F" }
+  ]
+};
+
+// src/data/equipmentTables.json
+var equipmentTables_default = {
+  qualityOrder: ["poor", "common", "fine", "rare", "epic", "legendary", "mythic"],
+  quality: {
+    poor: { name: "\u7834\u70C2", color: "#9e9e9e", statMultiplier: 0.6, affixCount: 0, affixCountMax: 0, sellMultiplier: 0.2, prefix: "\u7834\u65E7\u7684", basePrice: 5 },
+    common: { name: "\u666E\u901A", color: "#ffffff", statMultiplier: 1, affixCount: 0, affixCountMax: 0, sellMultiplier: 1, prefix: "", basePrice: 10 },
+    fine: { name: "\u4F18\u79C0", color: "#4488ff", statMultiplier: 1.4, affixCount: 1, affixCountMax: 1, sellMultiplier: 2, prefix: "\u7CBE\u826F\u7684", basePrice: 30 },
+    rare: { name: "\u7A00\u6709", color: "#aa44ff", statMultiplier: 1.9, affixCount: 2, affixCountMax: 3, sellMultiplier: 4, prefix: "\u4F18\u8D28\u7684", basePrice: 80, affixExtra: [{ atEquipLevel: 20, add: 1 }] },
+    epic: { name: "\u53F2\u8BD7", color: "#ffaa00", statMultiplier: 2.5, affixCount: 3, affixCountMax: 5, sellMultiplier: 8, prefix: "\u7CBE\u5236\u7684", basePrice: 200, affixExtra: [{ atEquipLevel: 15, add: 1 }] },
+    legendary: { name: "\u4F20\u8BF4", color: "#ff5533", statMultiplier: 3.5, affixCount: 4, affixCountMax: 7, sellMultiplier: 16, prefix: "\u5B8C\u7F8E\u7684", basePrice: 500, affixExtra: [{ atEquipLevel: 10, add: 1 }] },
+    mythic: { name: "\u795E\u8BDD", color: "#ff44dd", statMultiplier: 5, affixCount: 4, affixCountMax: 4, sellMultiplier: 35, prefix: "\u65E0\u53CC\u7684", basePrice: 1200 }
+  },
+  qualityByFloor: [
+    { minFloor: 1, maxFloor: 5, weights: { poor: 45, common: 40, fine: 12, rare: 3, epic: 0, legendary: 0, mythic: 0 } },
+    { minFloor: 6, maxFloor: 10, weights: { poor: 10, common: 50, fine: 28, rare: 10, epic: 2, legendary: 0, mythic: 0 } },
+    { minFloor: 11, maxFloor: 20, weights: { poor: 1, common: 35, fine: 35, rare: 20, epic: 8, legendary: 1, mythic: 0 } },
+    { minFloor: 21, maxFloor: 30, weights: { poor: 1, common: 15, fine: 31, rare: 30, epic: 18, legendary: 5, mythic: 0 } },
+    { minFloor: 31, maxFloor: 40, weights: { poor: 0, common: 5, fine: 20, rare: 30, epic: 30, legendary: 15, mythic: 0 } },
+    { minFloor: 41, maxFloor: 50, weights: { poor: 0, common: 0, fine: 10, rare: 25, epic: 35, legendary: 29.5, mythic: 0.5 } },
+    { minFloor: 51, maxFloor: 9999, weights: { poor: 0, common: 0, fine: 8, rare: 22, epic: 33, legendary: 35, mythic: 2 } }
+  ],
+  affixes: [
+    { type: "sharp", name: "\u950B\u5229", minQuality: "fine", isPercent: false, bands: [{ maxEquipLevel: 10, min: 3, max: 8 }, { maxEquipLevel: 25, min: 8, max: 20 }, { maxEquipLevel: 40, min: 20, max: 40 }, { maxEquipLevel: 50, min: 40, max: 70 }], description: "\u653B\u51FB +{v}" },
+    { type: "sturdy", name: "\u575A\u56FA", minQuality: "fine", isPercent: false, bands: [{ maxEquipLevel: 10, min: 2, max: 5 }, { maxEquipLevel: 25, min: 5, max: 12 }, { maxEquipLevel: 40, min: 12, max: 25 }, { maxEquipLevel: 50, min: 25, max: 45 }], description: "\u9632\u5FA1 +{v}" },
+    { type: "vitality", name: "\u6D3B\u529B", minQuality: "fine", isPercent: false, bands: [{ maxEquipLevel: 10, min: 15, max: 40 }, { maxEquipLevel: 25, min: 40, max: 100 }, { maxEquipLevel: 40, min: 100, max: 200 }, { maxEquipLevel: 50, min: 200, max: 350 }], description: "\u751F\u547D +{v}" },
+    { type: "precision", name: "\u7CBE\u51C6", minQuality: "rare", isPercent: true, bands: [{ maxEquipLevel: 10, min: 1, max: 3 }, { maxEquipLevel: 25, min: 3, max: 5 }, { maxEquipLevel: 40, min: 5, max: 7 }, { maxEquipLevel: 50, min: 7, max: 10 }], description: "\u66B4\u51FB\u7387 +{v}%" },
+    { type: "agility", name: "\u7075\u5DE7", minQuality: "rare", isPercent: true, bands: [{ maxEquipLevel: 10, min: 1, max: 2 }, { maxEquipLevel: 25, min: 2, max: 4 }, { maxEquipLevel: 40, min: 4, max: 6 }, { maxEquipLevel: 50, min: 6, max: 8 }], description: "\u95EA\u907F\u7387 +{v}%" },
+    { type: "savage", name: "\u5F3A\u653B", minQuality: "rare", isPercent: true, bands: [{ maxEquipLevel: 10, min: 2, max: 4 }, { maxEquipLevel: 25, min: 4, max: 7 }, { maxEquipLevel: 40, min: 7, max: 10 }, { maxEquipLevel: 50, min: 10, max: 15 }], description: "\u653B\u51FB +{v}%" },
+    { type: "fortress", name: "\u94C1\u58C1", minQuality: "rare", isPercent: true, bands: [{ maxEquipLevel: 10, min: 1, max: 3 }, { maxEquipLevel: 25, min: 3, max: 5 }, { maxEquipLevel: 40, min: 5, max: 8 }, { maxEquipLevel: 50, min: 8, max: 12 }], description: "\u9632\u5FA1 +{v}%" },
+    { type: "lifesteal", name: "\u55DC\u8840", minQuality: "epic", isPercent: true, bands: [{ maxEquipLevel: 10, min: 1, max: 2 }, { maxEquipLevel: 25, min: 2, max: 3 }, { maxEquipLevel: 40, min: 3, max: 4 }, { maxEquipLevel: 50, min: 4, max: 6 }], description: "\u653B\u51FB\u56DE\u590D\u751F\u547D {v}%" },
+    { type: "hellfire", name: "\u4E1A\u706B", minQuality: "rare", isPercent: false, bands: [{ maxEquipLevel: 10, min: 3, max: 8 }, { maxEquipLevel: 25, min: 8, max: 18 }, { maxEquipLevel: 40, min: 18, max: 35 }, { maxEquipLevel: 50, min: 35, max: 60 }], description: "\u9644\u52A0\u706B\u7130\u4F24\u5BB3 {v}" },
+    { type: "greed", name: "\u8D2A\u5A6A", minQuality: "rare", isPercent: true, bands: [{ maxEquipLevel: 10, min: 5, max: 10 }, { maxEquipLevel: 25, min: 10, max: 15 }, { maxEquipLevel: 40, min: 15, max: 20 }, { maxEquipLevel: 50, min: 20, max: 30 }], description: "\u91D1\u5E01\u83B7\u53D6 +{v}%" },
+    { type: "wisdom", name: "\u535A\u5B66", minQuality: "rare", isPercent: true, bands: [{ maxEquipLevel: 10, min: 5, max: 10 }, { maxEquipLevel: 25, min: 10, max: 15 }, { maxEquipLevel: 40, min: 15, max: 20 }, { maxEquipLevel: 50, min: 20, max: 30 }], description: "\u7ECF\u9A8C\u83B7\u53D6 +{v}%" },
+    { type: "dragonslayer", name: "\u5C60\u9F99", minQuality: "epic", isPercent: true, bands: [{ maxEquipLevel: 10, min: 5, max: 10 }, { maxEquipLevel: 25, min: 10, max: 15 }, { maxEquipLevel: 40, min: 15, max: 20 }, { maxEquipLevel: 50, min: 20, max: 30 }], description: "\u5BF9Boss\u4F24\u5BB3 +{v}%" }
+  ],
+  weaponTable: [
+    { minEquipLevel: 1, maxEquipLevel: 5, values: { poor: [2, 5], common: [4, 8], fine: [8, 15], rare: [15, 25], epic: null, legendary: null } },
+    { minEquipLevel: 6, maxEquipLevel: 10, values: { poor: [5, 8], common: [8, 15], fine: [15, 25], rare: [25, 40], epic: [40, 55], legendary: null } },
+    { minEquipLevel: 11, maxEquipLevel: 20, values: { poor: null, common: [15, 25], fine: [25, 40], rare: [40, 60], epic: [60, 85], legendary: [85, 120] } },
+    { minEquipLevel: 21, maxEquipLevel: 30, values: { poor: null, common: [25, 35], fine: [35, 55], rare: [55, 80], epic: [80, 110], legendary: [110, 160] } },
+    { minEquipLevel: 31, maxEquipLevel: 40, values: { poor: null, common: null, fine: [45, 65], rare: [65, 95], epic: [95, 140], legendary: [140, 200] } },
+    { minEquipLevel: 41, maxEquipLevel: 50, values: { poor: null, common: null, fine: [60, 80], rare: [80, 120], epic: [120, 180], legendary: [180, 280] } }
+  ],
+  armorTable: [
+    { minEquipLevel: 1, maxEquipLevel: 5, values: { poor: [1, 3], common: [2, 5], fine: [4, 8], rare: [6, 12], epic: null, legendary: null } },
+    { minEquipLevel: 6, maxEquipLevel: 10, values: { poor: [2, 4], common: [4, 8], fine: [8, 14], rare: [12, 20], epic: [18, 28], legendary: null } },
+    { minEquipLevel: 11, maxEquipLevel: 20, values: { poor: null, common: [8, 14], fine: [14, 22], rare: [20, 30], epic: [30, 45], legendary: [45, 60] } },
+    { minEquipLevel: 21, maxEquipLevel: 30, values: { poor: null, common: [14, 20], fine: [20, 30], rare: [30, 45], epic: [45, 60], legendary: [60, 85] } },
+    { minEquipLevel: 31, maxEquipLevel: 40, values: { poor: null, common: null, fine: [25, 35], rare: [35, 55], epic: [55, 75], legendary: [75, 110] } },
+    { minEquipLevel: 41, maxEquipLevel: 50, values: { poor: null, common: null, fine: [35, 45], rare: [45, 65], epic: [65, 95], legendary: [95, 140] } }
+  ],
+  mythicFromLegendary: 1.43,
+  baseNames: {
+    weapon: [
+      { minEquipLevel: 1, maxEquipLevel: 10, names: ["\u94C1\u5251"] },
+      { minEquipLevel: 11, maxEquipLevel: 20, names: ["\u9614\u5251"] },
+      { minEquipLevel: 21, maxEquipLevel: 30, names: ["\u957F\u5251"] },
+      { minEquipLevel: 31, maxEquipLevel: 40, names: ["\u7B26\u6587\u5251"] },
+      { minEquipLevel: 41, maxEquipLevel: 50, names: ["\u9F99\u9B42\u5251"] }
+    ],
+    armor: [
+      { minEquipLevel: 1, maxEquipLevel: 10, names: ["\u80F8\u7532"] },
+      { minEquipLevel: 11, maxEquipLevel: 20, names: ["\u9CDE\u7532"] },
+      { minEquipLevel: 21, maxEquipLevel: 30, names: ["\u677F\u7532"] },
+      { minEquipLevel: 31, maxEquipLevel: 40, names: ["\u7B26\u6587\u7532"] },
+      { minEquipLevel: 41, maxEquipLevel: 50, names: ["\u9F99\u9CDE\u7532"] }
+    ]
+  },
+  equipLevelFormula: { playerLevelFactor: 0.5, floorFactor: 1, randomMin: -2, randomMax: 3, min: 1, max: 50 },
+  buyPriceRule: { sellMultiplier: 1.6, min: 100, max: 5e3 },
+  affixSpecial: { mythicAffixCount: 4 }
+};
+
+// src/data/npcs.json
+var npcs_default = {
+  npcs: [
+    {
+      id: "npc_guide",
+      name: "\u5F15\u5BFC\u8005\xB7\u827E\u767B",
+      color: "#44dd99",
+      lines: [
+        "\u6B22\u8FCE\u6765\u5230\u65E0\u5C3D\u4E4B\u5854\uFF0C\u52C7\u8005\u3002\u8FD9\u5EA7\u5854\u6BCF\u5C42\u90FD\u7531\u65E0\u6570\u623F\u95F4\u6784\u6210\uFF0C\u8DEF\u5F84\u7531\u4F60\u9009\u62E9\u3002",
+        "\u7528 WASD \u6216\u65B9\u5411\u952E\u79FB\u52A8\uFF0C\u649E\u4E0A\u602A\u7269\u5373\u4F1A\u5C55\u5F00\u6218\u6597\u3002\u5DE6\u952E\u4E5F\u80FD\u76F4\u63A5\u70B9\u9009\u76EE\u6807\u3002",
+        "\u5B9D\u7BB1\u4E0E\u5546\u4EBA\u4F1A\u7ED9\u4F60\u8865\u7ED9\u3002\u88C5\u5907\u54C1\u8D28\u4ECE\u7834\u70C2\u5230\u795E\u8BDD\u5171\u4E03\u6863\uFF0C\u4ED4\u7EC6\u5BF9\u6BD4\u518D\u7A7F\u6234\u3002",
+        "\u697C\u68AF\u5728\u7EC8\u70B9\u623F\u95F4\u3002\u613F\u4F60\u811A\u4E0B\u751F\u98CE\uFF0C\u5251\u4E0B\u65E0\u60C5\u3002",
+        "\u5BF9\u4E86\u2014\u2014\u6B7B\u4EA1\u4E0D\u662F\u7EC8\u70B9\u3002\u5854\u4F1A\u7ED9\u4F60\u91CD\u6765\u7684\u673A\u4F1A\uFF0C\u4F46\u4F1A\u6536\u8D70\u4E00\u90E8\u5206\u91D1\u5E01\u3002"
+      ],
+      portrait: "img/eden.png"
+    },
+    {
+      id: "npc_merchant",
+      name: "\u5546\u4EBA\xB7\u8001\u53E4",
+      color: "#44dd66",
+      isMerchant: true,
+      lines: [
+        "\u54DF\uFF0C\u5BA2\u4EBA\uFF01\u7A00\u7F55\u7269\u4EF6\u5E94\u6709\u5C3D\u6709\uFF0C\u770B\u770B\uFF1F",
+        "\u836F\u6C34\u6309\u697C\u5C42\u8FDB\u65B0\u8D27\uFF0C\u65E9\u4E70\u65E9\u5B89\u5FC3\u3002",
+        "\u94A5\u5319\u4E0D\u5ACC\u591A\uFF0C\u5B9D\u7BB1\u53EF\u7B49\u4E0D\u4E86\u4EBA\u3002"
+      ]
+    },
+    {
+      id: "npc_witch",
+      name: "\u5973\u5DEB\xB7\u8587\u8587\u5B89",
+      color: "#c78cff",
+      isWitch: true,
+      lines: [
+        "\u5618\u2014\u2014\u522B\u78B0\u6211\u7684\u9505\uFF0C\u90A3\u6C64\u836F\u8FD8\u6CA1\u9192\u3002",
+        "\u5854\u91CC\u7684\u602A\u7269\u8D8A\u6DF1\u8D8A\u51F6\uFF0C\u6211\u7684\u836F\u6C34\u5374\u8D8A\u6DF1\u8D8A\u7075\u3002\u8981\u8BD5\u8BD5\u5417\uFF1F",
+        "\u65C1\u8FB9\u90A3\u53E3\u6CC9\u6C34\u80FD\u6D17\u53BB\u4F60\u7684\u4F24\uFF0C\u4E0D\u8FC7\u2026\u2026\u5F97\u4ED8\u70B9\u91D1\u5B50\u3002"
+      ]
+    },
+    {
+      id: "npc_blacksmith",
+      name: "\u94C1\u5320\xB7\u970D\u6069",
+      color: "#ff9a3d",
+      isBlacksmith: true,
+      lines: [
+        "\u94C1\u7827\u4E0D\u9A97\u4EBA\u3002\u5251\u662F\u597D\u5251\uFF0C\u5C31\u662F\u8FD8\u5DEE\u53E3\u6C14\u2014\u2014\u4EA4\u7ED9\u6211\u3002",
+        "\u91CD\u94F8\u8BCD\u6761\u3001\u9524\u70BC\u7B49\u7EA7\u3001\u6DEC\u706B\u63D0\u54C1\u8D28\uFF0C\u90FD\u884C\uFF0C\u6536\u8D39\u516C\u9053\u3002",
+        "\u5148\u8BF4\u597D\uFF1A\u53F2\u8BD7\u5F80\u4E0A\u7684\u795E\u5175\u6211\u4E0D\u78B0\uFF0C\u51E1\u706B\u6DEC\u4E0D\u52A8\u3002"
+      ]
+    }
+  ]
+};
+
+// src/data/quests.json
+var quests_default = {
+  quests: [
+    {
+      id: "quest_talk_guide",
+      name: "\u521D\u6765\u4E4D\u5230",
+      description: "\u4E0E\u8D77\u70B9\u7684\u5F15\u5BFC\u8005\u827E\u767B\u5BF9\u8BDD\uFF0C\u4E86\u89E3\u8FD9\u5EA7\u5854\u7684\u89C4\u5219\u3002",
+      objectives: [{ type: "talk_npc", targetId: "npc_guide", quantity: 1 }],
+      rewards: [{ type: "potion", tier: "crude", value: 2 }],
+      prerequisites: [],
+      guidance: "\u8D70\u5230\u7EFF\u8272\u65B9\u5757\u65C1\uFF0C\u5DE6\u952E\u5BF9\u8BDD\u3002"
+    },
+    {
+      id: "quest_first_blood",
+      name: "\u521D\u8BD5\u950B\u8292",
+      description: "\u51FB\u8D25\u4E00\u53EA\u53F2\u83B1\u59C6\u3002",
+      objectives: [{ type: "defeat_monster", targetId: "slime", quantity: 1 }],
+      rewards: [{ type: "gold", value: 30 }],
+      prerequisites: ["quest_talk_guide"],
+      guidance: "\u649E\u5411\u7EA2\u8272\u65B9\u5757\u5373\u8FDB\u5165\u6218\u6597\u3002"
+    },
+    {
+      id: "quest_first_chest",
+      name: "\u5F00\u7BB1\u6709\u559C",
+      description: "\u6253\u5F00\u4E00\u4E2A\u5B9D\u7BB1\u3002",
+      objectives: [{ type: "open_chest", quantity: 1 }],
+      rewards: [{ type: "gold", value: 20 }],
+      prerequisites: ["quest_talk_guide"],
+      guidance: "\u5DE6\u952E\u70B9\u51FB\u91D1\u8272\u5B9D\u7BB1\u3002"
+    },
+    {
+      id: "quest_first_equip",
+      name: "\u62AB\u6302\u4E0A\u9635",
+      description: "\u7A7F\u6234\u4E00\u4EF6\u88C5\u5907\u3002",
+      objectives: [{ type: "equip_item", quantity: 1 }],
+      rewards: [{ type: "equipment", quality: "poor" }],
+      prerequisites: ["quest_first_chest"],
+      guidance: "\u6309 B \u6253\u5F00\u80CC\u5305\uFF0C\u53CC\u51FB\u88C5\u5907\u7A7F\u6234\u3002"
+    },
+    {
+      id: "quest_descend",
+      name: "\u66F4\u4E0B\u4E00\u5C42",
+      description: "\u901A\u8FC7\u7EC8\u70B9\u697C\u68AF\u5230\u8FBE\u7B2C 2 \u5C42\u3002",
+      objectives: [{ type: "reach_floor", value: 2, quantity: 1 }],
+      rewards: [
+        { type: "gold", value: 50 },
+        { type: "potion", tier: "crude", value: 1 }
+      ],
+      prerequisites: ["quest_first_blood"],
+      guidance: "\u627E\u5230\u623F\u95F4\u89D2\u843D\u7684\u53D1\u5149\u697C\u68AF\u3002"
+    }
+  ]
+};
+
+// src/data/economy.json
+var economy_default = {
+  placeholder: true
+};
+
+// src/data/events.json
+var events_default = {
+  events: [
+    {
+      id: "ev_gold_fairy",
+      name: "\u91D1\u5E01\u5996\u7CBE",
+      icon: "\u{1F9DA}",
+      minFloor: 2,
+      chance: 0.07,
+      roomTypes: ["combat", "chest"],
+      description: "\u4E00\u53EA\u91D1\u5E01\u5996\u7CBE\u4ECE\u9634\u5F71\u91CC\u7A9C\u51FA\uFF0C\u7FC5\u8180\u4E0A\u6D12\u843D\u7740\u91D1\u7C89\u3002",
+      options: [
+        { text: "\u4F38\u624B\u53BB\u6293", effects: [{ type: "gold", value: 30, perFloor: 6 }] },
+        { text: "\u76EE\u9001\u5B83\u79BB\u5F00", effects: [] }
+      ]
+    },
+    {
+      id: "ev_trap",
+      name: "\u53EF\u7591\u7684\u8E0F\u677F",
+      icon: "\u26A0\uFE0F",
+      minFloor: 3,
+      chance: 0.06,
+      roomTypes: ["combat", "elite"],
+      description: "\u811A\u4E0B\u7684\u77F3\u677F\u5FFD\u7136\u4E0B\u9677\u2014\u2014\u662F\u9677\u9631\uFF01",
+      options: [
+        { text: "\u786C\u6297", effects: [{ type: "damagePct", value: 8 }] },
+        { text: "\u7FFB\u6EDA\u95EA\u907F\uFF08\u6D88\u8017\u4F53\u529B\uFF09", effects: [{ type: "damagePct", value: 3 }] }
+      ]
+    },
+    {
+      id: "ev_spring",
+      name: "\u795E\u79D8\u6CC9\u6C34",
+      icon: "\u26F2",
+      minFloor: 2,
+      chance: 0.06,
+      roomTypes: ["chest", "merchant", "end"],
+      description: "\u89D2\u843D\u91CC\u6D8C\u51FA\u4E00\u6C6A\u6CDB\u7740\u5FAE\u5149\u7684\u6CC9\u6C34\u3002",
+      options: [
+        { text: "\u996E\u4E0B\u6CC9\u6C34", effects: [{ type: "healPct", value: 20 }] },
+        { text: "\u8C28\u614E\u8D77\u89C1\uFF0C\u4E0D\u559D", effects: [] }
+      ]
+    },
+    {
+      id: "ev_scroll",
+      name: "\u53E4\u8001\u7684\u5377\u8F74",
+      icon: "\u{1F4DC}",
+      minFloor: 4,
+      chance: 0.05,
+      roomTypes: ["combat", "chest", "elite"],
+      description: "\u5899\u4E0A\u5D4C\u7740\u4E00\u5377\u53E4\u65E7\u7684\u5377\u8F74\uFF0C\u5B57\u8FF9\u4F9D\u7A00\u53EF\u8FA8\u3002",
+      options: [
+        { text: "\u7814\u8BFB\u5377\u8F74", effects: [{ type: "exp", value: 25, perFloor: 5 }] },
+        { text: "\u6CA1\u6709\u5174\u8DA3", effects: [] }
+      ]
+    }
+  ]
+};
+
+// src/data/texts.json
+var texts_default = {
+  roomNames: {
+    start: "\u8D77\u70B9\u5927\u5385",
+    end: "\u7EC8\u70B9\u4E4B\u95F4",
+    combat: "\u6218\u6597\u5BA4",
+    elite: "\u7CBE\u82F1\u6BBF\u5802",
+    chest: "\u5B9D\u85CF\u95F4",
+    merchant: "\u5546\u4EBA\u8425\u5730",
+    blacksmith: "\u94C1\u5320\u94FA",
+    witch: "\u5973\u5DEB\u917F\u836F\u95F4",
+    boss: "Boss\u5DE2\u7A74",
+    rest: "\u4F11\u6574\u8425\u5730"
+  },
+  hints: {
+    attack: "\u5DE6\u952E\u653B\u51FB",
+    pickup: "\u5DE6\u952E\u62FE\u53D6",
+    talk: "\u5DE6\u952E\u5BF9\u8BDD",
+    open: "\u5DE6\u952E\u6253\u5F00",
+    stair: "\u70B9\u51FB\u6216\u8D70\u4E0A\u697C\u68AF",
+    trade: "\u5DE6\u952E\u4EA4\u6613",
+    heal: "\u5DE6\u952E\u6CBB\u7597"
+  },
+  titles: {
+    gameTitle: "\u65E0\u5C3D\u4E4B\u5854",
+    floor: "\u7B2C {floor} \u5C42",
+    depth: "\u6DF1\u5EA6 {depth}",
+    pathA: "\u8DEF\u5F84A\uFF08\u9AD8\u5371\uFF09",
+    pathB: "\u8DEF\u5F84B\uFF08\u7A33\u5065\uFF09"
+  },
+  guidance: {
+    firstEquipment: "\u83B7\u5F97\u88C5\u5907\uFF01\u6309 B \u6253\u5F00\u80CC\u5305\u67E5\u770B\uFF0C\u53CC\u51FB\u53EF\u7A7F\u6234\u3002\u88C5\u5907\u5BF9\u6BD4\u4E2D\u7EFF\u8272\u4E3A\u63D0\u5347\u3002",
+    firstDeath: "\u4F60\u5012\u4E0B\u4E86\u2026\u2026\u4F46\u5854\u7ED9\u4E88\u4F60\u91CD\u6765\u7684\u673A\u4F1A\uFF1A\u5728\u672C\u5C42\u8D77\u70B9\u590D\u6D3B\uFF0C\u635F\u5931 20% \u91D1\u5E01\u3002",
+    tutorialWelcome: "\u6B22\u8FCE\u6765\u5230\u65E0\u5C3D\u4E4B\u5854\u3002\u8DDF\u968F\u53F3\u4FA7\u4EFB\u52A1\u6307\u5F15\u5F00\u59CB\u5192\u9669\u5427\u3002"
+  },
+  labels: {
+    player: "\u52C7\u8005",
+    merchant: "\u5546\u4EBA",
+    guide: "\u5F15\u5BFC\u8005",
+    chest: "\u5B9D\u7BB1",
+    chestOpened: "\u7A7A\u5B9D\u7BB1",
+    stair: "\u901A\u5F80\u7B2C {floor} \u5C42",
+    carpet: "\u5730\u6BEF",
+    pillar: "\u77F3\u67F1",
+    potion: "\u836F\u6C34",
+    torch: "\u706B\u628A",
+    cauldron: "\u71AC\u836F\u5927\u9505",
+    shelf: "\u836F\u67B6",
+    fountain: "\u6CBB\u7597\u6CC9"
+  }
+};
+
+// src/data/settings.json
+var settings_default = {
+  defaults: {
+    autoSave: true,
+    fpsCap: 0
+  }
+};
+
+// src/core/DataManager.ts
+var DataManager = class _DataManager {
+  static instance;
+  loaded = false;
+  constructor() {
+  }
+  static getInstance() {
+    if (!_DataManager.instance) _DataManager.instance = new _DataManager();
+    return _DataManager.instance;
+  }
+  loadAll() {
+    this.loaded = true;
+  }
+  get config() {
+    return gameConfig_default;
+  }
+  /** 药水素材图路径（public/img/p_<tier>.png；素材统一放 public/img，短文件名） */
+  potionIconSrc(tier) {
+    return `img/p_${tier}.png`;
+  }
+  /** 药水素材 <img> 标签（UI 通用） */
+  potionIconImg(tier, cls = "potion-icon") {
+    return `<img class="${cls}" src="${this.potionIconSrc(tier)}" alt="${tier}" draggable="false">`;
+  }
+  get mapGen() {
+    return mapGeneration_default;
+  }
+  get monsters() {
+    return monsters_default;
+  }
+  get potions() {
+    return potions_default;
+  }
+  get equipment() {
+    return equipmentTables_default;
+  }
+  get npcs() {
+    return npcs_default;
+  }
+  get quests() {
+    return quests_default;
+  }
+  get economy() {
+    return economy_default;
+  }
+  get events() {
+    return events_default;
+  }
+  get texts() {
+    return texts_default;
+  }
+  get settings() {
+    return settings_default;
+  }
+  getMonster(id) {
+    return this.monsters.monsters.find((m) => m.id === id);
+  }
+  getPotion(tier) {
+    return this.potions.potions.find((p) => p.tier === tier);
+  }
+  getNpc(id) {
+    return this.npcs.npcs.find((n) => n.id === id);
+  }
+  getQuest(id) {
+    return this.quests.quests.find((q) => q.id === id);
+  }
+  get isLoaded() {
+    return this.loaded;
+  }
+};
+var dataManager = DataManager.getInstance();
+
+// src/core/EventBus.ts
+var EventBus = class _EventBus {
+  static instance;
+  handlers = /* @__PURE__ */ new Map();
+  constructor() {
+  }
+  static getInstance() {
+    if (!_EventBus.instance) {
+      _EventBus.instance = new _EventBus();
+    }
+    return _EventBus.instance;
+  }
+  on(event, handler) {
+    let set = this.handlers.get(event);
+    if (!set) {
+      set = /* @__PURE__ */ new Set();
+      this.handlers.set(event, set);
+    }
+    set.add(handler);
+  }
+  once(event, handler) {
+    const wrapped = (payload) => {
+      this.off(event, wrapped);
+      handler(payload);
+    };
+    this.on(event, wrapped);
+  }
+  off(event, handler) {
+    const set = this.handlers.get(event);
+    if (set) {
+      set.delete(handler);
+    }
+  }
+  emit(event, payload) {
+    const set = this.handlers.get(event);
+    if (!set) return;
+    for (const handler of [...set]) {
+      try {
+        handler(payload);
+      } catch (err) {
+        console.error(`[EventBus] handler error on "${String(event)}"`, err);
+      }
+    }
+  }
+  clear() {
+    this.handlers.clear();
+  }
+};
+var eventBus = EventBus.getInstance();
+
+// src/utils/StatCalculator.ts
+var StatCalculator = class _StatCalculator {
+  static instance;
+  constructor() {
+  }
+  static getInstance() {
+    if (!_StatCalculator.instance) _StatCalculator.instance = new _StatCalculator();
+    return _StatCalculator.instance;
+  }
+  get anchors() {
+    return dataManager.config.floorAnchors;
+  }
+  /** 楼层锚点分段线性插值；超出末锚点后按 overflow 比例增长 */
+  anchorValue(series, floorId, overflowRate) {
+    const floors = this.anchors.floors;
+    const last = floors.length - 1;
+    if (floorId <= floors[0]) return series[0];
+    if (floorId >= floors[last]) {
+      const over = floorId - floors[last];
+      return series[last] * Math.pow(1 + overflowRate, over);
+    }
+    for (let i = 0; i < last; i++) {
+      if (floorId >= floors[i] && floorId <= floors[i + 1]) {
+        const t = (floorId - floors[i]) / (floors[i + 1] - floors[i]);
+        return series[i] + (series[i + 1] - series[i]) * t;
+      }
+    }
+    return series[last];
+  }
+  /** 怪物战斗属性：楼层基准 × 怪物倍率 × 精英加成 */
+  monsterStats(def, floorId, isElite) {
+    const cfg = dataManager.config;
+    const a = this.anchors;
+    const round = (v) => Math.max(1, Math.round(v));
+    const isBoss = def.category === "boss";
+    let hp = this.anchorValue(a.hp, floorId, a.overflowPerFloor.hp) * def.hpMul;
+    let atk = this.anchorValue(a.atk, floorId, a.overflowPerFloor.atk) * def.atkMul;
+    let defv = this.anchorValue(a.def, floorId, a.overflowPerFloor.def) * def.defMul;
+    let exp = this.anchorValue(a.exp, floorId, a.overflowPerFloor.exp) * def.expMul;
+    let gold = this.anchorValue(a.gold, floorId, a.overflowPerFloor.gold) * def.goldMul;
+    if (isBoss) {
+      hp *= 1 + cfg.bossStatBonus.hp;
+      atk *= 1 + cfg.bossStatBonus.atk;
+      defv *= 1 + cfg.bossStatBonus.def;
+    } else if (isElite) {
+      hp *= dataManager.monsters.eliteStatMultiplier;
+      atk *= dataManager.monsters.eliteStatMultiplier;
+      defv *= dataManager.monsters.eliteStatMultiplier;
+      gold *= dataManager.monsters.eliteGoldMultiplier;
+      exp *= dataManager.monsters.eliteExpMultiplier;
+    }
+    return {
+      name: isElite ? `\u7CBE\u82F1\xB7${def.name}` : def.name,
+      hp: round(hp),
+      attack: round(atk),
+      defense: round(defv),
+      exp: round(exp),
+      gold: round(gold),
+      isElite,
+      isBoss
+    };
+  }
+  /** 玩家到达某等级时的基础属性（不含装备） */
+  playerBaseAt(level) {
+    const cfg = dataManager.config;
+    const base = cfg.playerBase;
+    let hp = base.maxHp;
+    let atk = base.attack;
+    let def = base.defense;
+    for (let lv = 2; lv <= level; lv++) {
+      const row = cfg.growthTable.find((g) => lv >= g.minLevel && lv <= g.maxLevel) ?? cfg.growthTable[cfg.growthTable.length - 1];
+      hp += row.hp;
+      atk += row.attack;
+      def += row.defense;
+    }
+    return { maxHp: hp, attack: atk, defense: def };
+  }
+  /** 升到下一级所需经验 */
+  expToNext(level) {
+    const { base, power } = dataManager.config.expFormula;
+    return Math.round(base * Math.pow(level, power));
+  }
+};
+
+// src/entities/Player.ts
+var QUALITY_ORDER = ["poor", "common", "fine", "rare", "epic", "legendary", "mythic"];
+var Player = class _Player {
+  static instance;
+  state;
+  constructor() {
+    const base = dataManager.config.playerBase;
+    this.state = {
+      level: 1,
+      exp: 0,
+      hp: base.maxHp,
+      baseMaxHp: base.maxHp,
+      baseAttack: base.attack,
+      baseDefense: base.defense,
+      baseCritRate: base.critRate,
+      baseDodgeRate: base.dodgeRate,
+      gold: 0,
+      keys: 0,
+      potions: { crude: 0, normal: 0, quality: 0, strong: 0, holy: 0 },
+      hotbar: [null, null, null, null, null],
+      weaponId: null,
+      armorId: null,
+      bag: [],
+      x: 0,
+      y: 0,
+      currentFloor: 1,
+      currentRoomId: ""
+    };
+  }
+  static getInstance() {
+    if (!_Player.instance) _Player.instance = new _Player();
+    return _Player.instance;
+  }
+  /** 存档恢复 */
+  restore(state) {
+    this.state = state;
+  }
+  get pos() {
+    return { x: this.state.x, y: this.state.y };
+  }
+  // ============ 属性聚合（基础 + 装备 + 词条） ============
+  equipped() {
+    return this.state.bag.filter((e) => e.id === this.state.weaponId || e.id === this.state.armorId);
+  }
+  stats() {
+    let attack = this.state.baseAttack;
+    let defense = this.state.baseDefense;
+    let maxHp = this.state.baseMaxHp;
+    let critRate = this.state.baseCritRate;
+    let dodgeRate = this.state.baseDodgeRate;
+    let lifesteal = 0;
+    let fireDamage = 0;
+    let goldBonus = 0;
+    let expBonus = 0;
+    let bossDamage = 0;
+    let pctAtk = 0;
+    let pctDef = 0;
+    for (const equip of this.equipped()) {
+      attack += equip.attack;
+      defense += equip.defense;
+    }
+    const affixes = this.equipped().flatMap((e) => e.affixes);
+    for (const a of affixes) {
+      switch (a.type) {
+        case "sharp":
+          attack += a.value;
+          break;
+        case "sturdy":
+          defense += a.value;
+          break;
+        case "vitality":
+          maxHp += a.value;
+          break;
+        case "precision":
+          critRate += a.value;
+          break;
+        case "agility":
+          dodgeRate += a.value;
+          break;
+        case "savage":
+          pctAtk += a.value;
+          break;
+        case "fortress":
+          pctDef += a.value;
+          break;
+        case "lifesteal":
+          lifesteal += a.value;
+          break;
+        case "hellfire":
+          fireDamage += a.value;
+          break;
+        case "greed":
+          goldBonus += a.value;
+          break;
+        case "wisdom":
+          expBonus += a.value;
+          break;
+        case "dragonslayer":
+          bossDamage += a.value;
+          break;
+      }
+    }
+    return {
+      maxHp: Math.round(maxHp),
+      attack: Math.round(attack * (1 + pctAtk / 100)),
+      defense: Math.round(defense * (1 + pctDef / 100)),
+      critRate: Math.min(75, critRate),
+      dodgeRate: Math.min(50, dodgeRate),
+      lifesteal,
+      fireDamage,
+      goldBonus,
+      expBonus,
+      bossDamage
+    };
+  }
+  get maxHp() {
+    return this.stats().maxHp;
+  }
+  get attack() {
+    return this.stats().attack;
+  }
+  get defense() {
+    return this.stats().defense;
+  }
+  get isAlive() {
+    return this.state.hp > 0;
+  }
+  // ============ 生命 / 经验 / 金币 ============
+  heal(amount) {
+    const max = this.maxHp;
+    const before = this.state.hp;
+    this.state.hp = Math.min(max, this.state.hp + amount);
+    const healed = this.state.hp - before;
+    if (healed > 0) eventBus.emit("hpChanged", { oldValue: before, newValue: this.state.hp, delta: healed });
+    return healed;
+  }
+  damage(amount) {
+    const before = this.state.hp;
+    this.state.hp = Math.max(0, this.state.hp - amount);
+    eventBus.emit("hpChanged", { oldValue: before, newValue: this.state.hp, delta: this.state.hp - before });
+  }
+  gainExp(amount) {
+    const bonus = 1 + this.stats().expBonus / 100;
+    const gained = Math.round(amount * bonus);
+    const before = this.state.exp;
+    this.state.exp += gained;
+    eventBus.emit("expChanged", { oldValue: before, newValue: this.state.exp, delta: gained });
+    this.checkLevelUp();
+  }
+  checkLevelUp() {
+    const calc = StatCalculator.getInstance();
+    let need = calc.expToNext(this.state.level);
+    while (this.state.exp >= need && this.state.level < 999) {
+      this.state.exp -= need;
+      const oldLevel = this.state.level;
+      this.state.level += 1;
+      const base = calc.playerBaseAt(this.state.level);
+      const gainedHp = base.maxHp - this.state.baseMaxHp;
+      const gainedAtk = base.attack - this.state.baseAttack;
+      const gainedDef = base.defense - this.state.baseDefense;
+      this.state.baseMaxHp = base.maxHp;
+      this.state.baseAttack = base.attack;
+      this.state.baseDefense = base.defense;
+      this.state.hp += gainedHp;
+      eventBus.emit("levelUp", { oldLevel, newLevel: this.state.level, gainedHp, gainedAttack: gainedAtk, gainedDefense: gainedDef });
+      need = calc.expToNext(this.state.level);
+    }
+  }
+  gainGold(amount) {
+    const bonus = 1 + this.stats().goldBonus / 100;
+    const gained = Math.round(amount * bonus);
+    const old = this.state.gold;
+    this.state.gold += gained;
+    eventBus.emit("goldChanged", { oldValue: old, newValue: this.state.gold, delta: gained });
+  }
+  spendGold(amount) {
+    if (this.state.gold < amount) return false;
+    const old = this.state.gold;
+    this.state.gold -= amount;
+    eventBus.emit("goldChanged", { oldValue: old, newValue: this.state.gold, delta: -amount });
+    return true;
+  }
+  // ============ 药水 ============
+  getPotionCount(tier) {
+    return this.state.potions[tier] ?? 0;
+  }
+  /** 绑定快捷栏槽位（拖拽药水到快捷栏） */
+  setHotbarSlot(slot, tier) {
+    if (slot < 0 || slot >= this.state.hotbar.length) return;
+    this.state.hotbar[slot] = tier;
+  }
+  /** 交换/移动两个快捷栏槽位的绑定 */
+  swapHotbar(from, to) {
+    const hb = this.state.hotbar;
+    if (from < 0 || from >= hb.length || to < 0 || to >= hb.length) return;
+    [hb[from], hb[to]] = [hb[to], hb[from]];
+  }
+  addPotion(tier, count = 1) {
+    this.state.potions[tier] = this.getPotionCount(tier) + count;
+  }
+  /** 使用药水：百分比回复 */
+  usePotion(tier) {
+    if (this.getPotionCount(tier) <= 0) return false;
+    const def = dataManager.getPotion(tier);
+    if (!def) return false;
+    this.state.potions[tier] -= 1;
+    const healed = this.heal(Math.round(this.maxHp * def.healPct));
+    eventBus.emit("potionUsed", { tier, healed });
+    return true;
+  }
+  /** 自动选最优药水（战斗中扣血超过其回复量时用） */
+  bestPotionFor(missing) {
+    const order = ["crude", "normal", "quality", "strong", "holy"];
+    for (const tier of order) {
+      const def = dataManager.getPotion(tier);
+      if (!def) continue;
+      if (this.getPotionCount(tier) > 0 && Math.round(this.maxHp * def.healPct) <= missing) return tier;
+    }
+    for (const tier of order) {
+      if (this.getPotionCount(tier) > 0) return tier;
+    }
+    return null;
+  }
+  // ============ 装备 ============
+  get weapon() {
+    return this.state.bag.find((e) => e.id === this.state.weaponId) ?? null;
+  }
+  get armor() {
+    return this.state.bag.find((e) => e.id === this.state.armorId) ?? null;
+  }
+  /** 背包中未穿戴的装备 */
+  get unequippedBag() {
+    return this.state.bag.filter((e) => e.id !== this.state.weaponId && e.id !== this.state.armorId);
+  }
+  addEquipment(equip) {
+    this.state.bag.push(equip);
+    eventBus.emit("equipmentGenerated", { equipment: equip, source: equip.source });
+  }
+  equip(equipId) {
+    const equip = this.state.bag.find((e) => e.id === equipId);
+    if (!equip) return false;
+    const slot = equip.slot;
+    const current = slot === "weapon" ? this.state.weaponId : this.state.armorId;
+    if (current === equipId) return false;
+    if (slot === "weapon") this.state.weaponId = equipId;
+    else this.state.armorId = equipId;
+    eventBus.emit("equipmentEquipped", { slot, equipmentId: equipId, oldId: current });
+    return true;
+  }
+  unequip(slot) {
+    if (slot === "weapon") this.state.weaponId = null;
+    else this.state.armorId = null;
+    eventBus.emit("equipmentEquipped", { slot, equipmentId: "", oldId: null });
+  }
+  removeEquipment(equipId) {
+    const idx = this.state.bag.findIndex((e) => e.id === equipId);
+    if (idx < 0) return null;
+    if (this.state.weaponId === equipId) this.state.weaponId = null;
+    if (this.state.armorId === equipId) this.state.armorId = null;
+    const [removed] = this.state.bag.splice(idx, 1);
+    return removed;
+  }
+  qualityRank(q) {
+    return QUALITY_ORDER.indexOf(q);
+  }
+};
+
+// src/utils/MathUtils.ts
+var MathUtils = class {
+  static clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+  static lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+  /** 曼哈顿距离 */
+  static manhattan(x1, y1, x2, y2) {
+    return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+  }
+  /** 欧氏距离 */
+  static dist(x1, y1, x2, y2) {
+    return Math.hypot(x1 - x2, y1 - y2);
+  }
+};
+var rng = {
+  next() {
+    return Math.random();
+  },
+  randInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  },
+  randFloat(min, max) {
+    return Math.random() * (max - min) + min;
+  },
+  chance(p) {
+    return Math.random() < p;
+  },
+  pick(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  },
+  pickWeighted(arr, weightFn) {
+    const weights = arr.map(weightFn);
+    const total = weights.reduce((s, w) => s + w, 0);
+    if (total <= 0) return arr[0];
+    let roll = Math.random() * total;
+    for (let i = 0; i < arr.length; i++) {
+      roll -= weights[i];
+      if (roll <= 0) return arr[i];
+    }
+    return arr[arr.length - 1];
+  },
+  shuffle(arr) {
+    const r = [...arr];
+    for (let i = r.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [r[i], r[j]] = [r[j], r[i]];
+    }
+    return r;
+  }
+};
+
+// src/utils/IdGenerator.ts
+var IdGenerator = class _IdGenerator {
+  static counter = 0;
+  static reset() {
+    _IdGenerator.counter = 0;
+  }
+  static next(prefix) {
+    _IdGenerator.counter += 1;
+    return `${prefix}_${_IdGenerator.counter.toString(36)}`;
+  }
+  /** 装备实例唯一ID */
+  static equipmentId() {
+    _IdGenerator.counter += 1;
+    return `eq_${Date.now().toString(36)}_${_IdGenerator.counter.toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`;
+  }
+};
+
+// src/systems/EquipmentGenerator.ts
+var QUALITY_RANK = {
+  poor: 0,
+  common: 1,
+  fine: 2,
+  rare: 3,
+  epic: 4,
+  legendary: 5,
+  mythic: 6
+};
+var EquipmentGenerator = class _EquipmentGenerator {
+  static instance;
+  constructor() {
+  }
+  static getInstance() {
+    if (!_EquipmentGenerator.instance) _EquipmentGenerator.instance = new _EquipmentGenerator();
+    return _EquipmentGenerator.instance;
+  }
+  /** 品质掷骰：随楼层变化的权重表 */
+  rollQuality(floorId) {
+    const bands = dataManager.equipment.qualityByFloor;
+    const band = bands.find((b) => floorId >= b.minFloor && floorId <= b.maxFloor) ?? bands[bands.length - 1];
+    const entries = Object.entries(band.weights);
+    return rng.pickWeighted(entries, ([, w]) => w)[0];
+  }
+  /** 装备等级公式 */
+  rollEquipLevel(playerLevel, floorId) {
+    const f = dataManager.equipment.equipLevelFormula;
+    const level = Math.floor(playerLevel * f.playerLevelFactor + floorId * f.floorFactor + rng.randInt(f.randomMin, f.randomMax));
+    return Math.max(f.min, Math.min(f.max, level));
+  }
+  /** 生成一件装备 */
+  generate(source, opts = {}) {
+    const player = Player.getInstance();
+    const floorId = opts.floorId ?? player.state.currentFloor;
+    const quality = opts.forcedQuality ?? this.rollQuality(floorId);
+    const slot = opts.slot ?? (rng.chance(0.5) ? "weapon" : "armor");
+    const level = this.rollEquipLevel(player.state.level, floorId);
+    const value = this.rollBaseValue(slot, quality, level);
+    const attack = slot === "weapon" ? value : 0;
+    const defense = slot === "armor" ? value : 0;
+    const affixes = this.rollAffixes(quality, level);
+    const q = dataManager.equipment.quality[quality];
+    const baseName = this.baseName(slot, level);
+    const name = this.buildName(q.prefix, baseName, affixes);
+    const sellPrice = Math.round(q.basePrice * (1 + level * 0.05) * (1 + affixes.length * 0.15));
+    const rule = dataManager.equipment.buyPriceRule;
+    const buyPrice = Math.max(rule.min, Math.min(rule.max, Math.round(sellPrice * rule.sellMultiplier)));
+    return {
+      id: IdGenerator.equipmentId(),
+      slot,
+      baseName,
+      name,
+      level,
+      quality,
+      affixes,
+      attack,
+      defense,
+      sellPrice,
+      buyPrice,
+      source
+    };
+  }
+  /** 教学关固定基础装备（破烂铁剑） */
+  tutorialWeapon() {
+    return this.generate("tutorial", { forcedQuality: "poor", slot: "weapon", floorId: 1 });
+  }
+  // ============ 铁匠服务（BlacksmithPanel 调用） ============
+  /** 重铸词条：同品质同等级重掷词条与命名（保底：poor/common 无词条则无变化） */
+  reforge(e) {
+    return this.rebuild(e, { affixes: this.rollAffixes(e.quality, e.level) });
+  }
+  /** 锤炼升级：等级 +1（上限50），基础值与词条按新等级重掷 */
+  upgradeLevel(e) {
+    if (e.level >= 50) return null;
+    const level = e.level + 1;
+    return this.rebuild(e, {
+      level,
+      value: this.rollBaseValue(e.slot, e.quality, level),
+      affixes: this.rollAffixes(e.quality, level)
+    });
+  }
+  /** 淬火提品质：向上一档（仅限史诗以下，稀有可到史诗）；到顶返回 null */
+  upgradeQuality(e) {
+    const order = dataManager.equipment.qualityOrder;
+    const i = order.indexOf(e.quality);
+    const next = order[i + 1];
+    if (!next || i + 1 > order.indexOf("epic")) return null;
+    return this.rebuild(e, {
+      quality: next,
+      value: this.rollBaseValue(e.slot, next, e.level),
+      affixes: this.rollAffixes(next, e.level)
+    });
+  }
+  /** 以原装备为基底重建（保留 id/slot/source，可覆盖品质/等级/基础值/词条，并重算名称与价格） */
+  rebuild(e, over) {
+    const quality = over.quality ?? e.quality;
+    const level = over.level ?? e.level;
+    const value = over.value ?? (e.slot === "weapon" ? e.attack : e.defense);
+    const affixes = over.affixes ?? e.affixes;
+    const q = dataManager.equipment.quality[quality];
+    const name = this.buildName(q.prefix, e.baseName, affixes);
+    const sellPrice = Math.round(q.basePrice * (1 + level * 0.05) * (1 + affixes.length * 0.15));
+    const rule = dataManager.equipment.buyPriceRule;
+    const buyPrice = Math.max(rule.min, Math.min(rule.max, Math.round(sellPrice * rule.sellMultiplier)));
+    return {
+      ...e,
+      name,
+      level,
+      quality,
+      affixes,
+      attack: e.slot === "weapon" ? value : 0,
+      defense: e.slot === "armor" ? value : 0,
+      sellPrice,
+      buyPrice
+    };
+  }
+  /** 基础数值：等级段×品质范围；空缺(null)回退到更低的可用品质；神话=传说×1.43 */
+  rollBaseValue(slot, quality, level) {
+    const table = slot === "weapon" ? dataManager.equipment.weaponTable : dataManager.equipment.armorTable;
+    const row = table.find((r) => level >= r.minEquipLevel && level <= r.maxEquipLevel) ?? table[table.length - 1];
+    const values = row.values;
+    let range = values[quality] ?? null;
+    if (!range && quality === "mythic") {
+      const leg = values["legendary"];
+      if (leg) {
+        const mythicFactor = dataManager.equipment.mythicFromLegendary;
+        range = [Math.round(leg[0] * mythicFactor), Math.round(leg[1] * mythicFactor)];
+      }
+    }
+    const order = dataManager.equipment.qualityOrder;
+    let qi = order.indexOf(quality);
+    while (!range && qi > 0) {
+      qi -= 1;
+      range = values[order[qi]] ?? null;
+    }
+    if (!range) range = [1, 2];
+    return rng.randInt(range[0], range[1]);
+  }
+  /** 词条生成：数量按品质（含高等级加成），不重复，品质下限过滤 */
+  rollAffixes(quality, level) {
+    const q = dataManager.equipment.quality[quality];
+    let count = q.affixCount;
+    if (q.affixExtra) {
+      for (const extra of q.affixExtra) {
+        if (level >= extra.atEquipLevel) count += extra.add;
+      }
+    }
+    count = Math.min(count, q.affixCountMax);
+    if (quality === "mythic") count = dataManager.equipment.affixSpecial.mythicAffixCount;
+    const pool = dataManager.equipment.affixes.filter((a) => QUALITY_RANK[quality] >= QUALITY_RANK[a.minQuality]);
+    if (pool.length === 0) return [];
+    const picked = rng.shuffle(pool).slice(0, count);
+    return picked.map((def) => {
+      const band = def.bands.find((b) => level <= b.maxEquipLevel) ?? def.bands[def.bands.length - 1];
+      const value = rng.randInt(band.min, band.max);
+      return { type: def.type, name: def.name, value, isPercent: def.isPercent };
+    });
+  }
+  baseName(slot, level) {
+    const table = slot === "weapon" ? dataManager.equipment.baseNames.weapon : dataManager.equipment.baseNames.armor;
+    const row = table.find((r) => level >= r.minEquipLevel && level <= r.maxEquipLevel) ?? table[table.length - 1];
+    return row.names[0];
+  }
+  /** 命名：[品质前缀][基础名][·词条1][·词条2]（普通无前缀） */
+  buildName(prefix, baseName, affixes) {
+    let name = prefix ? `${prefix}${baseName}` : baseName;
+    for (const a of affixes) name += `\xB7${a.name}`;
+    return name;
+  }
+};
+
+// src/utils/Logger.ts
+var Logger = class _Logger {
+  static level = "info";
+  static order = { debug: 0, info: 1, warn: 2, error: 3 };
+  static setLevel(level) {
+    _Logger.level = level;
+  }
+  static shouldLog(level) {
+    return _Logger.order[level] >= _Logger.order[_Logger.level];
+  }
+  static debug(...args) {
+    if (_Logger.shouldLog("debug")) console.log("[DEBUG]", ...args);
+  }
+  static info(...args) {
+    if (_Logger.shouldLog("info")) console.log("[INFO]", ...args);
+  }
+  static warn(...args) {
+    if (_Logger.shouldLog("warn")) console.warn("[WARN]", ...args);
+  }
+  static error(...args) {
+    if (_Logger.shouldLog("error")) console.error("[ERROR]", ...args);
+  }
+};
+
+// src/map/FloorGenerator.ts
+var FloorGenerator = class _FloorGenerator {
+  static instance;
+  constructor() {
+  }
+  static getInstance() {
+    if (!_FloorGenerator.instance) _FloorGenerator.instance = new _FloorGenerator();
+    return _FloorGenerator.instance;
+  }
+  /** 判定楼层类型：第1层固定初始层；楼层号%5===0 为Boss层 */
+  getFloorKind(floorId) {
+    const cfg = dataManager.mapGen;
+    if (floorId === cfg.initialFloor) return "initial";
+    if (floorId % cfg.bossFloorInterval === 0) return "boss";
+    return "normal";
+  }
+  /**
+   * 分配楼层房间类型。
+   * 初始层与Boss层不参与随机分配，直接返回固定结构。
+   */
+  allocate(floorId) {
+    const kind = this.getFloorKind(floorId);
+    if (kind === "initial") {
+      return { floorId, kind, roomTypes: ["start", "end"] };
+    }
+    if (kind === "boss") {
+      return { floorId, kind, roomTypes: ["rest", "boss", "end"] };
+    }
+    const count = this.rollRoomCount(floorId);
+    const allocatable = count - 2;
+    const middle = this.allocateByTension(floorId, allocatable);
+    return { floorId, kind, roomTypes: ["start", ...middle, "end"] };
+  }
+  /** 普通楼层房间数量（文档二 2.2） */
+  rollRoomCount(floorId) {
+    const cfg = dataManager.mapGen;
+    const band = cfg.floorRoomCounts.find((b) => floorId >= b.minFloor && floorId <= b.maxFloor) ?? cfg.floorRoomCounts[cfg.floorRoomCounts.length - 1];
+    const count = rng.randInt(band.min, band.max);
+    return Math.min(count, cfg.maxRooms);
+  }
+  /**
+   * 运气平衡器（文档二 2.4）：张力值 Tension 机制。
+   * 正面概率 = 1/(1+e^(-Tension))；Tension≥4 强制正面，≤-3 强制负面；每层重置。
+   * 特殊约束：商人数量限制（总数≤7 最多1个，8-12 最多2个），优先级高于平衡器。
+   */
+  allocateByTension(floorId, allocatable) {
+    const cfg = dataManager.mapGen;
+    const weights = cfg.tension.weights;
+    let tension = 0;
+    let merchantCount = 0;
+    const result = [];
+    for (let i = 0; i < allocatable; i++) {
+      const totalSoFar = result.length + 2;
+      const merchantCap = totalSoFar <= cfg.merchantLimit.fewMaxRooms ? cfg.merchantLimit.fewCount : cfg.merchantLimit.manyCount;
+      let positive;
+      if (tension >= cfg.tension.forcePositiveAt) {
+        positive = true;
+      } else if (tension <= cfg.tension.forceNegativeAt) {
+        positive = false;
+      } else {
+        positive = rng.chance(1 / (1 + Math.exp(-tension)));
+      }
+      let type;
+      if (positive) {
+        const merchantAllowed = merchantCount < merchantCap;
+        type = merchantAllowed && rng.chance(0.3) ? "merchant" : "chest";
+        if (type === "merchant") merchantCount++;
+      } else {
+        type = rng.chance(0.3) ? "elite" : "combat";
+      }
+      result.push(type);
+      tension += weights[type] ?? 0;
+    }
+    if (this.isWitchFloor(floorId)) {
+      const idx = result.findIndex((t) => t === "chest");
+      const target = idx >= 0 ? idx : result.length - 1;
+      if (target >= 0) {
+        tension -= weights[result[target]] ?? 0;
+        result[target] = "witch";
+        tension += weights.witch ?? 0;
+      }
+    }
+    if (this.isBlacksmithFloor(floorId) && !this.isWitchFloor(floorId)) {
+      const idx = result.findIndex((t) => t === "chest");
+      const target = idx >= 0 ? idx : result.length - 1;
+      if (target >= 0) {
+        tension -= weights[result[target]] ?? 0;
+        result[target] = "blacksmith";
+        tension += weights.blacksmith ?? 0;
+      }
+    }
+    Logger.debug(`[FloorGen] \u697C\u5C42${floorId} \u7C7B\u578B\u5206\u914D=${result.join(",")} \u7EC8\u6001Tension=${tension}`);
+    return result;
+  }
+  /** 女巫酿药间出现楼层：最早 minFloor 起，每 interval 层一间（5~8 层区间内） */
+  isWitchFloor(floorId) {
+    const cfg = dataManager.mapGen.witchLimit;
+    return floorId >= cfg.minFloor && (floorId - cfg.minFloor) % cfg.interval === 0;
+  }
+  /** 铁匠铺出现楼层：最早 minFloor 起，每 interval 层一间 */
+  isBlacksmithFloor(floorId) {
+    const cfg = dataManager.mapGen.blacksmithLimit;
+    return floorId >= cfg.minFloor && (floorId - cfg.minFloor) % cfg.interval === 0;
+  }
+};
+
+// src/map/PathGenerator.ts
+var PathGenerator = class _PathGenerator {
+  static instance;
+  constructor() {
+  }
+  static getInstance() {
+    if (!_PathGenerator.instance) _PathGenerator.instance = new _PathGenerator();
+    return _PathGenerator.instance;
+  }
+  plan(alloc) {
+    const middle = alloc.roomTypes.slice(1, -1);
+    if (alloc.kind !== "normal" || middle.length < 2) {
+      return alloc.roomTypes.map((type, i) => ({
+        type,
+        rail: i === 0 ? "S" : i === alloc.roomTypes.length - 1 ? "E" : "A",
+        railIndex: Math.max(0, i - 1),
+        mountIndex: -1,
+        isTrunk: true
+      }));
+    }
+    const trunkCandidates = middle.filter((t) => t === "combat" || t === "elite");
+    const sideRooms = middle.filter((t) => t === "chest" || t === "merchant" || t === "witch" || t === "blacksmith");
+    const sorted = [...trunkCandidates];
+    sorted.sort((a, b) => (a === "elite" ? 0 : 1) - (b === "elite" ? 0 : 1));
+    const railA = [];
+    const railB = [];
+    sorted.forEach((t, i) => {
+      if (i % 2 === 0) railA.push(t);
+      else railB.push(t);
+    });
+    if (railB.length === 0 && railA.length >= 2) railB.push(railA.pop());
+    if (railA.length === 0 && railB.length >= 2) railA.push(railB.pop());
+    const trunkLen = railA.length + railB.length;
+    const mounts = sideRooms.map((type) => {
+      const midOffset = type === "merchant" || type === "witch" || type === "blacksmith" ? Math.floor(trunkLen / 2) : rng.randInt(Math.ceil(trunkLen / 2), trunkLen - 1);
+      return { type, mountIndex: Math.min(midOffset, trunkLen - 1) };
+    });
+    const chain = [{
+      type: alloc.roomTypes[0],
+      rail: "S",
+      railIndex: 0,
+      mountIndex: -1,
+      isTrunk: true
+    }];
+    const pushTrunk = (type, rail, railIndex) => {
+      chain.push({ type, rail, railIndex, mountIndex: -1, isTrunk: true });
+      const trunkOrder = railIndex * 2 + (rail === "A" ? 0 : 1);
+      const sidesHere = mounts.map((m, mi) => ({ ...m, mi })).filter((m) => m.mountIndex === trunkOrder);
+      for (const s of sidesHere) {
+        chain.push({ type: s.type, rail: "side", railIndex: -1, mountIndex: trunkOrder, isTrunk: false });
+      }
+    };
+    const n = Math.max(railA.length, railB.length);
+    for (let i = 0; i < n; i++) {
+      if (i < railA.length) pushTrunk(railA[i], "A", i);
+      if (i < railB.length) pushTrunk(railB[i], "B", i);
+    }
+    for (const s of mounts) {
+      const trunkOrder = s.mountIndex;
+      const already = chain.some((c) => c.rail === "side" && c.mountIndex === trunkOrder && c.type === s.type);
+      if (!already && !chain.some((c) => c.mountIndex === trunkOrder && c.rail === "side")) {
+        chain.splice(chain.length - 1, 0, { type: s.type, rail: "side", railIndex: -1, mountIndex: trunkOrder, isTrunk: false });
+      }
+    }
+    chain.push({ type: "end", rail: "E", railIndex: 0, mountIndex: -1, isTrunk: true });
+    return chain;
+  }
+  /** 长度差校验值：路径A与路径B的房间数差（文档要求 ≤2） */
+  pathLengthDiff(plan) {
+    const a = plan.filter((p) => p.rail === "A").length;
+    const b = plan.filter((p) => p.rail === "B").length;
+    return Math.abs(a - b);
+  }
+  /** 校验配置约束（冗余保险，ceil/floor 分配已保证） */
+  validateDiff(plan) {
+    return this.pathLengthDiff(plan) <= dataManager.mapGen.path.maxLengthDiff;
+  }
+};
+
+// src/map/RoomGenerator.ts
+var DIR_VECTORS = {
+  north: { dx: 0, dy: -1 },
+  south: { dx: 0, dy: 1 },
+  east: { dx: 1, dy: 0 },
+  west: { dx: -1, dy: 0 }
+};
+var OPPOSITE = {
+  north: "south",
+  south: "north",
+  east: "west",
+  west: "east"
+};
+var RoomGenerator = class _RoomGenerator {
+  static instance;
+  constructor() {
+  }
+  static getInstance() {
+    if (!_RoomGenerator.instance) _RoomGenerator.instance = new _RoomGenerator();
+    return _RoomGenerator.instance;
+  }
+  /**
+   * 按链顺序放置房间。返回 null 表示放置失败（由上层重试整层）。
+   */
+  place(floorId, plan) {
+    const cfg = dataManager.mapGen;
+    const R = cfg.gridRadius;
+    const maxW = this.maxSpecWidth();
+    const maxH = this.maxSpecHeight();
+    const gridW = 2 * R * cfg.cellSpacingX + maxW;
+    const gridH = 2 * R * cfg.cellSpacingY + maxH;
+    const occupied = /* @__PURE__ */ new Map();
+    const rooms = [];
+    const dirHistory = [];
+    const railPos = /* @__PURE__ */ new Map();
+    for (let i = 0; i < plan.length; i++) {
+      const planned = plan[i];
+      let gx = 0;
+      let gy = 0;
+      let fromDirection = null;
+      if (i === 0) {
+        gx = 0;
+        gy = 0;
+      } else {
+        const prev = rooms[i - 1];
+        const target = this.biasTarget(planned, plan, rooms, railPos);
+        const choice = this.chooseCell(prev.gx, prev.gy, occupied, dirHistory, target);
+        if (!choice) return null;
+        gx = choice.gx;
+        gy = choice.gy;
+        fromDirection = choice.direction;
+      }
+      const key = `${gx},${gy}`;
+      if (occupied.has(key)) return null;
+      occupied.set(key, i);
+      const size = this.rollSize(planned.type);
+      const x = (gx + R) * cfg.cellSpacingX;
+      const y = (gy + R) * cfg.cellSpacingY;
+      const room = {
+        id: `room_${floorId}_${i}`,
+        floorId,
+        type: planned.type,
+        order: i,
+        gx,
+        gy,
+        width: size.width,
+        height: size.height,
+        x,
+        y,
+        centerX: x + Math.floor(size.width / 2),
+        centerY: y + Math.floor(size.height / 2),
+        fromDirection,
+        depth: 0,
+        onPathA: planned.rail === "A",
+        onPathB: planned.rail === "B",
+        mountedOn: planned.rail === "side" ? this.mountedOnId(plan, planned, floorId) : null,
+        doors: [],
+        entities: []
+      };
+      rooms.push(room);
+      if (planned.rail === "A" || planned.rail === "B") {
+        railPos.set(`${planned.rail}${planned.railIndex}`, { gx, gy });
+      }
+      if (fromDirection) dirHistory.push(fromDirection);
+    }
+    const grid = Array.from({ length: gridH }, () => Array.from({ length: gridW }, () => -1));
+    for (const room of rooms) {
+      for (let ry = room.y; ry <= room.y + room.height - 1; ry++) {
+        for (let rx = room.x; rx <= room.x + room.width - 1; rx++) {
+          grid[ry][rx] = 1;
+        }
+      }
+      for (let ry = room.y + 1; ry <= room.y + room.height - 2; ry++) {
+        for (let rx = room.x + 1; rx <= room.x + room.width - 2; rx++) {
+          grid[ry][rx] = 0;
+        }
+      }
+    }
+    void IdGenerator.next("gen");
+    return { rooms, grid };
+  }
+  /** 计算偏置目标格：同路径前驱 / 起点闭合边 / 终点闭合边 */
+  biasTarget(planned, plan, rooms, railPos) {
+    if (planned.rail === "A" && planned.railIndex > 0) {
+      return railPos.get(`A${planned.railIndex - 1}`) ?? null;
+    }
+    if (planned.rail === "B" && planned.railIndex > 0) {
+      return railPos.get(`B${planned.railIndex - 1}`) ?? null;
+    }
+    if (planned.rail === "B" && planned.railIndex === 0) {
+      return { gx: 0, gy: 0 };
+    }
+    if (planned.rail === "E") {
+      const lastA = plan.filter((p) => p.rail === "A").length - 1;
+      if (lastA >= 0) return railPos.get(`A${lastA}`) ?? null;
+    }
+    return null;
+  }
+  /**
+   * 方向选择：先应用硬约束（禁止重合 + 距离≤2√2 + 边界），
+   * 再按放宽阶梯应用软约束（禁止折返 → 连续直走限制），带偏置评分。
+   */
+  chooseCell(px, py, occupied, dirHistory, bias) {
+    const cfg = dataManager.mapGen;
+    const R = cfg.gridRadius;
+    const maxDist = 2 * Math.SQRT2 + 1e-9;
+    const lastDir = dirHistory[dirHistory.length - 1] ?? null;
+    const allDirs = ["north", "south", "east", "west"];
+    const shuffled = rng.shuffle(allDirs);
+    const inBounds = (gx, gy) => Math.abs(gx) <= R && Math.abs(gy) <= R;
+    const tryPick = (allowReverse, allowStraight) => {
+      const candidates = [];
+      for (const dir of shuffled) {
+        if (!allowReverse && lastDir && dir === OPPOSITE[lastDir]) continue;
+        if (!allowStraight && this.isThirdStraight(dir, dirHistory)) continue;
+        const { dx, dy } = DIR_VECTORS[dir];
+        const gx = px + dx;
+        const gy = py + dy;
+        if (occupied.has(`${gx},${gy}`)) continue;
+        if (!inBounds(gx, gy)) continue;
+        if (MathUtils.dist(gx, gy, 0, 0) > maxDist) continue;
+        let score = rng.next();
+        if (bias && MathUtils.manhattan(gx, gy, bias.gx, bias.gy) <= 1) score += 3;
+        candidates.push({ gx, gy, direction: dir, score });
+      }
+      if (candidates.length === 0) return null;
+      candidates.sort((a, b) => b.score - a.score);
+      return candidates[0];
+    };
+    return tryPick(false, false) ?? tryPick(true, false) ?? tryPick(true, true) ?? this.nearestFreeCell(px, py, occupied, R);
+  }
+  /** 第3次连续同向判定 */
+  isThirdStraight(dir, history) {
+    const n = history.length;
+    if (n < 2) return false;
+    return history[n - 1] === dir && history[n - 2] === dir;
+  }
+  /** 强制选择：打破常规约束（折返/直走/优先级），取距离约束内最近的空白方向 */
+  nearestFreeCell(px, py, occupied, R) {
+    let best = null;
+    let bestD = Infinity;
+    for (const dir of Object.keys(DIR_VECTORS)) {
+      const { dx, dy } = DIR_VECTORS[dir];
+      const gx = px + dx;
+      const gy = py + dy;
+      if (occupied.has(`${gx},${gy}`)) continue;
+      if (Math.abs(gx) > R || Math.abs(gy) > R) continue;
+      if (MathUtils.dist(gx, gy, 0, 0) > 2 * Math.SQRT2 + 1e-9) continue;
+      const d = MathUtils.dist(gx, gy, 0, 0);
+      if (d < bestD) {
+        bestD = d;
+        best = { gx, gy, direction: dir };
+      }
+    }
+    return best;
+  }
+  /**
+   * 房间规格（文档二 4.1）：表中数值 = 内部可活动空间（不含外圈墙壁），
+   * 实际占地 = 规格 + 2（四面各一圈墙）。
+   */
+  rollSize(type) {
+    const spec = dataManager.mapGen.roomSpecs[type];
+    const roll = (v) => Array.isArray(v) ? rng.randInt(v[0], v[1]) : v;
+    const innerW = Math.max(dataManager.mapGen.minRoomWidth, roll(spec.width));
+    const innerH = Math.max(dataManager.mapGen.minRoomHeight, roll(spec.height));
+    return { width: innerW + 2, height: innerH + 2 };
+  }
+  maxSpecWidth() {
+    let max = 0;
+    for (const spec of Object.values(dataManager.mapGen.roomSpecs)) {
+      const w = Array.isArray(spec.width) ? spec.width[1] : spec.width;
+      max = Math.max(max, w);
+    }
+    return max + 2;
+  }
+  maxSpecHeight() {
+    let max = 0;
+    for (const spec of Object.values(dataManager.mapGen.roomSpecs)) {
+      const h = Array.isArray(spec.height) ? spec.height[1] : spec.height;
+      max = Math.max(max, h);
+    }
+    return max + 2;
+  }
+  /** 侧室挂载的主干房间ID（挂载点在链上的前一个主干房间） */
+  mountedOnId(plan, planned, floorId) {
+    const idx = plan.indexOf(planned);
+    for (let i = idx - 1; i >= 0; i--) {
+      if (plan[i].isTrunk) return `room_${floorId}_${i}`;
+    }
+    return null;
+  }
+};
+
+// src/map/CorridorGenerator.ts
+var CorridorGenerator = class _CorridorGenerator {
+  static instance;
+  constructor() {
+  }
+  static getInstance() {
+    if (!_CorridorGenerator.instance) _CorridorGenerator.instance = new _CorridorGenerator();
+    return _CorridorGenerator.instance;
+  }
+  connect(rooms, grid) {
+    const corridors = [];
+    const connections = [];
+    const connected = /* @__PURE__ */ new Set();
+    const byId = new Map(rooms.map((r) => [r.id, r]));
+    const markConnected = (a, b) => {
+      connected.add(this.pairKey(a, b));
+      connected.add(this.pairKey(b, a));
+    };
+    const isConnected = (a, b) => connected.has(this.pairKey(a, b));
+    for (let i = 0; i + 1 < rooms.length; i++) {
+      const a = rooms[i];
+      const b = rooms[i + 1];
+      const carved = this.carveCorridor(a, b, grid);
+      if (!carved) continue;
+      corridors.push({ id: IdGenerator.next("corr"), fromRoomId: a.id, toRoomId: b.id, tiles: carved.tiles, extra: false });
+      connections.push({ from: a.id, to: b.id });
+      markConnected(a.id, b.id);
+    }
+    const cfg = dataManager.mapGen.corridor;
+    const adjacentPairs = [];
+    for (let i = 0; i < rooms.length; i++) {
+      for (let j = i + 1; j < rooms.length; j++) {
+        const a = rooms[i];
+        const b = rooms[j];
+        if (isConnected(a.id, b.id)) continue;
+        if (MathUtils.manhattan(a.gx, a.gy, b.gx, b.gy) > cfg.adjacentManhattan) continue;
+        adjacentPairs.push({ a, b, priority: this.shortcutPriority(a, b, rooms) });
+      }
+    }
+    adjacentPairs.sort((p, q) => p.priority - q.priority || rng.next() - 0.5);
+    let extraCount = 0;
+    let hasLoopShortcut = false;
+    for (const pair of adjacentPairs) {
+      if (extraCount >= cfg.extraMax) break;
+      const roll = rng.chance(cfg.extraChance);
+      if (!roll) continue;
+      const carved = this.carveCorridor(pair.a, pair.b, grid);
+      if (!carved) continue;
+      corridors.push({ id: IdGenerator.next("corr"), fromRoomId: pair.a.id, toRoomId: pair.b.id, tiles: carved.tiles, extra: true });
+      connections.push({ from: pair.a.id, to: pair.b.id });
+      markConnected(pair.a.id, pair.b.id);
+      extraCount++;
+      if (pair.priority <= 1) hasLoopShortcut = true;
+    }
+    if (!hasLoopShortcut) {
+      const fallback = adjacentPairs.find((p) => p.priority <= 1 && !isConnected(p.a.id, p.b.id) && extraCount < cfg.extraMax) ?? adjacentPairs.find((p) => p.priority <= 2 && !isConnected(p.a.id, p.b.id) && extraCount < cfg.extraMax);
+      if (fallback) {
+        const carved = this.carveCorridor(fallback.a, fallback.b, grid);
+        if (carved) {
+          corridors.push({ id: IdGenerator.next("corr"), fromRoomId: fallback.a.id, toRoomId: fallback.b.id, tiles: carved.tiles, extra: true });
+          connections.push({ from: fallback.a.id, to: fallback.b.id });
+          markConnected(fallback.a.id, fallback.b.id);
+        }
+      }
+    }
+    return { corridors, connections };
+  }
+  /** 捷径优先级：0=同路径相邻捷径 1=闭合边 2=其余 */
+  shortcutPriority(a, b, rooms) {
+    const sameRailAdjacent = a.onPathA && b.onPathA || a.onPathB && b.onPathB;
+    const isStart = rooms[0];
+    const isEnd = rooms[rooms.length - 1];
+    const closingEdge = a === isStart && b.onPathB || b === isStart && a.onPathB || a === isEnd && b.onPathA || b === isEnd && a.onPathA;
+    if (sameRailAdjacent) {
+      return this.railGap(a, b) === 1 ? 0 : 2;
+    }
+    if (closingEdge) return 1;
+    return 2;
+  }
+  /** 同路径序号差（非同路径返回 -1） */
+  railGap(a, b) {
+    return Math.abs(a.order - b.order);
+  }
+  /**
+   * 在两个几何相邻房间之间挖一条直线走廊（含两侧开门）。
+   * 返回走廊地面格；两房间非轴向相邻时返回 null。
+   */
+  carveCorridor(a, b, grid) {
+    if (a.gy === b.gy && a.gx !== b.gx) {
+      const west = a.gx < b.gx ? a : b;
+      const east = a.gx < b.gx ? b : a;
+      const rowTop = Math.max(west.y + 1, east.y + 1);
+      const rowBottom = Math.min(west.y + west.height - 2, east.y + east.height - 2);
+      if (rowTop > rowBottom) return null;
+      const row = Math.floor((rowTop + rowBottom) / 2);
+      const tiles = [];
+      for (let x = west.x + west.width; x < east.x; x++) {
+        if (this.insideGrid(grid, x, row)) {
+          grid[row][x] = 0;
+          tiles.push({ x, y: row });
+        }
+      }
+      this.carveDoor(west, east, row, "east", grid);
+      this.carveDoor(east, west, row, "west", grid);
+      return { tiles };
+    }
+    if (a.gx === b.gx && a.gy !== b.gy) {
+      const north = a.gy < b.gy ? a : b;
+      const south = a.gy < b.gy ? b : a;
+      const colLeft = Math.max(north.x + 1, south.x + 1);
+      const colRight = Math.min(north.x + north.width - 2, south.x + south.width - 2);
+      if (colLeft > colRight) return null;
+      const col = Math.floor((colLeft + colRight) / 2);
+      const tiles = [];
+      for (let y = north.y + north.height; y < south.y; y++) {
+        if (this.insideGrid(grid, col, y)) {
+          grid[y][col] = 0;
+          tiles.push({ x: col, y });
+        }
+      }
+      this.carveDoor(north, south, col, "south", grid);
+      this.carveDoor(south, north, col, "north", grid);
+      return { tiles };
+    }
+    return null;
+  }
+  /** 在房间墙上开门并记录 */
+  carveDoor(room, other, line, dir, grid) {
+    let dx = 0;
+    let dy = 0;
+    if (dir === "east") {
+      dx = room.x + room.width - 1;
+      dy = line;
+    } else if (dir === "west") {
+      dx = room.x;
+      dy = line;
+    } else if (dir === "south") {
+      dx = line;
+      dy = room.y + room.height - 1;
+    } else {
+      dx = line;
+      dy = room.y;
+    }
+    if (!this.insideGrid(grid, dx, dy)) return;
+    if (dir === "east" || dir === "west") {
+      if (dy <= room.y || dy >= room.y + room.height - 1) return;
+    } else {
+      if (dx <= room.x || dx >= room.x + room.width - 1) return;
+    }
+    grid[dy][dx] = 0;
+    room.doors.push({ x: dx, y: dy, direction: dir, toRoomId: other.id });
+  }
+  insideGrid(grid, x, y) {
+    return y >= 0 && y < grid.length && x >= 0 && x < grid[0].length;
+  }
+  pairKey(a, b) {
+    return `${a}|${b}`;
+  }
+};
+
+// src/map/ContentFiller.ts
+var DIRS4 = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+var RoomFill = class {
+  room;
+  grid;
+  floorId;
+  spots;
+  taken = /* @__PURE__ */ new Set();
+  constructor(room, grid, floorId) {
+    this.room = room;
+    this.grid = grid;
+    this.floorId = floorId;
+    this.spots = this.computeSpots();
+  }
+  // ============ 基础 ============
+  /** 放置实体（不做占位校验；调用方用 freeAt / taken 自行判断） */
+  put(e) {
+    this.room.entities.push({ ...e, id: IdGenerator.next("ent") });
+    this.taken.add(`${e.x},${e.y}`);
+  }
+  /** 放置阻挡型装饰（柱子/大锅/药架）：实体 + 地形改为装饰格（阻挡通行） */
+  putBlocking(kind, x, y) {
+    this.put({ kind, x, y });
+    if (this.grid[y]?.[x] === 0) this.grid[y][x] = 2;
+  }
+  /** 该格是否可放主实体（空地 + 未被占 + 无既有实体） */
+  freeAt(x, y) {
+    if (this.grid[y]?.[x] !== 0) return false;
+    if (this.taken.has(`${x},${y}`)) return false;
+    return !this.room.entities.some((en) => en.x === x && en.y === y);
+  }
+  inRoom(x, y) {
+    return x >= this.room.x && x < this.room.x + this.room.width && y >= this.room.y && y < this.room.y + this.room.height;
+  }
+  /**
+   * 下行楼梯贴墙放置（2×2）：贴北墙、水平居中，逐格外移避开所有门的内侧格
+   * （防止从门进来第一格就踩到楼梯直接下落）。放不下返回 false，由调用方兜底。
+   */
+  placeStairAgainstWall(targetFloor) {
+    const ay = this.room.y + 1;
+    const doorInners = new Set(this.room.doors.map((d) => {
+      const p = this.innerOfDoor(d);
+      return `${p.x},${p.y}`;
+    }));
+    for (let step = 0; step <= this.room.width; step++) {
+      const off = step === 0 ? 0 : step % 2 === 1 ? (step + 1) / 2 : -(step / 2);
+      const ax = this.room.centerX - 1 + off;
+      if (ax < this.room.x + 1 || ax + 1 > this.room.x + this.room.width - 2) continue;
+      const cells = [0, 1].flatMap((dz) => [0, 1].map((dx) => ({ x: ax + dx, y: ay + dz })));
+      if (!cells.every((p) => this.freeAt(p.x, p.y))) continue;
+      if (cells.some((p) => doorInners.has(`${p.x},${p.y}`))) continue;
+      this.put({ kind: "stair", x: ax, y: ay, targetFloor, stairSpan: 2 });
+      this.put({ kind: "stair", x: ax + 1, y: ay, targetFloor, stairSpan: 1 });
+      this.put({ kind: "stair", x: ax, y: ay + 1, targetFloor, stairSpan: 1 });
+      this.put({ kind: "stair", x: ax + 1, y: ay + 1, targetFloor, stairSpan: 1 });
+      return true;
+    }
+    return false;
+  }
+  monsterAt(id, isElite, p) {
+    this.put({ kind: "monster", monsterId: id, isElite, x: p.x, y: p.y });
+  }
+  // ============ 路径与几何（挡路型 / 守卫型 用） ============
+  /** 房间内自由点位 + 距入口（门）的 BFS 距离；无门房间以中心为入口 */
+  computeSpots() {
+    const entries = this.room.doors.map((d) => ({ x: d.x, y: d.y }));
+    if (entries.length === 0) entries.push({ x: this.room.centerX, y: this.room.centerY });
+    const dist = /* @__PURE__ */ new Map();
+    const queue = [];
+    for (const e of entries) {
+      if (this.inRoom(e.x, e.y) && this.grid[e.y]?.[e.x] === 0) {
+        dist.set(`${e.x},${e.y}`, 0);
+        queue.push(e);
+      }
+    }
+    while (queue.length > 0) {
+      const cur = queue.shift();
+      const d = dist.get(`${cur.x},${cur.y}`) ?? 0;
+      for (const [dx, dy] of DIRS4) {
+        const nx = cur.x + dx;
+        const ny = cur.y + dy;
+        const key = `${nx},${ny}`;
+        if (!this.inRoom(nx, ny)) continue;
+        if (this.grid[ny]?.[nx] !== 0) continue;
+        if (dist.has(key)) continue;
+        dist.set(key, d + 1);
+        queue.push({ x: nx, y: ny });
+      }
+    }
+    const spots = [];
+    for (let y = this.room.y + 1; y <= this.room.y + this.room.height - 2; y++) {
+      for (let x = this.room.x + 1; x <= this.room.x + this.room.width - 2; x++) {
+        if (this.grid[y][x] !== 0) continue;
+        spots.push({ x, y, dist: dist.get(`${x},${y}`) ?? 99 });
+      }
+    }
+    return spots;
+  }
+  /** 门朝向房间内侧的格 */
+  innerOfDoor(d) {
+    switch (d.direction) {
+      case "east":
+        return { x: d.x - 1, y: d.y };
+      case "west":
+        return { x: d.x + 1, y: d.y };
+      case "north":
+        return { x: d.x, y: d.y + 1 };
+      default:
+        return { x: d.x, y: d.y - 1 };
+    }
+  }
+  /**
+   * 入口→出口主路径（房间内格序列）。
+   * 入口/出口 = 房间门内侧格中相距最远的一对；单门时取「门 → 距门最远格」。
+   */
+  mainPath() {
+    const inners = this.room.doors.map((d) => this.innerOfDoor(d)).filter((p) => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 0);
+    if (inners.length === 0) return [{ x: this.room.centerX, y: this.room.centerY }];
+    if (inners.length === 1) return this.bfsPath(inners[0], this.farthestFrom(inners[0]));
+    let best = [inners[0], inners[1]];
+    let bestD = -1;
+    for (let i = 0; i < inners.length; i++) {
+      for (let j = i + 1; j < inners.length; j++) {
+        const d = Math.abs(inners[i].x - inners[j].x) + Math.abs(inners[i].y - inners[j].y);
+        if (d > bestD) {
+          bestD = d;
+          best = [inners[i], inners[j]];
+        }
+      }
+    }
+    const path = this.bfsPath(best[0], best[1]);
+    return path.length > 0 ? path : [best[0]];
+  }
+  /** 房间内 BFS 路径（只看地形，忽略实体） */
+  bfsPath(from, to) {
+    const key = (x, y) => `${x},${y}`;
+    const prev = /* @__PURE__ */ new Map();
+    const queue = [from];
+    prev.set(key(from.x, from.y), null);
+    while (queue.length > 0) {
+      const cur2 = queue.shift();
+      if (cur2.x === to.x && cur2.y === to.y) break;
+      for (const [dx, dy] of DIRS4) {
+        const nx = cur2.x + dx;
+        const ny = cur2.y + dy;
+        if (!this.inRoom(nx, ny)) continue;
+        if (this.grid[ny]?.[nx] !== 0) continue;
+        const k = key(nx, ny);
+        if (prev.has(k)) continue;
+        prev.set(k, key(cur2.x, cur2.y));
+        queue.push({ x: nx, y: ny });
+      }
+    }
+    const end = key(to.x, to.y);
+    if (!prev.has(end)) return [];
+    const out = [];
+    let cur = end;
+    while (cur) {
+      const [x, y] = cur.split(",").map(Number);
+      out.push({ x, y });
+      cur = prev.get(cur) ?? null;
+    }
+    return out.reverse();
+  }
+  /** 距 from 最远的可达格（BFS） */
+  farthestFrom(from) {
+    let best = from;
+    let bestD = -1;
+    for (const s of this.spots) {
+      if (s.dist > bestD) {
+        bestD = s.dist;
+        best = { x: s.x, y: s.y };
+      }
+    }
+    return best;
+  }
+  /** 房间内侧四角（贴墙的地面格） */
+  innerCorners() {
+    const r = this.room;
+    return [
+      { x: r.x + 1, y: r.y + 1 },
+      { x: r.x + r.width - 2, y: r.y + 1 },
+      { x: r.x + 1, y: r.y + r.height - 2 },
+      { x: r.x + r.width - 2, y: r.y + r.height - 2 }
+    ];
+  }
+  // ============ 阻塞模式（文档二） ============
+  /**
+   * 挡路型：在入口→出口主路径上架一道横跨房间的屏障。
+   * ratio：屏障落在路径的什么位置（0=入口侧，0.5=中段默认，0.7=偏出口侧），双屏障布局用不同 ratio 架两道。
+   * 怪物占 N 格，其余格用柱子补满（barrier.fillWithPillars）→ 必须打掉至少 1 只怪才能通过。
+   * 返回实际放置的怪物数（0 = 无法架设，调用方需兜底）。
+   */
+  blockPath(count, pool, isElite, ratio = 0.5) {
+    if (count <= 0 || pool.length === 0) return 0;
+    const path = this.mainPath();
+    if (path.length < 3) return 0;
+    const i = Math.max(1, Math.min(path.length - 2, Math.round(path.length * ratio)));
+    const cur = path[i];
+    const nxt = path[i + 1] ?? path[i - 1];
+    const alongX = cur.y === nxt.y;
+    const cells = [];
+    if (alongX) {
+      for (let y = this.room.y + 1; y <= this.room.y + this.room.height - 2; y++) {
+        if (this.grid[y]?.[cur.x] === 0) cells.push({ x: cur.x, y });
+      }
+    } else {
+      for (let x = this.room.x + 1; x <= this.room.x + this.room.width - 2; x++) {
+        if (this.grid[cur.y]?.[x] === 0) cells.push({ x, y: cur.y });
+      }
+    }
+    if (cells.length === 0) return 0;
+    const entry = path[0];
+    const usable = cells.filter((c) => Math.abs(c.x - entry.x) + Math.abs(c.y - entry.y) >= 2);
+    const line = usable.length > 0 ? usable : cells;
+    const chosen = rng.shuffle(line).slice(0, Math.min(count, line.length));
+    let placed = 0;
+    for (const c of chosen) {
+      if (this.taken.has(`${c.x},${c.y}`)) continue;
+      this.monsterAt(rng.pickWeighted(pool, (m) => m.weight).id, isElite, c);
+      placed++;
+    }
+    if (placed > 0 && dataManager.mapGen.content.barrier.fillWithPillars) {
+      const doorInners = this.doorInnerCells();
+      for (const c of line) {
+        if (this.taken.has(`${c.x},${c.y}`)) continue;
+        if (doorInners.has(`${c.x},${c.y}`)) continue;
+        this.put({ kind: "pillar", x: c.x, y: c.y });
+        this.grid[c.y][c.x] = 2;
+      }
+    }
+    return placed;
+  }
+  /** 所有门的内侧格（立柱禁区：柱子改地形会封门） */
+  doorInnerCells() {
+    return new Set(this.room.doors.map((d) => {
+      const p = this.innerOfDoor(d);
+      return `${p.x},${p.y}`;
+    }));
+  }
+  /** 围宝型 / 守卫型：在目标周围 radius 格内的空位放怪，返回实际数量 */
+  guardAround(cx, cy, count, pool, isElite, radius = 1) {
+    if (count <= 0 || pool.length === 0) return 0;
+    const cells = [];
+    for (let y = cy - radius; y <= cy + radius; y++) {
+      for (let x = cx - radius; x <= cx + radius; x++) {
+        if (x === cx && y === cy) continue;
+        if (!this.inRoom(x, y)) continue;
+        if (this.grid[y]?.[x] !== 0) continue;
+        if (this.taken.has(`${x},${y}`)) continue;
+        cells.push({ x, y });
+      }
+    }
+    const picked = rng.shuffle(cells).slice(0, Math.min(count, cells.length));
+    for (const c of picked) this.monsterAt(rng.pickWeighted(pool, (m) => m.weight).id, isElite, c);
+    return picked.length;
+  }
+  /** 守卫型：在目标（楼梯/Boss）朝向入口一侧 1-2 格放怪 */
+  guardStair(count, pool, isElite = false) {
+    if (count <= 0 || pool.length === 0) return 0;
+    const stair = this.room.entities.find((e) => e.kind === "stair");
+    const target = stair ? { x: stair.x, y: stair.y } : { x: this.room.centerX, y: this.room.centerY };
+    const entry = this.mainPath()[0] ?? { x: target.x, y: target.y + 1 };
+    const dx = Math.sign(entry.x - target.x);
+    const dy = Math.sign(entry.y - target.y);
+    const cand = [];
+    if (dx !== 0) cand.push({ x: target.x + dx, y: target.y }, { x: target.x + dx * 2, y: target.y });
+    if (dy !== 0) cand.push({ x: target.x, y: target.y + dy }, { x: target.x, y: target.y + dy * 2 });
+    let placed = 0;
+    for (const p of cand) {
+      if (placed >= count) break;
+      if (!this.freeAt(p.x, p.y)) continue;
+      this.monsterAt(rng.pickWeighted(pool, (m) => m.weight).id, isElite, p);
+      placed++;
+    }
+    return placed;
+  }
+  /** 精确放置：王座型精英/护卫用（目标格被占则返回 false，由调用方兜底） */
+  placeMonsterAt(id, isElite, p) {
+    if (!this.freeAt(p.x, p.y)) return false;
+    this.monsterAt(id, isElite, p);
+    return true;
+  }
+  /** 从怪池取一只（不放置）；空池返回 null */
+  pickMonsterId(pool) {
+    return pool.length > 0 ? rng.pickWeighted(pool, (m) => m.weight).id : null;
+  }
+  /**
+   * 竞技场型：中轴对称立柱圈（3×3 外圈留四正位），中央留空给怪物群。
+   * 柱子避开主路径格与门内侧格，保证所有门可达；可立柱不足 4 根视为失败。
+   */
+  placeArenaPillars() {
+    const cx = this.room.centerX;
+    const cy = this.room.centerY;
+    const ring = [
+      { x: cx - 2, y: cy },
+      { x: cx + 2, y: cy },
+      { x: cx, y: cy - 2 },
+      { x: cx, y: cy + 2 },
+      { x: cx - 2, y: cy - 2 },
+      { x: cx + 2, y: cy - 2 },
+      { x: cx - 2, y: cy + 2 },
+      { x: cx + 2, y: cy + 2 }
+    ];
+    const protectedCells = /* @__PURE__ */ new Set();
+    for (const d of this.room.doors) {
+      const p = this.innerOfDoor(d);
+      protectedCells.add(`${p.x},${p.y}`);
+    }
+    for (const p of this.mainPath()) protectedCells.add(`${p.x},${p.y}`);
+    const placeable = ring.filter((p) => this.inRoom(p.x, p.y) && this.freeAt(p.x, p.y) && !protectedCells.has(`${p.x},${p.y}`));
+    if (placeable.length < 4) return false;
+    for (const p of placeable) this.putBlocking("pillar", p.x, p.y);
+    return true;
+  }
+  // ============ 物品与装饰 ============
+  /** 普通放置：距入口 ≥ monsterMinDistFromEntry 的空位随机放怪 */
+  placeMonsters(count, isElite, pool) {
+    if (count <= 0 || pool.length === 0) return 0;
+    const minDist = dataManager.mapGen.content.monsterMinDistFromEntry;
+    const far = this.spots.filter((s) => s.dist >= minDist && this.freeAt(s.x, s.y));
+    const use = far.length >= count ? far : this.spots.filter((s) => this.freeAt(s.x, s.y));
+    const picked = rng.shuffle(use).slice(0, count);
+    for (const s of picked) this.monsterAt(rng.pickWeighted(pool, (m) => m.weight).id, isElite, s);
+    return picked.length;
+  }
+  /** 宝箱放内侧四角；carpet=true 时首个宝箱下方铺地毯（房间身份感） */
+  placeCornerChests(count, carpet = false) {
+    const out = [];
+    if (count <= 0) return out;
+    const corners = this.innerCorners().filter((c) => this.freeAt(c.x, c.y));
+    const picked = rng.shuffle(corners).slice(0, Math.min(count, corners.length));
+    picked.forEach((c, i) => {
+      if (carpet && i === 0) this.put({ kind: "carpet", x: c.x, y: c.y });
+      this.put({ kind: "chest", chestTier: "normal", x: c.x, y: c.y });
+      out.push(c);
+    });
+    return out;
+  }
+  /** 药水：优先放入口附近（1-4 格），不足时用任意空位 */
+  placePotions(count) {
+    if (count <= 0) return 0;
+    const near = this.spots.filter((s) => s.dist >= 1 && s.dist <= 4 && this.freeAt(s.x, s.y));
+    const use = near.length >= count ? near : this.spots.filter((s) => this.freeAt(s.x, s.y));
+    const picked = rng.shuffle(use).slice(0, Math.min(count, use.length));
+    for (const s of picked) {
+      this.put({ kind: "potion", potionTier: this.pickPotionTier(), x: s.x, y: s.y });
+    }
+    return picked.length;
+  }
+  /** 按楼层挑选药水档次（低档权重更高） */
+  pickPotionTier() {
+    const all = dataManager.potions.potions;
+    const avail = all.filter((p) => this.floorId >= p.minFloor && this.floorId <= p.maxFloor);
+    const pool = avail.length > 0 ? avail : all;
+    const weighted = pool.map((p, i) => ({ tier: p.tier, weight: pool.length - i }));
+    return rng.pickWeighted(weighted, (w) => w.weight).tier;
+  }
+  /** 火把：按房间类型的数量，优先挂房间四角，再沿墙扩散 */
+  placeRoomTorches() {
+    const range = dataManager.mapGen.content.roomTorches[this.room.type];
+    if (!range) return;
+    const want = rng.randInt(range[0], range[1]);
+    if (want <= 0) return;
+    let placed = 0;
+    for (const p of this.wallRing()) {
+      if (placed >= want) break;
+      if (this.grid[p.y]?.[p.x] !== 1) continue;
+      if (this.room.entities.some((e) => e.x === p.x && e.y === p.y)) continue;
+      this.put({ kind: "torch", x: p.x, y: p.y });
+      placed++;
+    }
+  }
+  /** 房间边界墙格，按「距四角近」排序 */
+  wallRing() {
+    const r = this.room;
+    const pts = [];
+    for (let x = r.x; x < r.x + r.width; x++) {
+      pts.push({ x, y: r.y }, { x, y: r.y + r.height - 1 });
+    }
+    for (let y = r.y + 1; y < r.y + r.height - 1; y++) {
+      pts.push({ x: r.x, y }, { x: r.x + r.width - 1, y });
+    }
+    const corners = [
+      { x: r.x, y: r.y },
+      { x: r.x + r.width - 1, y: r.y },
+      { x: r.x, y: r.y + r.height - 1 },
+      { x: r.x + r.width - 1, y: r.y + r.height - 1 }
+    ];
+    const cd = (p) => Math.min(...corners.map((c) => Math.abs(p.x - c.x) + Math.abs(p.y - c.y)));
+    return pts.sort((a, b) => cd(a) - cd(b));
+  }
+  /** 装饰：宽≥7 的房间四角立柱子（阻挡通行；门内侧格豁免避免封门） */
+  placePillars() {
+    if (this.room.width - 2 < dataManager.mapGen.decor.pillarMinRoomWidth) return;
+    const doorInners = this.doorInnerCells();
+    for (const c of this.innerCorners()) {
+      if (!this.freeAt(c.x, c.y)) continue;
+      if (doorInners.has(`${c.x},${c.y}`)) continue;
+      this.put({ kind: "pillar", x: c.x, y: c.y });
+      this.grid[c.y][c.x] = 2;
+    }
+  }
+  /**
+   * 女巫酿药间（安全房）：中央女巫 + 朝门一侧的熬药大锅 + 两侧药架 + 角落治疗泉。
+   * 女巫提供特殊药水交易，治疗泉提供治疗服务（交互在世界层处理）。
+   */
+  placeWitchRoom(shelves) {
+    const cx = this.room.centerX;
+    const cy = this.room.centerY;
+    const entry = this.mainPath()[0] ?? { x: cx, y: cy + 1 };
+    if (this.freeAt(cx, cy)) {
+      this.put({ kind: "npc", npcId: "npc_witch", x: cx, y: cy });
+    } else {
+      const fallback = [...this.spots].filter((s) => this.freeAt(s.x, s.y)).sort((a, b) => b.dist - a.dist)[0];
+      if (fallback) this.put({ kind: "npc", npcId: "npc_witch", x: fallback.x, y: fallback.y });
+    }
+    const dx = Math.sign(entry.x - cx);
+    const dy = Math.sign(entry.y - cy);
+    const cauldron = dx !== 0 ? { x: cx + dx, y: cy } : { x: cx, y: cy + (dy || 1) };
+    if (this.freeAt(cauldron.x, cauldron.y)) this.putBlocking("cauldron", cauldron.x, cauldron.y);
+    const perp = dx !== 0 ? [{ x: 0, y: 1 }, { x: 0, y: -1 }] : [{ x: 1, y: 0 }, { x: -1, y: 0 }];
+    let placed = 0;
+    for (const p of perp) {
+      if (placed >= shelves) break;
+      const sx = cx + p.x * 2;
+      const sy = cy + p.y * 2;
+      if (this.freeAt(sx, sy)) {
+        this.putBlocking("shelf", sx, sy);
+        placed++;
+      }
+    }
+    if (placed < shelves) {
+      for (const c of rng.shuffle(this.innerCorners())) {
+        if (placed >= shelves) break;
+        if (this.freeAt(c.x, c.y)) {
+          this.putBlocking("shelf", c.x, c.y);
+          placed++;
+        }
+      }
+    }
+    const corners = rng.shuffle(this.innerCorners()).sort((a, b) => Math.abs(b.x - entry.x) + Math.abs(b.y - entry.y) - (Math.abs(a.x - entry.x) + Math.abs(a.y - entry.y)));
+    for (const c of corners) {
+      if (this.freeAt(c.x, c.y)) {
+        this.put({ kind: "fountain", x: c.x, y: c.y });
+        break;
+      }
+    }
+  }
+  /** 战斗房按深度取档位（文档五 深度与难度对应） */
+  bandFor(bands) {
+    const depth = this.room.depth;
+    return bands.find((b) => depth <= b.maxDepth) ?? bands[bands.length - 1];
+  }
+  // ============ 内容验证（文档六 6.1） ============
+  /**
+   * 验证并就地修复：
+   *   战斗不可绕过 —— 把怪物/柱子当障碍后入口仍能到出口/楼梯 = 可绕过 → 主路径中点补怪
+   *   宝箱被守护   —— 宝箱 guard.chestRadius 格内无怪 → 邻格补怪
+   *   楼梯被守护   —— 楼梯 guard.stairRadius 格内无怪 → 楼梯前补怪
+   *   无重叠/可到达 —— 放置阶段已由 freeAt 保证（装饰地毯除外）
+   * 返回未修复的失败项（调用方记日志）。
+   */
+  validate(roomType, pool) {
+    const issues = [];
+    const g = dataManager.mapGen.content.guard;
+    const hasMonster = () => this.room.entities.some((e) => e.kind === "monster" || e.kind === "boss");
+    if ((roomType === "combat" || roomType === "elite") && pool.length > 0) {
+      if (!hasMonster() || this.canBypass()) {
+        const path = this.mainPath();
+        const mid = path[Math.floor(path.length / 2)] ?? { x: this.room.centerX, y: this.room.centerY };
+        if (this.freeAt(mid.x, mid.y)) {
+          this.monsterAt(rng.pickWeighted(pool, (m) => m.weight).id, false, mid);
+        } else {
+          issues.push("\u53EF\u7ED5\u8FC7\u4E14\u65E0\u7A7A\u4F4D\u8865\u602A");
+        }
+      }
+    }
+    for (const chest of this.room.entities.filter((e) => e.kind === "chest")) {
+      const guarded = this.room.entities.some((e) => (e.kind === "monster" || e.kind === "boss") && Math.abs(e.x - chest.x) + Math.abs(e.y - chest.y) <= g.chestRadius);
+      if (!guarded && pool.length > 0) {
+        if (this.guardAround(chest.x, chest.y, 1, pool, false, 1) === 0) issues.push("\u5B9D\u7BB1\u65E0\u5B88\u62A4\u4E14\u65E0\u7A7A\u4F4D");
+      }
+    }
+    for (const stair of this.room.entities.filter((e) => e.kind === "stair")) {
+      const guarded = this.room.entities.some((e) => (e.kind === "monster" || e.kind === "boss") && Math.abs(e.x - stair.x) + Math.abs(e.y - stair.y) <= g.stairRadius);
+      if (!guarded && pool.length > 0) {
+        if (this.guardStair(1, pool) === 0) issues.push("\u697C\u68AF\u65E0\u5B88\u62A4\u4E14\u65E0\u7A7A\u4F4D");
+      }
+    }
+    return issues;
+  }
+  /** 把怪物/柱子视为障碍后，入口仍能走到出口/楼梯 → 说明挡路不成立 */
+  canBypass() {
+    const path = this.mainPath();
+    const target = this.room.entities.find((e) => e.kind === "stair") ?? path[path.length - 1];
+    const entry = path[0];
+    if (!target || !entry) return false;
+    const blocked = new Set(
+      this.room.entities.filter((e) => e.kind === "monster" || e.kind === "boss" || e.kind === "pillar").map((e) => `${e.x},${e.y}`)
+    );
+    const seen = /* @__PURE__ */ new Set([`${entry.x},${entry.y}`]);
+    const queue = [entry];
+    while (queue.length > 0) {
+      const cur = queue.shift();
+      if (cur.x === target.x && cur.y === target.y) return true;
+      for (const [dx, dy] of DIRS4) {
+        const nx = cur.x + dx;
+        const ny = cur.y + dy;
+        const k = `${nx},${ny}`;
+        if (!this.inRoom(nx, ny)) continue;
+        if (this.grid[ny]?.[nx] !== 0) continue;
+        if (blocked.has(k) || seen.has(k)) continue;
+        seen.add(k);
+        queue.push({ x: nx, y: ny });
+      }
+    }
+    return false;
+  }
+};
+var ContentFiller = class _ContentFiller {
+  static instance;
+  constructor() {
+  }
+  static getInstance() {
+    if (!_ContentFiller.instance) _ContentFiller.instance = new _ContentFiller();
+    return _ContentFiller.instance;
+  }
+  fill(rooms, corridors, grid, floorId, kind) {
+    const c = dataManager.mapGen.content;
+    const all = dataManager.monsters.monsters.filter((m) => m.category === "normal");
+    const avail = all.filter((m) => floorId >= m.floorMin && floorId <= m.floorMax);
+    const pool = (avail.length > 0 ? avail : all).map((m) => ({ id: m.id, weight: m.weight }));
+    for (const room of rooms) {
+      const rf = new RoomFill(room, grid, floorId);
+      switch (room.type) {
+        case "start": {
+          if (kind === "initial") {
+            rf.put({ kind: "npc", npcId: "npc_guide", x: room.centerX, y: room.y + 1 });
+          }
+          rf.placePotions(rng.randInt(c.startRoom.potions[0], c.startRoom.potions[1]));
+          break;
+        }
+        case "end": {
+          if (!rf.placeStairAgainstWall(floorId + 1)) {
+            const ax = room.centerX - 1;
+            const ay = room.centerY - 1;
+            const span2 = [0, 1].flatMap((dz) => [0, 1].map((dx) => ({ x: ax + dx, y: ay + dz })));
+            if (span2.every((p) => rf.freeAt(p.x, p.y))) {
+              rf.put({ kind: "stair", x: ax, y: ay, targetFloor: floorId + 1, stairSpan: 2 });
+              rf.put({ kind: "stair", x: ax + 1, y: ay, targetFloor: floorId + 1, stairSpan: 1 });
+              rf.put({ kind: "stair", x: ax, y: ay + 1, targetFloor: floorId + 1, stairSpan: 1 });
+              rf.put({ kind: "stair", x: ax + 1, y: ay + 1, targetFloor: floorId + 1, stairSpan: 1 });
+            } else {
+              const wallSpot = { x: room.centerX, y: room.y + 1 };
+              if (rf.freeAt(wallSpot.x, wallSpot.y)) {
+                rf.put({ kind: "stair", x: wallSpot.x, y: wallSpot.y, targetFloor: floorId + 1 });
+              } else {
+                rf.put({ kind: "stair", x: room.centerX, y: room.centerY, targetFloor: floorId + 1 });
+              }
+            }
+          }
+          if (kind === "initial") {
+            rf.put({ kind: "chest", chestTier: "normal", x: room.x + 1, y: room.y + 1 });
+            rf.guardStair(1, pool);
+          } else if (kind === "boss") {
+            rf.put({ kind: "chest", chestTier: "grand", x: room.x + 1, y: room.y + 1 });
+            rf.put({ kind: "chest", chestTier: "grand", x: room.x + room.width - 2, y: room.y + room.height - 2 });
+          } else {
+            rf.guardStair(rng.randInt(c.exitRoom.guards[0], c.exitRoom.guards[1]), pool);
+            rf.placeCornerChests(rng.randInt(c.exitRoom.chests[0], c.exitRoom.chests[1]));
+          }
+          rf.placePotions(rng.randInt(c.exitRoom.potions[0], c.exitRoom.potions[1]));
+          break;
+        }
+        case "rest":
+          break;
+        case "merchant": {
+          rf.put({ kind: "npc", npcId: "npc_merchant", x: room.centerX, y: room.centerY });
+          rf.placePotions(rng.randInt(c.merchantRoom.potions[0], c.merchantRoom.potions[1]));
+          rf.placeCornerChests(rng.randInt(c.merchantRoom.chests[0], c.merchantRoom.chests[1]));
+          break;
+        }
+        case "blacksmith": {
+          rf.put({ kind: "npc", npcId: "npc_blacksmith", x: room.centerX, y: room.centerY });
+          break;
+        }
+        case "witch": {
+          rf.placeWitchRoom(rng.randInt(c.witchRoom.shelves[0], c.witchRoom.shelves[1]));
+          break;
+        }
+        case "chest": {
+          const chests = rf.placeCornerChests(rng.randInt(c.treasureRoom.chests[0], c.treasureRoom.chests[1]), true);
+          let guards = rng.randInt(c.treasureRoom.monsters[0], c.treasureRoom.monsters[1]);
+          for (const ch of chests) {
+            if (guards <= 0) break;
+            guards -= rf.guardAround(ch.x, ch.y, 1, pool, false, 1);
+          }
+          rf.placePotions(rng.randInt(c.treasureRoom.potions[0], c.treasureRoom.potions[1]));
+          break;
+        }
+        case "combat": {
+          const band = rf.bandFor(c.combatByDepth);
+          const cap = this.densityCap(room);
+          const want = Math.max(1, Math.min(rng.randInt(band.monsters[0], band.monsters[1]), cap));
+          const bigW = room.width - 2 >= 8;
+          const bigH = room.height - 2 >= 7;
+          const layouts = [
+            { id: "barrier", weight: 4 },
+            { id: "double", weight: bigW ? 2 : 0 },
+            { id: "arena", weight: bigW && bigH ? 2 : 0 },
+            { id: "scattered", weight: 2 }
+          ];
+          const layout = rng.pickWeighted(layouts, (l) => l.weight).id;
+          room.layout = layout;
+          let placed = 0;
+          if (layout === "double") {
+            const first = Math.max(1, Math.floor(want / 2));
+            placed = rf.blockPath(first, pool, false, 0.32) + rf.blockPath(want - first, pool, false, 0.68);
+          } else if (layout === "arena") {
+            if (rf.placeArenaPillars()) {
+              placed = rf.guardAround(room.centerX, room.centerY, want, pool, false, 2);
+            }
+          } else if (layout === "barrier") {
+            placed = rf.blockPath(want, pool, false);
+          } else {
+            placed = rf.placeMonsters(want, false, pool);
+          }
+          if (placed === 0) rf.placeMonsters(want, false, pool);
+          const elites = rng.randInt(band.elites[0], band.elites[1]);
+          if (elites > 0) rf.placeMonsters(elites, true, pool);
+          rf.placeCornerChests(rng.randInt(band.chests[0], band.chests[1]));
+          rf.placePotions(rng.randInt(band.potions[0], band.potions[1]));
+          break;
+        }
+        case "elite": {
+          const bigW = room.width - 2 >= 9;
+          const bigH = room.height - 2 >= 7;
+          const layouts = [
+            { id: "barrier", weight: 3 },
+            { id: "throne", weight: bigH ? 3 : 0 },
+            { id: "arena", weight: bigW && bigH ? 2 : 0 }
+          ];
+          const layout = rng.pickWeighted(layouts, (l) => l.weight).id;
+          room.layout = `elite_${layout}`;
+          const path = rf.mainPath();
+          const seat = path[path.length - 1] ?? { x: room.centerX, y: room.centerY };
+          const eid = rf.pickMonsterId(pool);
+          if (layout === "throne" && eid) {
+            const ok2 = rf.placeMonsterAt(eid, true, seat) || rf.placeMonsterAt(eid, true, { x: seat.x, y: seat.y - 1 }) || rf.placeMonsterAt(eid, true, { x: seat.x, y: seat.y + 1 }) || rf.placeMonsterAt(eid, true, { x: seat.x - 1, y: seat.y });
+            if (!ok2) rf.blockPath(1, pool, true);
+          } else if (layout === "arena" && eid) {
+            if (!rf.placeArenaPillars() || !rf.placeMonsterAt(eid, true, { x: room.centerX, y: room.centerY })) {
+              rf.placeMonsters(1, true, pool);
+            }
+          } else {
+            if (rf.blockPath(1, pool, true) === 0) rf.placeMonsters(1, true, pool);
+          }
+          const adds = rng.randInt(c.eliteRoom.monsters[0], c.eliteRoom.monsters[1]);
+          if (layout === "throne") {
+            const mid = rf.pickMonsterId(pool);
+            let n = 0;
+            if (mid) {
+              for (const off of [-1, 1]) {
+                if (n >= adds) break;
+                if (rf.placeMonsterAt(mid, false, { x: seat.x + off, y: seat.y })) n++;
+                else if (rf.placeMonsterAt(mid, false, { x: seat.x, y: seat.y + off })) n++;
+              }
+            }
+            if (n < adds) rf.placeMonsters(adds - n, false, pool);
+          } else {
+            rf.placeMonsters(adds, false, pool);
+          }
+          const chests = rf.placeCornerChests(rng.randInt(c.eliteRoom.chests[0], c.eliteRoom.chests[1]), true);
+          for (const ch of chests) rf.guardAround(ch.x, ch.y, 1, pool, false, 1);
+          rf.placePotions(rng.randInt(c.eliteRoom.potions[0], c.eliteRoom.potions[1]));
+          break;
+        }
+        case "boss": {
+          rf.put({ kind: "carpet", x: room.centerX, y: room.centerY });
+          rf.put({ kind: "boss", monsterId: "ancient_dragon", x: room.centerX, y: room.centerY });
+          rf.guardAround(room.centerX, room.centerY, rng.randInt(c.bossRoom.elites[0], c.bossRoom.elites[1]), pool, true, 2);
+          rf.placeCornerChests(rng.randInt(c.bossRoom.chests[0], c.bossRoom.chests[1]));
+          rf.placePotions(rng.randInt(c.bossRoom.potions[0], c.bossRoom.potions[1]));
+          break;
+        }
+      }
+      rf.placeRoomTorches();
+      if (room.type !== "witch") rf.placePillars();
+      if (!(room.type === "end" && (kind === "initial" || kind === "boss"))) {
+        const issues = rf.validate(room.type, pool);
+        if (issues.length > 0) {
+          console.warn(`[ContentFiller] \u623F\u95F4 ${room.id}(${room.type}) \u5185\u5BB9\u9A8C\u8BC1\u672A\u901A\u8FC7\uFF1A${issues.join("\u3001")}`);
+        }
+      }
+    }
+    const every = dataManager.mapGen.decor.torchCorridorEvery;
+    for (const corridor of corridors) {
+      corridor.tiles.forEach((tile, i) => {
+        if (i % every !== Math.floor(every / 2)) return;
+        const side = grid[tile.y - 1]?.[tile.x] === 1 ? { x: tile.x, y: tile.y - 1 } : grid[tile.y + 1]?.[tile.x] === 1 ? { x: tile.x, y: tile.y + 1 } : null;
+        if (side && !this.entityAt(rooms, side.x, side.y)) {
+          const host = rooms.find((r) => r.id === corridor.fromRoomId);
+          host?.entities.push({ id: IdGenerator.next("ent"), kind: "torch", x: side.x, y: side.y });
+        }
+      });
+    }
+  }
+  /** 怪物密度上限（按房间内面积） */
+  densityCap(room) {
+    const c = dataManager.mapGen.content;
+    const area = (room.width - 2) * (room.height - 2);
+    if (area <= c.smallAreaMax) return c.density.small;
+    if (area <= c.mediumAreaMax) return c.density.medium;
+    return c.density.large;
+  }
+  entityAt(rooms, x, y) {
+    return rooms.some((r) => r.entities.some((e) => e.x === x && e.y === y));
+  }
+};
+
+// src/map/MapValidator.ts
+var MAX_PATH_ENUM = 500;
+var MapValidator = class _MapValidator {
+  static instance;
+  constructor() {
+  }
+  static getInstance() {
+    if (!_MapValidator.instance) _MapValidator.instance = new _MapValidator();
+    return _MapValidator.instance;
+  }
+  /** 特殊层（初始/Boss）只验证连通性 */
+  validate(rooms, connections, isNormal) {
+    const errors = [];
+    const adj = this.buildAdjacency(rooms, connections);
+    const start = rooms[0];
+    const end = rooms[rooms.length - 1];
+    const dist = this.bfs(start.id, adj);
+    for (const room of rooms) {
+      const neighbors = adj.get(room.id) ?? [];
+      if (neighbors.length === 0) errors.push(`\u623F\u95F4${room.id}\u65E0\u8FDE\u63A5\uFF08\u5B64\u7ACB\uFF09`);
+      if (!dist.has(room.id)) errors.push(`\u623F\u95F4${room.id}\u4E0D\u53EF\u4ECE\u8D77\u70B9\u5230\u8FBE`);
+    }
+    let pathLengths = [];
+    if (isNormal) {
+      pathLengths = this.enumeratePaths(start.id, end.id, adj);
+      if (pathLengths.length < 2) {
+        errors.push(`\u8D77\u70B9\u5230\u7EC8\u70B9\u4EC5${pathLengths.length}\u6761\u8DEF\u5F84\uFF08\u8981\u6C42\u22652\uFF09`);
+      } else {
+        let ok2 = false;
+        for (let i = 0; i < pathLengths.length && !ok2; i++) {
+          for (let j = i + 1; j < pathLengths.length && !ok2; j++) {
+            if (Math.abs(pathLengths[i] - pathLengths[j]) <= dataManager.mapGen.path.maxLengthDiff) ok2 = true;
+          }
+        }
+        if (!ok2) errors.push(`\u8DEF\u5F84\u957F\u5EA6\u5DEE\u5747>${dataManager.mapGen.path.maxLengthDiff}\uFF1A[${pathLengths.join(",")}]`);
+      }
+      const hasTrunkBattle = rooms.some((r) => (r.onPathA || r.onPathB) && (r.type === "combat" || r.type === "elite"));
+      if (!hasTrunkBattle) errors.push("\u4E3B\u5E72\u4E0A\u6CA1\u6709\u6218\u6597\u623F\u95F4");
+    }
+    return { pass: errors.length === 0, errors, pathLengths };
+  }
+  /** BFS 距离表（也用于房间 depth） */
+  bfs(fromId, adj) {
+    const dist = /* @__PURE__ */ new Map([[fromId, 0]]);
+    const queue = [fromId];
+    while (queue.length > 0) {
+      const cur = queue.shift();
+      const d = dist.get(cur);
+      for (const next of adj.get(cur) ?? []) {
+        if (dist.has(next)) continue;
+        dist.set(next, d + 1);
+        queue.push(next);
+      }
+    }
+    return dist;
+  }
+  /** 枚举起点→终点全部简单路径长度（封顶防爆炸） */
+  enumeratePaths(fromId, toId, adj) {
+    const lengths = [];
+    const visited = /* @__PURE__ */ new Set([fromId]);
+    const dfs = (node, depth) => {
+      if (node === toId) {
+        lengths.push(depth);
+        return lengths.length >= MAX_PATH_ENUM;
+      }
+      for (const next of adj.get(node) ?? []) {
+        if (visited.has(next)) continue;
+        visited.add(next);
+        const stop = dfs(next, depth + 1);
+        visited.delete(next);
+        if (stop) return true;
+      }
+      return false;
+    };
+    dfs(fromId, 1);
+    return lengths;
+  }
+  buildAdjacency(rooms, connections) {
+    const adj = new Map(rooms.map((r) => [r.id, []]));
+    for (const conn of connections) {
+      adj.get(conn.from)?.push(conn.to);
+      adj.get(conn.to)?.push(conn.from);
+    }
+    return adj;
+  }
+};
+
+// src/map/MapGenerator.ts
+var MapGenerator = class _MapGenerator {
+  static instance;
+  /** 最近一次生成成功的尝试次数（诊断重试率） */
+  lastAttempts = 1;
+  constructor() {
+  }
+  static getInstance() {
+    if (!_MapGenerator.instance) _MapGenerator.instance = new _MapGenerator();
+    return _MapGenerator.instance;
+  }
+  generate(floorId) {
+    const maxAttempts = dataManager.mapGen.generation.maxAttempts;
+    let lastErrors = [];
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const floor = this.tryGenerate(floorId);
+        if (floor) {
+          this.lastAttempts = attempt;
+          return floor;
+        }
+      } catch (err) {
+        lastErrors = [String(err)];
+      }
+      if (attempt === 5 || attempt === 20) {
+        Logger.warn(`[MapGen] \u697C\u5C42${floorId} \u7B2C${attempt}\u6B21\u5C1D\u8BD5\u5931\u8D25\uFF1A${lastErrors.join("; ") || "\u62D3\u6251\u9A8C\u8BC1\u672A\u901A\u8FC7"}`);
+      }
+    }
+    throw new Error(`\u697C\u5C42${floorId}\u751F\u6210\u5931\u8D25\uFF08${maxAttempts}\u6B21\u5C1D\u8BD5\uFF09\uFF1A${lastErrors.join("; ")}`);
+  }
+  tryGenerate(floorId) {
+    const floorGen = FloorGenerator.getInstance();
+    const pathGen = PathGenerator.getInstance();
+    const roomGen = RoomGenerator.getInstance();
+    const corridorGen = CorridorGenerator.getInstance();
+    const filler = ContentFiller.getInstance();
+    const validator = MapValidator.getInstance();
+    const alloc = floorGen.allocate(floorId);
+    const plan = pathGen.plan(alloc);
+    if (!pathGen.validateDiff(plan)) return null;
+    const placed = roomGen.place(floorId, plan);
+    if (!placed) return null;
+    const rooms = placed.rooms;
+    const grid = placed.grid;
+    const corridorResult = corridorGen.connect(rooms, grid);
+    const connections = corridorResult.connections;
+    const adj = new Map(rooms.map((r) => [r.id, []]));
+    for (const c of connections) {
+      adj.get(c.from)?.push(c.to);
+      adj.get(c.to)?.push(c.from);
+    }
+    const depths = validator.bfs(rooms[0].id, adj);
+    for (const room of rooms) room.depth = depths.get(room.id) ?? 0;
+    const check = validator.validate(rooms, connections, alloc.kind === "normal");
+    if (!check.pass) {
+      if (alloc.kind === "normal") return null;
+      throw new Error(`\u7279\u6B8A\u5C42\u6821\u9A8C\u5931\u8D25: ${check.errors.join("; ")}`);
+    }
+    filler.fill(rooms, corridorResult.corridors, grid, floorId, alloc.kind);
+    const start = rooms[0];
+    return {
+      floorId,
+      kind: alloc.kind,
+      rooms,
+      corridors: corridorResult.corridors,
+      connections,
+      grid,
+      width: grid[0].length,
+      height: grid.length,
+      entryX: start.centerX,
+      entryY: start.centerY
+    };
+  }
+  /** 调试辅助：控制台输出整层结构摘要 */
+  describe(floor) {
+    const lines = [];
+    lines.push(`=== \u697C\u5C42 ${floor.floorId}\uFF08${floor.kind}\uFF09 ${floor.rooms.length}\u4E2A\u623F\u95F4 ${floor.corridors.length}\u6761\u8D70\u5ECA ===`);
+    for (const room of this.roomsSorted(floor)) {
+      const path = room.onPathA ? "A" : room.onPathB ? "B" : room.mountedOn ? "\u4FA7\u5BA4" : "-";
+      lines.push(
+        `#${room.order} ${room.type.padEnd(8, "\u3000")} \u7F51\u683C(${room.gx},${room.gy}) \u4E16\u754C(${room.x},${room.y}) ${room.width}x${room.height} \u6DF1${room.depth} \u8DEF\u5F84${path} \u6765\u6E90${room.fromDirection ?? "\u6839"} \u95E8${room.doors.length} \u5B9E\u4F53${room.entities.length}`
+      );
+    }
+    lines.push(`\u5165\u53E3: (${floor.entryX},${floor.entryY}) \u8DEF\u5F84\u6570: \u89C1\u9A8C\u8BC1\u5668`);
+    return lines.join("\n");
+  }
+  roomsSorted(floor) {
+    return [...floor.rooms].sort((a, b) => a.order - b.order);
+  }
+};
+
+// src/test/equipTest.ts
+var QUALITY_RANK2 = { poor: 0, common: 1, fine: 2, rare: 3, epic: 4, legendary: 5, mythic: 6 };
+var failures = 0;
+var fail = (msg) => {
+  failures++;
+  console.error("  \u2717", msg);
+};
+var ok = (msg) => console.log("  \u2713", msg);
+function testQualityDistribution() {
+  console.log("\n== \u54C1\u8D28\u5206\u5E03\uFF08\u968F\u697C\u5C42\uFF09 ==");
+  const floors = [3, 8, 15, 25, 35, 45];
+  for (const floor of floors) {
+    const counts = {};
+    const N = 5e3;
+    for (let i = 0; i < N; i++) {
+      const q = EquipmentGenerator.getInstance().rollQuality(floor);
+      counts[q] = (counts[q] ?? 0) + 1;
+    }
+    const pct = Object.fromEntries(Object.entries(counts).map(([k, v]) => [k, (v / N * 100).toFixed(1) + "%"]));
+    console.log(`  \u697C\u5C42${floor}:`, JSON.stringify(pct));
+    if (floor <= 5 && ((counts.poor ?? 0) + (counts.common ?? 0)) / N < 0.7) fail("\u524D\u671F\u7834\u70C2+\u666E\u901A\u5E94\u226570%");
+    if (floor >= 41 && ((counts.epic ?? 0) + (counts.legendary ?? 0)) / N < 0.55) fail("\u540E\u671F\u53F2\u8BD7+\u4F20\u8BF4\u5E94\u226555%");
+  }
+  ok("\u54C1\u8D28\u6982\u7387\u968F\u697C\u5C42\u6F14\u8FDB\u6B63\u5E38");
+}
+function testEquipmentGeneration() {
+  console.log("\n== \u88C5\u5907\u751F\u6210\u89C4\u5219 ==");
+  const gen = EquipmentGenerator.getInstance();
+  const tables = dataManager.equipment;
+  const N = 3e3;
+  let sameAffixDup = 0;
+  for (let i = 0; i < N; i++) {
+    const floor = 1 + Math.floor(Math.random() * 50);
+    const equip = gen.generate("chest", { floorId: floor });
+    validateEquip(equip, floor);
+  }
+  let armorSum = 0;
+  let weaponSum = 0;
+  let count = 0;
+  for (const lvl of [5, 15, 30, 45]) {
+    const wRow = tables.weaponTable.find((r) => lvl >= r.minEquipLevel && lvl <= r.maxEquipLevel);
+    const aRow = tables.armorTable.find((r) => lvl >= r.minEquipLevel && lvl <= r.maxEquipLevel);
+    weaponSum += mid(wRow.values.fine);
+    armorSum += mid(aRow.values.fine);
+    count++;
+  }
+  const avgRatio = armorSum / weaponSum;
+  if (avgRatio < 0.45 || avgRatio > 0.68) fail(`\u9632\u5177/\u6B66\u5668\u6BD4\u4F8B ${avgRatio.toFixed(2)} \u8D85\u51FA50-60%\u533A\u95F4\uFF08\u653E\u5BBD\u523045-68%\uFF09`);
+  else ok(`\u9632\u5177/\u6B66\u5668\u6570\u503C\u6BD4\u4F8B \u2248 ${(avgRatio * 100).toFixed(0)}%\uFF08\u76EE\u680750-60%\uFF09`);
+  if (sameAffixDup > 0) fail(`\u8BCD\u6761\u91CD\u590D ${sameAffixDup} \u6B21`);
+  else ok("\u8BCD\u6761\u65E0\u91CD\u590D");
+  function mid(range) {
+    return (range[0] + range[1]) / 2;
+  }
+  function validateEquip(e, floor) {
+    const q = tables.quality[e.quality];
+    const f = tables.equipLevelFormula;
+    const maxPossible = Math.floor(60 * f.playerLevelFactor + floor * f.floorFactor + f.randomMax);
+    if (e.level < 1 || e.level > Math.min(f.max, maxPossible)) fail(`\u88C5\u5907\u7B49\u7EA7${e.level}\u8D8A\u754C floor=${floor}`);
+    let expected = q.affixCount;
+    if (q.affixExtra) {
+      for (const ex of q.affixExtra) if (e.level >= ex.atEquipLevel) expected += ex.add;
+    }
+    expected = Math.min(expected, q.affixCountMax);
+    if (e.quality === "mythic") expected = tables.affixSpecial.mythicAffixCount;
+    if (e.affixes.length !== expected) fail(`${e.quality}\u8BCD\u6761\u6570${e.affixes.length}\u2260${expected} (${e.name})`);
+    for (const a of e.affixes) {
+      const def = tables.affixes.find((d) => d.type === a.type);
+      if (QUALITY_RANK2[e.quality] < QUALITY_RANK2[def.minQuality]) fail(`\u8BCD\u6761${a.name}\u54C1\u8D28\u4E0B\u9650\u4E0D\u6EE1\u8DB3 ${e.quality}`);
+      const band = def.bands.find((b) => e.level <= b.maxEquipLevel) ?? def.bands[def.bands.length - 1];
+      if (a.value < band.min || a.value > band.max) fail(`\u8BCD\u6761${a.name}=${a.value} \u8D85\u51FAband[${band.min},${band.max}] Lv${e.level}`);
+    }
+    const types = e.affixes.map((a) => a.type);
+    if (new Set(types).size !== types.length) sameAffixDup++;
+    const prefix = q.prefix;
+    const affixNames = e.affixes.map((a) => `\xB7${a.name}`).join("");
+    const expectName = `${prefix}${e.baseName}${affixNames}`;
+    if (e.name !== expectName) fail(`\u547D\u540D ${e.name} \u2260 ${expectName}`);
+    const expectSell = Math.round(q.basePrice * (1 + e.level * 0.05) * (1 + e.affixes.length * 0.15));
+    if (e.sellPrice !== expectSell) fail(`\u56DE\u6536\u4EF7 ${e.sellPrice} \u2260 ${expectSell}`);
+    if (e.buyPrice < tables.buyPriceRule.min || e.buyPrice > tables.buyPriceRule.max) fail(`\u8D2D\u4E70\u4EF7${e.buyPrice}\u8D8A\u754C`);
+    if (e.slot === "weapon" && e.attack <= 0) fail("\u6B66\u5668\u653B\u51FB\u22640");
+    if (e.slot === "armor" && e.defense <= 0) fail("\u9632\u5177\u9632\u5FA1\u22640");
+  }
+  ok(`${N}\u4EF6\u88C5\u5907\u751F\u6210\u89C4\u5219\u5168\u90E8\u6821\u9A8C`);
+}
+function testAffixesTable() {
+  console.log("\n== \u8BCD\u6761\u8868\u5B8C\u6574\u6027 ==");
+  const affixes = dataManager.equipment.affixes;
+  if (affixes.length !== 12) fail(`\u8BCD\u6761\u6570${affixes.length}\u226012`);
+  const names = ["\u950B\u5229", "\u575A\u56FA", "\u6D3B\u529B", "\u7CBE\u51C6", "\u7075\u5DE7", "\u5F3A\u653B", "\u94C1\u58C1", "\u55DC\u8840", "\u4E1A\u706B", "\u8D2A\u5A6A", "\u535A\u5B66", "\u5C60\u9F99"];
+  for (const n of names) if (!affixes.some((a) => a.name === n)) fail(`\u7F3A\u5C11\u8BCD\u6761${n}`);
+  for (const a of affixes) {
+    if (a.bands.length !== 4) fail(`${a.name}\u5206\u6863\u6570\u22604`);
+    if (a.minQuality !== "fine" && a.minQuality !== "rare" && a.minQuality !== "epic") fail(`${a.name}\u54C1\u8D28\u4E0B\u9650\u5F02\u5E38`);
+  }
+  ok("12\u8BCD\u6761 \xD7 4\u5206\u6863 \u5B8C\u6574");
+}
+function testPotions() {
+  console.log("\n== \u836F\u6C34\u7CFB\u7EDF ==");
+  const potions = dataManager.potions.potions;
+  const expect = [
+    { tier: "crude", pct: 0.2, price: 20 },
+    { tier: "normal", pct: 0.3, price: 40 },
+    { tier: "quality", pct: 0.45, price: 100 },
+    { tier: "strong", pct: 0.6, price: 250 },
+    { tier: "holy", pct: 0.8, price: 600 }
+  ];
+  if (potions.length !== 5) fail("\u836F\u6C34\u6863\u6570\u22605");
+  for (const e of expect) {
+    const p = potions.find((p2) => p2.tier === e.tier);
+    if (!p) {
+      fail(`\u7F3A\u836F\u6C34${e.tier}`);
+      continue;
+    }
+    if (p.healPct !== e.pct) fail(`${e.tier}\u56DE\u590D\u6BD4\u4F8B${p.healPct}\u2260${e.pct}`);
+    if (p.price !== e.price) fail(`${e.tier}\u4EF7\u683C${p.price}\u2260${e.price}`);
+  }
+  ok("5\u6863\u836F\u6C34\uFF1A20%/30%/45%/60%/80%\uFF0C\u4EF7\u683C 20/40/100/250/600");
+  for (let f = 1; f <= 50; f++) {
+    const avail = potions.filter((p) => f >= p.minFloor && f <= p.maxFloor);
+    if (avail.length === 0) fail(`\u697C\u5C42${f}\u65E0\u53EF\u7528\u836F\u6C34`);
+  }
+  ok("\u5404\u697C\u5C42\u5747\u6709\u5BF9\u5E94\u54C1\u8D28\u836F\u6C34\u53EF\u8D2D");
+}
+function testEconomy() {
+  console.log("\n== \u7ECF\u6D4E\uFF08\u51FB\u6740\u51E0\u53EA\u602A\u53EF\u4E70\u4E00\u74F6\u836F\uFF09 ==");
+  const calc = StatCalculator.getInstance();
+  const floors = [3, 8, 15, 25, 35, 45];
+  for (const f of floors) {
+    const monGold = calc.anchorValue(dataManager.config.floorAnchors.gold, f, 0);
+    const potions = dataManager.potions.potions.filter((p) => f >= p.minFloor && f <= p.maxFloor);
+    const top = potions.sort((a, b) => b.healPct - a.healPct)[0];
+    const need = Math.ceil(top.price / monGold);
+    const line = `  \u697C\u5C42${f}: \u5355\u602A\u2248${Math.round(monGold)}\u91D1 \u2192 ${top.name}(${top.price}\u91D1) \u9700${need}\u53EA`;
+    if (need > 4) {
+      fail(line + " \u836F\u6C34\u8FC7\u8D35");
+    } else {
+      console.log(line, "\u2713");
+    }
+  }
+  ok("\u836F\u6C34\u4EF7\u683C\u4E0E\u91D1\u5E01\u83B7\u53D6\u540C\u6B65");
+}
+function testGrowthBalance() {
+  console.log("\n== \u6210\u957F/\u5F3A\u5EA6\u5E73\u8861\u6A21\u62DF ==");
+  const calc = StatCalculator.getInstance();
+  const gen = MapGenerator.getInstance();
+  const cfg = dataManager.config;
+  const mons = dataManager.monsters.monsters.filter((m) => m.category === "normal");
+  let level = 1;
+  let exp = 0;
+  let battlesAtRisk = 0;
+  const rows = [];
+  for (let floor = 1; floor <= 50; floor++) {
+    const floorMap = gen.generate(floor);
+    let monsterCount = 0;
+    let hasBoss = false;
+    for (const room of floorMap.rooms) {
+      for (const e of room.entities) {
+        if (e.kind === "monster") monsterCount++;
+        if (e.kind === "boss") hasBoss = true;
+      }
+    }
+    const base = calc.playerBaseAt(level);
+    const equipLevel = Math.max(1, Math.min(50, Math.floor(level * 0.5 + floor)));
+    const wRow = dataManager.equipment.weaponTable.find((r) => equipLevel >= r.minEquipLevel && equipLevel <= r.maxEquipLevel);
+    const wMid = mid(wRow.values.rare);
+    const aRow = dataManager.equipment.armorTable.find((r) => equipLevel >= r.minEquipLevel && equipLevel <= r.maxEquipLevel);
+    const aMid = mid(aRow.values.rare);
+    const pAtk = base.attack + wMid;
+    const pDef = base.defense + aMid;
+    const pHp = base.maxHp;
+    const pool = mons.filter((m) => floor >= m.floorMin && floor <= m.floorMax);
+    let worstTaken = 0;
+    let worstName = "";
+    for (const m of pool) {
+      const st = calc.monsterStats(m, floor, false);
+      const dmgOut = Math.max(1, pAtk - st.defense);
+      const dmgIn = Math.max(1, st.attack - pDef);
+      const turns = Math.ceil(st.hp / dmgOut);
+      const taken = turns * dmgIn;
+      if (taken > worstTaken) {
+        worstTaken = taken;
+        worstName = st.name;
+      }
+    }
+    let eliteTaken = 0;
+    if (pool.length > 0) {
+      const st = calc.monsterStats(pool[0], floor, true);
+      eliteTaken = Math.ceil(st.hp / Math.max(1, pAtk - st.defense)) * Math.max(1, st.attack - pDef);
+    }
+    let bossTaken = 0;
+    if (floor % 5 === 0) {
+      const dragon2 = dataManager.monsters.monsters.find((m) => m.category === "boss");
+      const st = calc.monsterStats(dragon2, floor, false);
+      bossTaken = Math.ceil(st.hp / Math.max(1, pAtk - st.defense)) * Math.max(1, st.attack - pDef);
+    }
+    const safe = worstTaken < pHp * 0.55;
+    if (!safe) battlesAtRisk++;
+    if (floor % 5 === 0 || !safe) {
+      rows.push(`  F${floor} Lv${level} HP${pHp} \u653B${Math.round(pAtk)} \u9632${Math.round(pDef)} | \u602A${worstName}\u635F${Math.round(worstTaken)} \u7CBE\u82F1\u635F${Math.round(eliteTaken)}${bossTaken > 0 ? ` Boss\u635F${Math.round(bossTaken)}` : ""} ${safe ? "\u2713" : "\u26A0\uFE0F\u5371\u9669"}`);
+    }
+    const dragon = dataManager.monsters.monsters.find((m) => m.category === "boss");
+    const bossExp = floor % 5 === 0 ? calc.monsterStats(dragon, floor, false).exp : 0;
+    const expGain = monsterCount * calc.anchorValue(cfg.floorAnchors.exp, floor, 0) * 1.1 + bossExp;
+    exp += expGain;
+    let need = calc.expToNext(level);
+    while (exp >= need) {
+      exp -= need;
+      level++;
+      need = calc.expToNext(level);
+    }
+  }
+  rows.forEach((r) => console.log(r));
+  console.log(`  \u6A21\u62DF\u7ED3\u675F\uFF1A50\u5C42\u65F6\u73A9\u5BB6\u7B49\u7EA7 \u2248 Lv.${level}\uFF08\u671F\u671B\u224840-50\uFF09`);
+  if (level < 35 || level > 60) fail(`\u6210\u957F\u66F2\u7EBF\u504F\u79FB\uFF1ALv.${level}`);
+  if (battlesAtRisk > 8) fail(`\u5371\u9669\u6218\u6597\u5C42\u6570\u8FC7\u591A\uFF1A${battlesAtRisk}`);
+  else ok(`\u5E73\u8861\u53EF\u73A9\uFF08\u5371\u9669\u5C42${battlesAtRisk}/50\uFF09`);
+  function mid(range) {
+    return (range[0] + range[1]) / 2;
+  }
+}
+function testSaveShape() {
+  console.log("\n== \u5B58\u6863\u5E8F\u5217\u5316 ==");
+  const floor = MapGenerator.getInstance().generate(7);
+  const json = JSON.stringify(floor);
+  const back = JSON.parse(json);
+  if (back.rooms.length !== floor.rooms.length) fail("\u5730\u56FE\u5E8F\u5217\u5316\u5F80\u8FD4\u5931\u8D25");
+  if (back.grid.length !== floor.grid.length) fail("\u7F51\u683C\u5E8F\u5217\u5316\u5F80\u8FD4\u5931\u8D25");
+  console.log(`  \u697C\u5C42\u5E8F\u5217\u5316\u4F53\u79EF \u2248 ${(json.length / 1024).toFixed(1)}KB`);
+  ok("\u5730\u56FE\u5E8F\u5217\u5316\u5F80\u8FD4\u4E00\u81F4");
+}
+console.log("=== \u9636\u6BB5\u4E09 \u88C5\u5907/\u836F\u6C34/\u7ECF\u6D4E/\u5E73\u8861 \u65E0\u5934\u6D4B\u8BD5 ===");
+dataManager.loadAll();
+testQualityDistribution();
+testEquipmentGeneration();
+testAffixesTable();
+testPotions();
+testEconomy();
+testGrowthBalance();
+testSaveShape();
+if (failures > 0) {
+  console.error(`
+!!! ${failures} \u9879\u5931\u8D25 !!!`);
+  process.exit(1);
+} else {
+  console.log("\n\u5168\u90E8\u901A\u8FC7 \u2714");
+}

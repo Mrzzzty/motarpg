@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-09-09T06:06:46.865Z",
+  "sessionId": "sess_ed72e507-a9b1-4e03-9a8a-94b080982b02",
+  "event": "PostToolUse",
+  "toolName": "Write",
+  "file": "C:/Users/Mrzzz/.zcode/cli/memories/projects/motarpg-1c8f8c5812ee1a07/memory/motarpg-map-system-p0p1.md",
+  "outcome": "clear",
+  "coverage": "complete",
+  "findingCount": 0,
+  "durationMs": 5,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

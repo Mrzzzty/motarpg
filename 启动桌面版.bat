@@ -29,11 +29,20 @@ if not exist "node_modules" (
     )
 )
 
-if not exist "dist\index.html" (
-    echo [first run] Building game assets...
+rem ---- dist integrity check: index.html without assets\*.js means the last
+rem ---- build was interrupted, force a rebuild instead of launching a broken dist
+set NEED_BUILD=0
+if not exist "dist\index.html" set NEED_BUILD=1
+dir /b "dist\assets\*.js" >nul 2>nul
+if errorlevel 1 set NEED_BUILD=1
+
+if "%NEED_BUILD%"=="1" (
+    echo [first run / repair] Building game assets...
     call npm run build
     if errorlevel 1 (
         echo [ERROR] Build failed.
+        echo         Hint: close every running game window first, then run this again.
+        echo         If it still fails, delete the dist folder and retry.
         pause
         exit /b 1
     )

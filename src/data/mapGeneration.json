@@ -102,14 +102,14 @@
   "tension": {
     "weights": {
       "combat": 1,
-      "elite": 3,
+      "elite": 2,
       "chest": -1,
       "merchant": -2,
-      "witch": -3,
-      "blacksmith": -1
+      "witch": -2,
+      "blacksmith": -2
     },
-    "forcePositiveAt": 4,
-    "forceNegativeAt": -3
+    "forcePositiveAt": 5,
+    "forceNegativeAt": -4
   },
   "merchantLimit": {
     "fewMaxRooms": 7,
@@ -307,7 +307,7 @@
       ]
     },
     "guard": {
-      "chestRadius": 3,
+      "chestRadius": 2,
       "stairRadius": 3
     },
     "barrier": {

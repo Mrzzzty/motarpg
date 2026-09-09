@@ -24,6 +24,9 @@ import { EventPanel } from './EventPanel';
 import { TitleScreen } from './TitleScreen';
 import { MiniMap } from './MiniMap';
 import { ConfirmDialog } from './ConfirmDialog';
+import { BattlePanel } from './BattlePanel';
+import { TierTitle } from './TierTitle';
+import { DebugConsole } from './DebugConsole';
 
 export class GameUI {
   private static instance: GameUI;
@@ -107,6 +110,9 @@ export class GameUI {
     new BlacksmithPanel(document.getElementById('overlay-layer')!);
     new EventPanel(document.getElementById('overlay-layer')!);
     new ConfirmDialog(document.getElementById('overlay-layer')!);
+    BattlePanel.getInstance().init(document.getElementById('overlay-layer')!);
+    new TierTitle(document.getElementById('center-area')!);
+    DebugConsole.getInstance().init(document.getElementById('center-area')!);
     this.titleScreen = new TitleScreen(document.getElementById('title-screen')!);
 
     // 引用缓存
@@ -170,11 +176,12 @@ export class GameUI {
     eventBus.on('panelToggled', p => {
       if (p.open) this.panels.open(p.panel);
     });
-    // Esc：统一切换语义（有面板→各面板自身监听与OverlayPanel栈负责关闭；无面板→打开设置）
+    // Esc：统一切换语义（有面板→各面板自身监听与OverlayPanel栈负责关闭；
+    // 无面板且无其他模态（微操战斗/登顶演出）→ 打开设置）
     window.addEventListener('keydown', e => {
       if (e.key !== 'Escape' || !gameState.started) return;
       const anyOpen = document.querySelector('.overlay-panel:not(.hidden)');
-      if (!anyOpen) this.panels.open('settings');
+      if (!anyOpen && !gameState.modalOpen) this.panels.open('settings');
       else this.panels.handleEscape();
     });
   }
@@ -276,7 +283,9 @@ export class GameUI {
     const floor = world.currentFloor;
     const floorEl = document.getElementById('floor-info')!;
     if (floor) {
-      const kindText = floor.kind === 'initial' ? '初始层' : floor.kind === 'boss' ? 'Boss层' : '';
+      const kindText = floor.kind === 'initial' ? '初始层'
+        : floor.kind === 'boss' ? 'Boss层'
+        : floor.kind === 'summit' ? '塔顶' : '';
       floorEl.innerHTML = `<div class="floor-big">第 ${floor.floorId} 层</div><div class="dim">${kindText} · ${floor.rooms.length}个房间</div>`;
     }
 

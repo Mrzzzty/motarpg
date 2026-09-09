@@ -14,6 +14,8 @@ import { ParticleSystem } from '../effects/ParticleSystem';
 import { projection } from '../render/Projection';
 import { CameraController } from './CameraController';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { BattlePanel } from '../ui/BattlePanel';
+import { SummitCinematic } from '../ui/SummitCinematic';
 
 export class GameController {
   private static instance: GameController;
@@ -23,6 +25,8 @@ export class GameController {
   private moving = false;
   /** 移动缓冲（ms）：每次移动后短暂锁定，避免一次输入移动多格 */
   private moveBlockMs = 0;
+  /** 调试：点击传送模式（DebugConsole 开关）——点击地板瞬移，无视寻路 */
+  public teleportMode = false;
 
   private constructor() {
     // 死亡处理统一由事件驱动（任何战斗入口都能触发复活）
@@ -89,6 +93,32 @@ export class GameController {
     const player = Player.getInstance();
     // 点击自身所在格：忽略
     if (player.state.x === targetX && player.state.y === targetY) return;
+
+    // 调试传送模式：直接落位（目标不可走/有实体 → 落到相邻可走格），不走寻路
+    if (this.teleportMode) {
+      this.pathQueue = [];
+      this.pendingInteract = null;
+      let tx = targetX;
+      let ty = targetY;
+      const blocked = !world.isWalkable(tx, ty) || !!world.getEntityAt(tx, ty);
+      if (blocked) {
+        const adj = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+          .map(([dx, dy]) => ({ x: tx + dx, y: ty + dy }))
+          .find(p => world.isWalkable(p.x, p.y) && !world.getEntityAt(p.x, p.y));
+        if (!adj) {
+          eventBus.emit('notification', { message: '该处无法落脚', type: 'warning', icon: '🚫' });
+          return;
+        }
+        tx = adj.x;
+        ty = adj.y;
+      }
+      player.state.x = tx;
+      player.state.y = ty;
+      eventBus.emit('playerMoved', { x: tx, y: ty });
+      this.afterStep();
+      return;
+    }
+
     const entity = world.getEntityAt(targetX, targetY);
     if (entity) {
       // 邻接直接交互，否则寻路走近
@@ -267,28 +297,52 @@ export class GameController {
         );
         break;
       }
+      case 'gate': {
+        // 塔顶终局之门（§4 假终点 + 反转揭示）
+        const cine = SummitCinematic.getInstance();
+        if (cine.revealed) {
+          eventBus.emit('notification', {
+            message: '门后空无一物。风，从很深的下面吹上来……',
+            type: 'info', icon: '🚪',
+          });
+        } else {
+          void cine.play();
+        }
+        break;
+      }
       default:
         break;
     }
   }
 
-  /** 确认后执行：战斗 */
+  /** 确认后执行：战斗（托管=自动结算；微操=逐回合面板，§5 [已确认]） */
   private doBattle(entity: MapEntity): void {
     const player = Player.getInstance();
+    if (gameState.settings.battleMode === 'manual') {
+      const session = BattleSystem.getInstance().beginManual(entity);
+      BattlePanel.getInstance().begin(session, result => this.battleFloats(entity, result));
+      return;
+    }
     const result = BattleSystem.getInstance().battle(entity);
+    this.battleFloats(entity, result);
+    // 死亡复活由 playerDied 事件统一处理
+  }
+
+  /** 战后飘字（两模式共用） */
+  private battleFloats(entity: MapEntity, result: { win: boolean; goldGained: number }): void {
+    const player = Player.getInstance();
     if (result.win) {
       ParticleSystem.getInstance().floatText(entity.x, entity.y, `+${result.goldGained}💰`, '#ffdd44');
     } else if (player.state.hp > 0) {
       ParticleSystem.getInstance().floatText(player.state.x, player.state.y, '撤退！', '#ffaa44');
     }
-    // 死亡复活由 playerDied 事件统一处理
   }
 
   /** 直接执行：开宝箱（无确认），战利品逐项 toast 提示后自动收回 */
   private doOpenChest(entity: MapEntity): void {
     const world = WorldManager.getInstance();
     const room = world.getRoomAt(entity.x, entity.y);
-    const rewards = ChestSystem.getInstance().open(entity, room?.type ?? 'combat');
+    const rewards = ChestSystem.getInstance().open(entity, room?.type ?? 'combat', room?.depth ?? 1);
     let text = `+${rewards.gold} 金币`;
     if (rewards.potion) text += ` +${dataManager.getPotion(rewards.potion)?.name ?? '药水'}`;
     if (rewards.equipment) text += ' +装备';
@@ -316,11 +370,34 @@ export class GameController {
 
   private afterStep(): void {
     this.checkRoomEnter();
+    this.checkHiddenDiscovery();
   }
 
   private afterFloorChange(): void {
     this.lastRoomId = '';
     this.checkRoomEnter();
+    this.checkHiddenDiscovery();
+  }
+
+  /**
+   * 隐藏房间发现检测（P1-1）：玩家移动到隐藏入口相邻格（含斜向同曼哈顿1）时自动触发——
+   * 挖开入口墙、房间并入当前楼层，广播事件与提示。
+   */
+  private checkHiddenDiscovery(): void {
+    const world = WorldManager.getInstance();
+    const floor = world.currentFloor;
+    if (!floor || !floor.hiddenRooms || floor.hiddenRooms.length === 0) return;
+    const p = Player.getInstance().state;
+    for (const room of [...floor.hiddenRooms]) {
+      const ent = room.hiddenEntrance;
+      if (!ent) continue;
+      if (Math.abs(p.x - ent.x) + Math.abs(p.y - ent.y) <= 1) {
+        world.revealHiddenRoom(room);
+        eventBus.emit('hiddenRoomDiscovered', { roomId: room.id, x: ent.x, y: ent.y });
+        eventBus.emit('notification', { message: '墙后传来微光——发现了一间隐藏房间！', type: 'success', icon: '🕯️' });
+        ParticleSystem.getInstance().floatText(ent.x, ent.y, '发现隐藏房间！', '#ffdd44');
+      }
+    }
   }
 
   /** 房间进入检测：房间名/深度事件 + 休整房回血 + Boss房警告（幂等，每帧调用） */
@@ -377,6 +454,7 @@ export class GameController {
 
   /** 重开新局 */
   restart(): void {
+    FloorManager.getInstance().clearPregen(); // 新一局：清掉旧预生成楼层
     Player.getInstance().restore({
       ...Player.getInstance().state,
       level: 1, exp: 0, hp: dataManager.config.playerBase.maxHp,
