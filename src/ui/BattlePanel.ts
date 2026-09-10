@@ -240,11 +240,13 @@ export class BattlePanel {
     const tier = s && !s.finished ? s.bestPotion() : null;
     const def = tier ? dataManager.getPotion(tier) : null;
     const count = tier ? player.getPotionCount(tier) : 0;
-    this.potionBtn.disabled = !tier;
+    const uses = s && !s.finished ? s.potionUses : 0;
+    this.potionBtn.disabled = !tier || uses <= 0;
     const warn = s !== null && !s.finished && s.hpBelowAutoPotionThreshold();
     this.potionBtn.classList.toggle('bp-warn', !!warn);
+    const usesTag = uses <= 0 ? '<span class="bp-warn-tag">本战已用完</span>' : `（用药机会 ${uses}）`;
     this.potionBtn.innerHTML = def
-      ? `🧪 ${def.name} ×${count}${warn ? '<span class="bp-warn-tag">生命&lt;30%</span>' : ''}`
+      ? `🧪 ${def.name} ×${count}${usesTag}${warn ? '<span class="bp-warn-tag">生命&lt;30%</span>' : ''}`
       : '🧪 无药水';
   }
 

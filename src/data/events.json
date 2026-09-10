@@ -4,6 +4,7 @@
       "id": "ev_gold_fairy",
       "name": "金币妖精",
       "icon": "🧚",
+      "trigger": "on_enter",
       "minFloor": 2,
       "chance": 0.07,
       "roomTypes": ["combat", "chest"],
@@ -17,8 +18,9 @@
       "id": "ev_trap",
       "name": "可疑的踏板",
       "icon": "⚠️",
+      "trigger": "on_step",
       "minFloor": 3,
-      "chance": 0.06,
+      "chance": 0.02,
       "roomTypes": ["combat", "elite"],
       "description": "脚下的石板忽然下陷——是陷阱！",
       "options": [
@@ -30,6 +32,7 @@
       "id": "ev_spring",
       "name": "神秘泉水",
       "icon": "⛲",
+      "trigger": "on_enter",
       "minFloor": 2,
       "chance": 0.06,
       "roomTypes": ["chest", "merchant", "end"],
@@ -43,6 +46,7 @@
       "id": "ev_scroll",
       "name": "古老的卷轴",
       "icon": "📜",
+      "trigger": "on_enter",
       "minFloor": 4,
       "chance": 0.05,
       "roomTypes": ["combat", "chest", "elite"],
@@ -50,6 +54,34 @@
       "options": [
         { "text": "研读卷轴", "effects": [{ "type": "exp", "value": 25, "perFloor": 5 }] },
         { "text": "没有兴趣", "effects": [] }
+      ]
+    },
+    {
+      "id": "ev_loose_brick",
+      "name": "松动的砖",
+      "icon": "🧱",
+      "trigger": "on_interact",
+      "minFloor": 4,
+      "chance": 0.10,
+      "roomTypes": ["combat", "chest", "merchant", "elite"],
+      "description": "你触及的墙面有一块砖微微松动，缝隙里透出一点微光。",
+      "options": [
+        { "text": "用力撬开", "effects": [{ "type": "gold", "value": 25, "perFloor": 4 }, { "type": "damagePct", "value": 3 }] },
+        { "text": "不去管它", "effects": [] }
+      ]
+    },
+    {
+      "id": "ev_hollow_echo",
+      "name": "空荡的回响",
+      "icon": "🕯️",
+      "trigger": "on_defeat_all",
+      "minFloor": 5,
+      "chance": 0.10,
+      "roomTypes": ["combat", "elite"],
+      "description": "最后一只怪物倒下，房间里只剩你与烛火的呼吸声。",
+      "options": [
+        { "text": "静立片刻，清点所得", "effects": [{ "type": "exp", "value": 20, "perFloor": 6 }] },
+        { "text": "立刻赶往下一处", "effects": [] }
       ]
     }
   ]

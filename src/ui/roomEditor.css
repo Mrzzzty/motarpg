@@ -1,0 +1,225 @@
+/* 房间编辑器（开发工具，F2 开关）：深色面板 + 网格画布 + 右侧属性/导出 */
+
+/* 挂到 <body>：position: fixed + 高于标题屏(500) 的层级，游戏内外都能打开。
+   只轻度压暗背景：面板是**浮动窗口**（不铺满整屏），四周仍能看见游戏画面。 */
+#room-editor {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 8, 12, 0.3);
+  pointer-events: auto;
+}
+#room-editor.hidden { display: none; }
+
+.re-panel {
+  /* 默认不铺满：留出四周看游戏；可拖标题栏移动、拖右下角缩放（resize: both） */
+  width: min(1280px, 93vw);
+  height: min(780px, 88vh);
+  min-width: 760px;
+  min-height: 460px;
+  resize: both;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #14161c;
+  border: 1px solid #3a4356;
+  border-radius: 10px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6);
+  color: #d7dce8;
+  font: 13px/1.5 "Microsoft YaHei", sans-serif;
+}
+
+.re-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #2a3140;
+  font-size: 14px;
+  font-weight: 600;
+  color: #cfe0ff;
+  cursor: grab;
+  user-select: none;
+  flex: 0 0 auto;
+}
+.re-head.dragging { cursor: grabbing; }
+.re-head .dim { color: #7b8496; font-weight: 400; font-size: 12px; }
+.re-head .spacer { flex: 1; }
+
+.re-body {
+  flex: 1;
+  display: grid;
+  /* 调色板 | 画布 | 实时 3D 预览 | 属性与档案
+     最小宽度收窄到 888px，保证窗口/面板变小时 4 列（尤其 3D 预览）仍不会被裁掉 */
+  grid-template-columns: 168px minmax(200px, 1fr) minmax(220px, 1.1fr) 300px;
+  gap: 0;
+  min-height: 0;
+  overflow: auto;
+}
+.re-col { padding: 10px 12px; overflow: auto; min-width: 0; }
+.re-col + .re-col { border-left: 1px solid #262d3a; }
+
+.re-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #8fb3d9;
+  margin: 2px 0 6px;
+  letter-spacing: 0.5px;
+}
+.re-title .spacer { flex: 1; }
+.re-title:not(:first-child) { margin-top: 14px; }
+
+/* 调色板 */
+.re-palette { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
+.re-swatch {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 6px;
+  border: 1px solid #2f3746;
+  border-radius: 5px;
+  background: #1b1f28;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+}
+.re-swatch:hover { border-color: #55617a; }
+.re-swatch.active { border-color: #8fb3d9; box-shadow: 0 0 0 1px #8fb3d9 inset; background: #202836; }
+.re-swatch .chip {
+  width: 14px; height: 14px; border-radius: 3px;
+  border: 1px solid #00000055; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; line-height: 1;
+}
+.re-swatch .k { color: #7b8496; margin-left: auto; font-family: Consolas, monospace; }
+
+/* 画布：可滚动 + 自适应/手动缩放（自定义大小可能远超一屏） */
+.re-canvas-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  min-height: 0; min-width: 0;
+}
+.re-canvas-scroll {
+  flex: 1; min-height: 0; width: 100%;
+  overflow: auto;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 2px;
+}
+.re-grid {
+  display: grid;
+  gap: 1px;
+  background: #0c0e13;
+  padding: 6px;
+  border: 1px solid #2a3140;
+  border-radius: 6px;
+  width: max-content;
+  margin: auto;
+}
+.re-cell {
+  width: var(--re-cell, 26px);
+  height: var(--re-cell, 26px);
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(var(--re-cell, 26px) * 0.55);
+  line-height: 1;
+  background: #1d2330;
+  cursor: crosshair;
+  user-select: none;
+}
+.re-cell.inside { background: #3a4356; }
+.re-cell.margin { background: #12151b; cursor: not-allowed; }
+.re-cell.stub { background: #2b3648; outline: 1px dashed #55617a; outline-offset: -2px; }
+.re-cell.door { box-shadow: 0 0 0 2px #ffcc55 inset; }
+.re-cell:hover { filter: brightness(1.25); }
+.re-zoombar { display: flex; gap: 6px; align-items: center; justify-content: center; }
+.re-zoombar .re-hint { min-width: 150px; text-align: center; }
+
+.re-dirbar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+/* 通口类型（出口模式）选择条：单口 / 上下通口 / 对角通口 / T型通口 / 四方通口 */
+.re-patternbar { display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.re-patternbar select {
+  padding: 4px 6px; border-radius: 4px; background: #10131a;
+  border: 1px solid #2f3746; color: #d7dce8; font: inherit;
+}
+.re-dirbtn {
+  padding: 4px 10px; border-radius: 5px; cursor: pointer;
+  border: 1px solid #3a4356; background: #1b1f28; color: #b9c3d4; font-size: 12px;
+}
+.re-dirbtn.active { border-color: #ffcc55; color: #ffe3a0; background: #2a2416; }
+.re-dirbtn.fixed { border-color: #3f8f63; color: #b9f0cf; background: #16281d; cursor: default; }
+
+/* 实时 3D 预览：游戏视口被搬进这个槽位（见 RoomEditor.startPreview）。改为点击开启 / 可关闭 */
+.re-preview-col { display: flex; flex-direction: column; overflow: hidden; }
+.re-preview-slot {
+  position: relative;
+  flex: 1;
+  min-height: 300px;
+  border: 1px solid #2a3140;
+  border-radius: 6px;
+  background: #05070b;
+  overflow: hidden;
+}
+/* 「未开启」占位层：预览关闭时显示大按钮，开启后隐藏 */
+.re-preview-off {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 16px; text-align: center; color: #7b8496;
+}
+.re-preview-off.hidden { display: none; }
+.re-preview-slot.active .re-preview-off { display: none; }
+.re-preview-off-title { color: #8fb3d9; font-size: 13px; }
+
+/* 「写给 AI 看」的备注 */
+.re-note {
+  width: 100%;
+  height: 74px;
+  resize: vertical;
+  background: #10131a;
+  color: #ffe3a0;
+  border: 1px solid #4a4030;
+  border-radius: 5px;
+  font: 12px/1.45 "Microsoft YaHei", sans-serif;
+  padding: 6px;
+}
+
+.re-fixed {
+  flex: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #16281d;
+  border: 1px solid #3f8f63;
+  color: #b9f0cf;
+  font-size: 12px;
+}
+
+/* 右侧属性 */
+.re-field { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.re-field label { width: 62px; color: #8b93a4; flex: 0 0 auto; }
+.re-field input, .re-field select {
+  flex: 1; min-width: 0; padding: 4px 6px; border-radius: 4px;
+  background: #10131a; border: 1px solid #2f3746; color: #d7dce8; font: inherit;
+}
+.re-field input[type="number"] { width: 64px; flex: 0 0 auto; }
+
+.re-rows {
+  width: 100%; height: 190px; resize: vertical;
+  background: #0c0e13; color: #9fe0a0; border: 1px solid #2f3746; border-radius: 5px;
+  font: 12px/1.35 Consolas, "Courier New", monospace; padding: 6px;
+}
+.re-btnrow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.re-btn {
+  padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;
+  border: 1px solid #3a4356; background: #212836; color: #cfe0ff;
+}
+.re-btn:hover { border-color: #8fb3d9; }
+.re-btn.primary { background: #1d3a2a; border-color: #3f8f63; color: #b9f0cf; }
+
+.re-hint { color: #7b8496; font-size: 12px; }
+.re-status {
+  padding: 6px 14px; border-top: 1px solid #2a3140;
+  color: #8fb3d9; font-size: 12px; min-height: 26px;
+}
+.re-status.err { color: #ff8f7a; }

@@ -9,13 +9,15 @@
  * 物品清单（文档四 4.1）：按房间类型 + 深度从 mapGeneration.content 读取。
  * 装饰：火把（房间四角/门两侧 + 走廊每4格）、柱子（宽≥7房间四角）、地毯（宝箱/Boss 下方）。
  */
-import type { CorridorData, FloorKind, MapEntity, PotionTier, RoomData, RoomDoor, TileCode } from '../types';
+import type { CorridorData, FloorKind, MapEntity, PotionTier, RoomData, TileCode } from '../types';
 import { dataManager } from '../core/DataManager';
-import type { ContentBand } from '../core/DataManager';
+import type { ContentBand, MapGenConfig } from '../core/DataManager';
 import { rng } from '../utils/MathUtils';
 import { IdGenerator } from '../utils/IdGenerator';
 import { StatCalculator } from '../utils/StatCalculator';
+import { isTierStartFloor } from '../data/tiers';
 import type { MonsterStats } from '../types';
+import { DIRS4, manhattan, doorInner, cellKey, ptKey, type Pt } from '../utils/Grid';
 
 interface Spot {
   x: number;
@@ -24,17 +26,16 @@ interface Spot {
   dist: number;
 }
 
-interface P {
-  x: number;
-  y: number;
-}
+/** 平面坐标（`utils/Grid.Pt` 的本地别名，避免重复声明） */
+type P = Pt;
+
+/** 参与「风险-收益」分层的房型（安全房不设风险，避免误导路线选择） */
+const RISK_ROOM_TYPES = new Set<RoomData['type']>(['combat', 'elite', 'chest', 'boss']);
 
 interface PoolEntry {
   id: string;
   weight: number;
 }
-
-const DIRS4: [number, number][] = [[0, 1], [0, -1], [1, 0], [-1, 0]];
 
 /**
  * 单个房间的填充上下文。
@@ -71,7 +72,7 @@ class RoomFill {
   /** 该格是否可放主实体（空地 + 未被占 + 无既有实体） */
   freeAt(x: number, y: number): boolean {
     if (this.grid[y]?.[x] !== 0) return false;
-    if (this.taken.has(`${x},${y}`)) return false;
+    if (this.taken.has(cellKey(x, y))) return false;
     return !this.room.entities.some(en => en.x === x && en.y === y);
   }
 
@@ -87,8 +88,8 @@ class RoomFill {
   placeStairAgainstWall(targetFloor: number): boolean {
     const ay = this.room.y + 1; // 第一行地面格，紧贴上墙
     const doorInners = new Set(this.room.doors.map(d => {
-      const p = this.innerOfDoor(d);
-      return `${p.x},${p.y}`;
+      const p = doorInner(d);
+      return ptKey(p);
     }));
     for (let step = 0; step <= this.room.width; step++) {
       const off = step === 0 ? 0 : (step % 2 === 1 ? (step + 1) / 2 : -(step / 2));
@@ -96,7 +97,7 @@ class RoomFill {
       if (ax < this.room.x + 1 || ax + 1 > this.room.x + this.room.width - 2) continue;
       const cells = [0, 1].flatMap(dz => [0, 1].map(dx => ({ x: ax + dx, y: ay + dz })));
       if (!cells.every(p => this.freeAt(p.x, p.y))) continue;
-      if (cells.some(p => doorInners.has(`${p.x},${p.y}`))) continue;
+      if (cells.some(p => doorInners.has(ptKey(p)))) continue;
       this.put({ kind: 'stair', x: ax, y: ay, targetFloor, stairSpan: 2 });
       this.put({ kind: 'stair', x: ax + 1, y: ay, targetFloor, stairSpan: 1 });
       this.put({ kind: 'stair', x: ax, y: ay + 1, targetFloor, stairSpan: 1 });
@@ -124,7 +125,7 @@ class RoomFill {
   monsterNear(x: number, y: number, radius: number): boolean {
     return this.room.entities.some(e =>
       (e.kind === 'monster' || e.kind === 'boss')
-      && Math.abs(e.x - x) + Math.abs(e.y - y) <= radius);
+      && manhattan(e, { x, y }) <= radius);
   }
 
   /**
@@ -140,7 +141,7 @@ class RoomFill {
       if (!this.freeAt(s.x, s.y)) continue;
       let cover = 0;
       for (const t of targets) {
-        if (Math.abs(t.x - s.x) + Math.abs(t.y - s.y) <= radius) cover++;
+        if (manhattan(t, s) <= radius) cover++;
       }
       if (cover > bestCover) { bestCover = cover; best = { x: s.x, y: s.y }; }
     }
@@ -192,20 +193,35 @@ class RoomFill {
     for (let y = this.room.y + 1; y <= this.room.y + this.room.height - 2; y++) {
       for (let x = this.room.x + 1; x <= this.room.x + this.room.width - 2; x++) {
         if (this.grid[y][x] !== 0) continue;
-        spots.push({ x, y, dist: dist.get(`${x},${y}`) ?? 99 });
+        spots.push({ x, y, dist: dist.get(cellKey(x, y)) ?? 99 });
       }
     }
     return spots;
   }
 
-  /** 门朝向房间内侧的格 */
-  private innerOfDoor(d: RoomDoor): P {
-    switch (d.direction) {
-      case 'east': return { x: d.x - 1, y: d.y };
-      case 'west': return { x: d.x + 1, y: d.y };
-      case 'north': return { x: d.x, y: d.y + 1 };
-      default: return { x: d.x, y: d.y - 1 };
+  /** 房间各门的内侧格（须为可通行地板） */
+  private doorInners(): P[] {
+    return this.room.doors
+      .map(d => doorInner(d))
+      .filter(p => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 0);
+  }
+
+  /**
+   * 门内侧格中曼哈顿距离最远的一对（= 主路径入口 / 出口）。
+   * 不足两个门时返回 null —— 主路径与绕过检测共用，此前两处各写了一遍。
+   */
+  private farthestDoorPair(): [P, P] | null {
+    const inners = this.doorInners();
+    if (inners.length < 2) return null;
+    let best: [P, P] = [inners[0], inners[1]];
+    let bestD = -1;
+    for (let i = 0; i < inners.length; i++) {
+      for (let j = i + 1; j < inners.length; j++) {
+        const d = manhattan(inners[i], inners[j]);
+        if (d > bestD) { bestD = d; best = [inners[i], inners[j]]; }
+      }
     }
+    return best;
   }
 
   /**
@@ -213,46 +229,37 @@ class RoomFill {
    * 入口/出口 = 房间门内侧格中相距最远的一对；单门时取「门 → 距门最远格」。
    */
   mainPath(): P[] {
-    const inners = this.room.doors
-      .map(d => this.innerOfDoor(d))
-      .filter(p => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 0);
+    const inners = this.doorInners();
     if (inners.length === 0) return [{ x: this.room.centerX, y: this.room.centerY }];
-    if (inners.length === 1) return this.bfsPath(inners[0], this.farthestFrom(inners[0]));
-
-    let best: [P, P] = [inners[0], inners[1]];
-    let bestD = -1;
-    for (let i = 0; i < inners.length; i++) {
-      for (let j = i + 1; j < inners.length; j++) {
-        const d = Math.abs(inners[i].x - inners[j].x) + Math.abs(inners[i].y - inners[j].y);
-        if (d > bestD) { bestD = d; best = [inners[i], inners[j]]; }
-      }
-    }
-    const path = this.bfsPath(best[0], best[1]);
-    return path.length > 0 ? path : [best[0]];
+    const pair = this.farthestDoorPair();
+    if (!pair) return this.bfsPath(inners[0], this.farthestFrom(inners[0])) ?? [inners[0]];
+    return this.bfsPath(pair[0], pair[1]) ?? [pair[0]];
   }
 
-  /** 房间内 BFS 路径（只看地形，忽略实体） */
-  private bfsPath(from: P, to: P): P[] {
-    const key = (x: number, y: number): string => `${x},${y}`;
-    const prev = new Map<string, string | null>();
+  /**
+   * 房间内 BFS 路线（只看地形，忽略实体）。
+   * `blocked` 为额外视为障碍的格（怪物 / 柱子）；不可达返回 null。
+   * 原先 bfsPath / bfsRoute 两份实现只差一个 blocked 参数，已合并。
+   */
+  private bfsPath(from: P, to: P, blocked?: Set<string>): P[] | null {
+    const prev = new Map<string, string | null>([[ptKey(from), null]]);
     const queue: P[] = [from];
-    prev.set(key(from.x, from.y), null);
     while (queue.length > 0) {
       const cur = queue.shift()!;
-      if (cur.x === to.x && cur.y === to.y) break;
       for (const [dx, dy] of DIRS4) {
         const nx = cur.x + dx;
         const ny = cur.y + dy;
         if (!this.inRoom(nx, ny)) continue;
         if (this.grid[ny]?.[nx] !== 0) continue;
-        const k = key(nx, ny);
+        const k = cellKey(nx, ny);
         if (prev.has(k)) continue;
-        prev.set(k, key(cur.x, cur.y));
+        if (blocked?.has(k)) continue;
+        prev.set(k, ptKey(cur));
         queue.push({ x: nx, y: ny });
       }
     }
-    const end = key(to.x, to.y);
-    if (!prev.has(end)) return [];
+    const end = ptKey(to);
+    if (!prev.has(end)) return null;
     const out: P[] = [];
     let cur: string | null = end;
     while (cur) {
@@ -315,7 +322,7 @@ class RoomFill {
 
     // 避开入口侧 2 格内（不贴脸）
     const entry = path[0];
-    const usable = cells.filter(c => Math.abs(c.x - entry.x) + Math.abs(c.y - entry.y) >= 2);
+    const usable = cells.filter(c => manhattan(c, entry) >= 2);
     const line = usable.length > 0 ? usable : cells;
 
     const chosen = rng.shuffle(line).slice(0, Math.min(count, line.length));
@@ -342,8 +349,8 @@ class RoomFill {
   /** 所有门的内侧格（立柱禁区：柱子改地形会封门） */
   private doorInnerCells(): Set<string> {
     return new Set(this.room.doors.map(d => {
-      const p = this.innerOfDoor(d);
-      return `${p.x},${p.y}`;
+      const p = doorInner(d);
+      return ptKey(p);
     }));
   }
 
@@ -356,7 +363,7 @@ class RoomFill {
         if (x === cx && y === cy) continue;
         if (!this.inRoom(x, y)) continue;
         if (this.grid[y]?.[x] !== 0) continue;
-        if (this.taken.has(`${x},${y}`)) continue;
+        if (this.taken.has(cellKey(x, y))) continue;
         cells.push({ x, y });
       }
     }
@@ -401,7 +408,7 @@ class RoomFill {
   placeMonsterUnchecked(id: string, isElite: boolean, p: P): boolean {
     if (p.x <= this.room.x || p.x >= this.room.x + this.room.width - 1) return false;
     if (p.y <= this.room.y || p.y >= this.room.y + this.room.height - 1) return false;
-    if (this.taken.has(`${p.x},${p.y}`)) return false;
+    if (this.taken.has(ptKey(p))) return false;
     if (this.room.entities.some(en => en.x === p.x && en.y === p.y)) return false;
     this.monsterAt(id, isElite, p);
     return true;
@@ -427,15 +434,15 @@ class RoomFill {
     ];
     const protectedCells = new Set<string>();
     for (const d of this.room.doors) {
-      const p = this.innerOfDoor(d);
-      protectedCells.add(`${p.x},${p.y}`);
+      const p = doorInner(d);
+      protectedCells.add(ptKey(p));
     }
-    for (const p of this.mainPath()) protectedCells.add(`${p.x},${p.y}`);
+    for (const p of this.mainPath()) protectedCells.add(ptKey(p));
 
     const placeable = ring.filter(p =>
       this.inRoom(p.x, p.y)
       && this.freeAt(p.x, p.y)
-      && !protectedCells.has(`${p.x},${p.y}`));
+      && !protectedCells.has(ptKey(p)));
     if (placeable.length < 4) return false;
     for (const p of placeable) this.putBlocking('pillar', p.x, p.y);
     return true;
@@ -462,10 +469,34 @@ class RoomFill {
     const picked = rng.shuffle(corners).slice(0, Math.min(count, corners.length));
     picked.forEach((c, i) => {
       if (carpet && i === 0) this.put({ kind: 'carpet', x: c.x, y: c.y });
-      this.put({ kind: 'chest', chestTier: 'normal', x: c.x, y: c.y });
+      // 风险收益：宝箱记录所在房间的风险级 / 收益倍率，开箱时结算（路线权衡的兑现端）
+      this.put({
+        kind: 'chest', chestTier: 'normal', x: c.x, y: c.y,
+        riskTier: this.risk(), rewardMul: this.room.rewardMul ?? 1,
+      });
       out.push(c);
     });
     return out;
+  }
+
+  /** 房间风险级（1~3；未分级 = 1 = 旧行为） */
+  risk(): number {
+    return this.room.risk ?? 1;
+  }
+
+  /**
+   * 风险兑现（另一半）：按风险级掷骰，把首个宝箱升级为「大宝箱」
+   * （必出装备、金币 ×2.5）→ 让高风险房值得绕路。
+   */
+  rollVault(chests: P[]): boolean {
+    if (chests.length === 0) return false;
+    const chance = dataManager.mapGen.content.risk.vaultChance[this.risk() - 1] ?? 0;
+    if (chance <= 0 || !rng.chance(chance)) return false;
+    const first = chests[0];
+    const ent = this.room.entities.find(e => e.kind === 'chest' && e.x === first.x && e.y === first.y);
+    if (!ent) return false;
+    ent.chestTier = 'grand';
+    return true;
   }
 
   /** 药水：优先放入口附近（1-4 格），不足时用任意空位 */
@@ -521,7 +552,7 @@ class RoomFill {
       { x: r.x, y: r.y + r.height - 1 },
       { x: r.x + r.width - 1, y: r.y + r.height - 1 },
     ];
-    const cd = (p: P): number => Math.min(...corners.map(c => Math.abs(p.x - c.x) + Math.abs(p.y - c.y)));
+    const cd = (p: P): number => Math.min(...corners.map(c => manhattan(p, c)));
     return pts.sort((a, b) => cd(a) - cd(b));
   }
 
@@ -537,6 +568,101 @@ class RoomFill {
     }
   }
 
+  // ============ 陈设填充（反「大而空」） ============
+
+  /**
+   * 陈设填充：内容落定后、`validate()` 之前执行——让每个房间都有「陈设密度」，而非大而空。
+   *   ① 配光保底：按内面积补足火把（沿周长均匀，绝不上门格 / 已占格）；
+   *   ② 列柱：内宽/内高均达标的房间，沿两条长墙等距列柱（对称，避开主路径与门内侧）；
+   *   ③ 引导地毯：入口 → 房间中心铺 2~3 格地毯，给出动线暗示（非阻挡）。
+   * 列柱是阻挡地形，其连通/不可绕过后果由随后 `validate()` 的校验统一兜底修复。
+   */
+  furnish(): void {
+    const f = dataManager.mapGen.content.furnish;
+    const innerW = this.room.width - 2;
+    const innerH = this.room.height - 2;
+    this.furnishTorches(Math.min(f.torchMax, Math.max(1, Math.round((innerW * innerH) / f.torchPerArea))));
+    this.furnishColonnade(f, innerW, innerH);
+    if (f.guideCarpet) this.furnishGuideCarpet();
+  }
+
+  /** 房间边界墙格（按周长顺序排列 → 等分取点即「沿墙均匀分布」） */
+  private wallPerimeter(): P[] {
+    const r = this.room;
+    const pts: P[] = [];
+    for (let x = r.x; x < r.x + r.width; x++) pts.push({ x, y: r.y });
+    for (let y = r.y + 1; y < r.y + r.height - 1; y++) pts.push({ x: r.x + r.width - 1, y });
+    for (let x = r.x + r.width - 1; x >= r.x; x--) pts.push({ x, y: r.y + r.height - 1 });
+    for (let y = r.y + r.height - 2; y > r.y; y--) pts.push({ x: r.x, y });
+    return pts;
+  }
+
+  /** ① 配光保底：沿墙周长等分补火把到目标数量（门格地形为 0，天然排除） */
+  private furnishTorches(want: number): void {
+    let need = want - this.room.entities.filter(e => e.kind === 'torch').length;
+    if (need <= 0) return;
+    const ring = this.wallPerimeter().filter(p =>
+      this.grid[p.y]?.[p.x] === 1
+      && !this.room.entities.some(e => e.x === p.x && e.y === p.y));
+    if (ring.length === 0) return;
+    for (let i = 0; i < need; i++) {
+      const idx = Math.floor(((i + 1) * ring.length) / (need + 1));
+      const p = ring[Math.min(idx, ring.length - 1)];
+      if (!p || this.room.entities.some(e => e.x === p.x && e.y === p.y)) continue;
+      this.put({ kind: 'torch', x: p.x, y: p.y });
+    }
+  }
+
+  /** ② 列柱：长边两侧等距立柱（对称、避主路径/门内侧/角落宝箱位） */
+  private furnishColonnade(f: MapGenConfig['content']['furnish'], innerW: number, innerH: number): void {
+    if (innerW < f.colonnadeMinInnerW || innerH < f.colonnadeMinInnerH) return;
+    const r = this.room;
+    const horizontal = innerW >= innerH; // 长边在上下 → 沿上下两行立柱
+    const span = horizontal ? innerW : innerH;
+    const step = Math.max(2, f.colonnadeSpacing);
+    const offsets: number[] = [];
+    for (let i = step; i <= span - 1; i += step) offsets.push(i);
+    if (offsets.length === 0) offsets.push(Math.ceil(span / 2));
+
+    const protectedCells = new Set<string>(this.doorInnerCells());
+    for (const p of this.mainPath()) protectedCells.add(ptKey(p));
+
+    let placed = 0;
+    const lanes = horizontal ? [r.y + 1, r.y + r.height - 2] : [r.x + 1, r.x + r.width - 2];
+    for (const off of offsets) {
+      if (placed >= f.colonnadeMax) break;
+      for (const lane of lanes) {
+        if (placed >= f.colonnadeMax) break;
+        const x = horizontal ? r.x + off : lane;
+        const y = horizontal ? lane : r.y + off;
+        if (!this.inRoom(x, y) || !this.freeAt(x, y)) continue;
+        if (protectedCells.has(ptKey({ x, y }))) continue;
+        this.putBlocking('pillar', x, y);
+        placed++;
+      }
+    }
+  }
+
+  /** ③ 引导地毯：入口 → 中心（先 x 后 y 的 L 形），每 2 格 1 块，最多 3 块 */
+  private furnishGuideCarpet(): void {
+    const entry = this.mainPath()[0];
+    if (!entry) return;
+    const cx = this.room.centerX;
+    const cy = this.room.centerY;
+    const steps: P[] = [{ x: entry.x, y: entry.y }];
+    let x = entry.x;
+    let y = entry.y;
+    while (x !== cx) { x += Math.sign(cx - x); steps.push({ x, y }); }
+    while (y !== cy) { y += Math.sign(cy - y); steps.push({ x, y }); }
+    let placed = 0;
+    for (let i = 1; i < steps.length && placed < 3; i += 2) {
+      const p = steps[i];
+      if (!this.freeAt(p.x, p.y)) continue;
+      this.put({ kind: 'carpet', x: p.x, y: p.y });
+      placed++;
+    }
+  }
+
   /**
    * 女巫酿药间（安全房）：中央女巫 + 朝门一侧的熬药大锅 + 两侧药架 + 角落治疗泉。
    * 女巫提供特殊药水交易，治疗泉提供治疗服务（交互在世界层处理）。
@@ -548,7 +674,7 @@ class RoomFill {
     const entry = this.mainPath()[0] ?? { x: cx, y: cy + 1 };
     const doorInners = this.doorInnerCells();
     const blockable = (x: number, y: number): boolean =>
-      this.freeAt(x, y) && !doorInners.has(`${x},${y}`);
+      this.freeAt(x, y) && !doorInners.has(cellKey(x, y));
 
     // 女巫：优先居中，居中不可用则退到离入口最远的空位
     if (this.freeAt(cx, cy)) {
@@ -587,9 +713,8 @@ class RoomFill {
     }
 
     // 治疗泉：离入口最远的角落（越深入越珍贵）
-    const corners = rng.shuffle(this.innerCorners()).sort((a, b) =>
-      (Math.abs(b.x - entry.x) + Math.abs(b.y - entry.y))
-      - (Math.abs(a.x - entry.x) + Math.abs(a.y - entry.y)));
+    const corners = rng.shuffle(this.innerCorners())
+      .sort((a, b) => manhattan(b, entry) - manhattan(a, entry));
     for (const c of corners) {
       if (this.freeAt(c.x, c.y)) { this.put({ kind: 'fountain', x: c.x, y: c.y }); break; }
     }
@@ -606,11 +731,12 @@ class RoomFill {
   /**
    * 验证并就地修复：
    *   地形连通       —— 柱子/装饰封死地板口袋 → 撤柱开通（P0-5 配套修复）
+   *   楼梯被守护     —— 楼梯 guard.stairRadius 格内无怪 → 楼梯前补怪（受密度上限约束）
+   *   宝箱被守护     —— 宝箱 guard.chestRadius 格内无怪 → 邻格补怪（受密度上限约束）
    *   战斗不可绕过   —— 怪物/柱子为障碍时任意两门内侧仍连通 = 可绕过 → 沿开路线中点循环补怪封堵
    *                     （P0-5：战斗/精英/Boss 房均执行；补怪不超过密度上限）
    *   精英房主路径   —— 主路径上至少 1 只精英怪，不足则补/升级（P0-5）
-   *   宝箱被守护     —— 宝箱 guard.chestRadius 格内无怪 → 邻格补怪（受密度上限约束）
-   *   楼梯被守护     —— 楼梯 guard.stairRadius 格内无怪 → 楼梯前补怪（受密度上限约束）
+   * 执行顺序：守卫（楼梯→宝箱）先占用密度余量，「不可绕过」最后执行——余量不足时退化为柱线封堵。
    *   无重叠/可到达 —— 放置阶段已由 freeAt 保证（装饰地毯除外）
    * 返回未修复的失败项（调用方记日志），不中断生成流程。
    */
@@ -623,7 +749,36 @@ class RoomFill {
     // 0) 地形连通修复：先开通口袋，再判断是否因开通产生绕过（绕过由下方补怪封堵）
     this.ensureReachable();
 
-    // 1) 战斗不可绕过（战斗房 / 精英房 / Boss房 —— P0-5 扩展至 Boss）
+    // 1) 楼梯被守护（P1-4：楼梯是进度关键，优先占用密度余量）
+    for (const stair of this.room.entities.filter(e => e.kind === 'stair')) {
+      const guarded = this.monsterNear(stair.x, stair.y, g.stairRadius);
+      if (!guarded && pool.length > 0 && monsterCount() < densityCap) {
+        // guardStair 朝向入口放置失败时，用覆盖式放置在半径内找任意空位兜底
+        if (this.guardStair(1, pool) === 0
+          && !this.placeGuardCovering([{ x: stair.x, y: stair.y }], pool, g.stairRadius)) {
+          issues.push('楼梯无守护（无可放置格）');
+        }
+      }
+    }
+
+    // 2) 宝箱被守护（P1-4：覆盖式补守卫；Boss 房奖励宝箱不受此限制）
+    //    必须排在「不可绕过」之前：否则反绕过补怪会先把密度余量吃光，宝箱永远等不到守卫。
+    if (roomType !== 'boss') {
+      const chests = this.room.entities.filter(e => e.kind === 'chest') as { x: number; y: number }[];
+      let unguarded = chests.filter(c => !this.monsterNear(c.x, c.y, g.chestRadius));
+      while (unguarded.length > 0 && pool.length > 0 && monsterCount() < densityCap) {
+        if (!this.placeGuardCovering(unguarded, pool, g.chestRadius)) break;
+        unguarded = chests.filter(c => !this.monsterNear(c.x, c.y, g.chestRadius));
+      }
+      if (unguarded.length > 0) {
+        issues.push(monsterCount() >= densityCap
+          ? `宝箱无守护（密度上限已满 ${monsterCount()}/${densityCap}，未守护 ${unguarded.length} 座）`
+          : '宝箱无守护（无可放置格）');
+      }
+    }
+
+    // 3) 战斗不可绕过（战斗房 / 精英房 / Boss房 —— P0-5 扩展至 Boss）
+    //    排在守卫之后：余量不足时退化为柱线封堵（柱子不计怪物密度上限）。
     //    Boss 房特殊处理：通往终点房的门由 Boss 铁门机制锁闭（击败 Boss 才开启），
     //    进度不可跳过已有系统保证，因此只在房内毫无守卫时补 1 只、绝不上柱线封路——
     //    Boss 层是 rest→boss→end 线性链，无冗余通路，封路会截断整层。
@@ -670,29 +825,8 @@ class RoomFill {
       if (roomType === 'elite') this.ensureEliteOnPath(this.mainPath(), pool, densityCap);
     }
 
-    // 2) 楼梯被守护（P1-4：优先于宝箱——楼梯是进度关键，密度余量不足时优先保楼梯）
-    for (const stair of this.room.entities.filter(e => e.kind === 'stair')) {
-      const guarded = this.monsterNear(stair.x, stair.y, g.stairRadius);
-      if (!guarded && pool.length > 0 && monsterCount() < densityCap) {
-        // guardStair 朝向入口放置失败时，用覆盖式放置在半径内找任意空位兜底
-        if (this.guardStair(1, pool) === 0
-          && !this.placeGuardCovering([{ x: stair.x, y: stair.y }], pool, g.stairRadius)) {
-          issues.push('楼梯无守护且无空位');
-        }
-      }
-    }
-
-    // 3) 宝箱被守护（P1-4：覆盖式补守卫；Boss 房奖励宝箱不受此限制）
-    if (roomType !== 'boss') {
-      const chests = this.room.entities.filter(e => e.kind === 'chest') as { x: number; y: number }[];
-      let unguarded = chests.filter(c => !this.monsterNear(c.x, c.y, g.chestRadius));
-      while (unguarded.length > 0 && pool.length > 0 && monsterCount() < densityCap) {
-        if (!this.placeGuardCovering(unguarded, pool, g.chestRadius)) break;
-        unguarded = chests.filter(c => !this.monsterNear(c.x, c.y, g.chestRadius));
-      }
-      if (unguarded.length > 0) issues.push('宝箱无守护且无空位');
-    }
-
+    // 收尾再修一次连通（幂等）：反绕过柱线/悬崖可能在上一步重新围出口袋
+    this.ensureReachable();
     return issues;
   }
 
@@ -702,57 +836,15 @@ class RoomFill {
    * 返回该路线用于精确封堵；无门对或已阻断返回 null。
    */
   private bypassRoute(): P[] | null {
-    const inners = this.room.doors
-      .map(d => this.innerOfDoor(d))
-      .filter(p => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 0);
-    if (inners.length < 2) return null;
-
-    let best: [P, P] = [inners[0], inners[1]];
-    let bestD = -1;
-    for (let i = 0; i < inners.length; i++) {
-      for (let j = i + 1; j < inners.length; j++) {
-        const d = Math.abs(inners[i].x - inners[j].x) + Math.abs(inners[i].y - inners[j].y);
-        if (d > bestD) { bestD = d; best = [inners[i], inners[j]]; }
-      }
-    }
+    const pair = this.farthestDoorPair();
+    if (!pair) return null;
 
     const blocked = new Set(
       this.room.entities
         .filter(e => e.kind === 'monster' || e.kind === 'boss' || e.kind === 'pillar')
-        .map(e => `${e.x},${e.y}`),
+        .map(e => ptKey(e)),
     );
-    return this.bfsRoute(best[0], best[1], blocked);
-  }
-
-  /** 避开障碍格的 BFS 路线（不可达返回 null） */
-  private bfsRoute(from: P, to: P, blocked: Set<string>): P[] | null {
-    const key = (x: number, y: number): string => `${x},${y}`;
-    const prev = new Map<string, string | null>([[key(from.x, from.y), null]]);
-    const queue: P[] = [from];
-    while (queue.length > 0) {
-      const cur = queue.shift()!;
-      if (cur.x === to.x && cur.y === to.y) {
-        const out: P[] = [];
-        let k: string | null = key(to.x, to.y);
-        while (k) {
-          const [x, y] = k.split(',').map(Number);
-          out.push({ x, y });
-          k = prev.get(k) ?? null;
-        }
-        return out.reverse();
-      }
-      for (const [dx, dy] of DIRS4) {
-        const nx = cur.x + dx;
-        const ny = cur.y + dy;
-        const k = key(nx, ny);
-        if (!this.inRoom(nx, ny)) continue;
-        if (this.grid[ny]?.[nx] !== 0) continue;
-        if (blocked.has(k) || prev.has(k)) continue;
-        prev.set(k, key(cur.x, cur.y));
-        queue.push({ x: nx, y: ny });
-      }
-    }
-    return null;
+    return this.bfsPath(pair[0], pair[1], blocked);
   }
 
   /** 开放路线上自中点向外第一个可放置格（封堵补怪/立柱用；forbidden 内的格子跳过） */
@@ -762,7 +854,7 @@ class RoomFill {
       for (const i of [mid + off, mid - off]) {
         const p = route[i];
         if (!p || !this.freeAt(p.x, p.y)) continue;
-        if (forbidden?.has(`${p.x},${p.y}`)) continue;
+        if (forbidden?.has(ptKey(p))) continue;
         return p;
       }
     }
@@ -867,7 +959,7 @@ class RoomFill {
    * 超上限则把主路径上的一只普通怪升级为精英（保留位置与掉落规则）。
    */
   private ensureEliteOnPath(path: P[], pool: PoolEntry[], densityCap: number): void {
-    const onPath = new Set(path.map(p => `${p.x},${p.y}`));
+    const onPath = new Set(path.map(p => ptKey(p)));
     const onPathElite = this.room.entities.some(e =>
       (e.kind === 'monster' || e.kind === 'boss') && e.isElite && onPath.has(`${e.x},${e.y}`));
     if (onPathElite) return;
@@ -902,7 +994,7 @@ class RoomFill {
   private ensureReachable(): void {
     // 门内侧格必须是地板：任何阻挡装饰落在门内侧都会封死房门（撤除）
     for (const d of this.room.doors) {
-      const p = this.innerOfDoor(d);
+      const p = doorInner(d);
       if (!this.inRoom(p.x, p.y) || this.grid[p.y]?.[p.x] === 0) continue;
       const blocker = this.room.entities.find(e =>
         (e.kind === 'pillar' || e.kind === 'cauldron' || e.kind === 'shelf')
@@ -921,7 +1013,7 @@ class RoomFill {
     }
     if (floorCells.length === 0) return;
     const firstInner = this.room.doors
-      .map(d => this.innerOfDoor(d))
+      .map(d => doorInner(d))
       .find(p => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 0);
     const source = firstInner ?? floorCells[Math.floor(floorCells.length / 2)];
 
@@ -946,10 +1038,19 @@ class RoomFill {
       // 撤除口袋边界任意一个阻挡装饰（柱子/大锅/药架），下一轮重算
       const blocker = this.room.entities.find(e =>
         (e.kind === 'pillar' || e.kind === 'cauldron' || e.kind === 'shelf')
-        && pockets.some(c => Math.abs(e.x - c.x) + Math.abs(e.y - c.y) === 1));
-      if (!blocker) return; // 口袋由不可撤除地形封死（理论上不会发生）
-      this.room.entities = this.room.entities.filter(en => en !== blocker);
-      this.grid[blocker.y][blocker.x] = 0;
+        && pockets.some(c => manhattan(e, c) === 1));
+      if (blocker) {
+        this.room.entities = this.room.entities.filter(en => en !== blocker);
+        this.grid[blocker.y][blocker.x] = 0;
+        continue;
+      }
+      // 无装饰可撤：口袋被悬崖（编码 4）与墙围死（悬崖先于内容填充生成，
+      // 反绕过柱线落到旁边就可能合围）→ 回填贴口袋的悬崖为地板，彻底消灭死格。
+      const cliff = pockets
+        .flatMap(c => DIRS4.map(([dx, dy]) => ({ x: c.x + dx, y: c.y + dy })))
+        .find(p => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 4);
+      if (!cliff) return; // 由墙圈封死（理论上不会发生）
+      this.grid[cliff.y][cliff.x] = 0;
     }
   }
 
@@ -974,6 +1075,7 @@ export class ContentFiller {
     const avail = all.filter(m => floorId >= m.floorMin && floorId <= m.floorMax);
     const pool: PoolEntry[] = (avail.length > 0 ? avail : all).map(m => ({ id: m.id, weight: m.weight }));
 
+    this.assignFloorRisk(rooms, floorId); // 风险-收益分层（含层内差异保底）：先定风险，内容再按风险强化
     for (const room of rooms) {
       const rf = new RoomFill(room, grid, floorId);
 
@@ -1025,10 +1127,21 @@ export class ContentFiller {
           } else if (kind === 'boss') {
             rf.put({ kind: 'chest', chestTier: 'grand', x: room.x + 1, y: room.y + 1 });
             rf.put({ kind: 'chest', chestTier: 'grand', x: room.x + room.width - 2, y: room.y + room.height - 2 });
+            // 区段最后一个 Boss 层（下一层即新区段起点）：终点房**必定**再给一个「遗物宝箱」
+            if (isTierStartFloor(floorId + 1)) {
+              const spot = this.relicChestSpot(rf, room);
+              if (spot) rf.put({ kind: 'chest', chestTier: 'relic', x: spot.x, y: spot.y });
+            }
           } else {
-            // 守卫型：楼梯前 0-1 只守门怪
+            // 守卫型：先给宝箱配守卫并预留 1 个密度余量给楼梯守卫，再放楼梯守卫——
+            // 否则楼梯守卫会先吃掉余量，宝箱永远无守护（终点房密度上限仅 3）。
+            const cap = this.densityCap(room);
+            const chests = rf.placeCornerChests(rng.randInt(c.exitRoom.chests[0], c.exitRoom.chests[1]));
+            for (const ch of chests) {
+              if (rf.monsterCount() >= cap - 1) break;
+              rf.placeGuardCovering([ch], pool, c.guard.chestRadius);
+            }
             rf.guardStair(rng.randInt(c.exitRoom.guards[0], c.exitRoom.guards[1]), pool);
-            rf.placeCornerChests(rng.randInt(c.exitRoom.chests[0], c.exitRoom.chests[1]));
           }
           rf.placePotions(rng.randInt(c.exitRoom.potions[0], c.exitRoom.potions[1]));
           break;
@@ -1068,7 +1181,11 @@ export class ContentFiller {
         case 'chest': {
           // 围宝型：宝箱放角落，守卫用覆盖式放置（同墙两箱的墙中点一格双守，P1-4），
           // 数量受密度上限约束
-          const chests = rf.placeCornerChests(rng.randInt(c.treasureRoom.chests[0], c.treasureRoom.chests[1]), true);
+          // 风险收益：最高风险宝箱房在**配置上限内**多 1 座宝箱（不突破 chestRoomMax），且可能开出「大宝箱」
+          const baseChests = rng.randInt(c.treasureRoom.chests[0], c.treasureRoom.chests[1]);
+          const bonusChest = rf.risk() >= 3 && baseChests < c.treasureRoom.chests[1] ? 1 : 0;
+          const chests = rf.placeCornerChests(baseChests + bonusChest, true);
+          rf.rollVault(chests);
           const cap = this.densityCap(room);
           let guards = Math.min(rng.randInt(c.treasureRoom.monsters[0], c.treasureRoom.monsters[1]), cap - rf.monsterCount());
           let unguarded = chests.filter(ch => !rf.monsterNear(ch.x, ch.y, 2));
@@ -1085,8 +1202,8 @@ export class ContentFiller {
           // 布局随机（大房解锁更多排列）：挡路 / 双重屏障 / 竞技场立柱 / 游散
           const band = rf.bandFor(c.combatByDepth);
           const cap = this.densityCap(room);
-          // 预留 1 个密度余量给「不可绕过」校验补怪（P0-5）
-          const want = Math.max(1, Math.min(rng.randInt(band.monsters[0], band.monsters[1]), cap - 1));
+          // 预留密度余量：1 给「不可绕过」校验补怪（P0-5），1 给「宝箱守卫」（P1-4）
+          const want = Math.max(1, Math.min(rng.randInt(band.monsters[0], band.monsters[1]), cap - 2));
           const bigW = room.width - 2 >= 8;
           const bigH = room.height - 2 >= 7;
           const layouts: { id: string; weight: number }[] = [
@@ -1113,9 +1230,11 @@ export class ContentFiller {
             placed = rf.placeMonsters(want, false, pool);
           }
           if (placed === 0) rf.placeMonsters(want, false, pool); // 布局架设失败兜底
-          const elites = Math.min(rng.randInt(band.elites[0], band.elites[1]), Math.max(0, cap - rf.monsterCount()));
+          // 精英同样受密度约束，并给宝箱守卫留 1 个余量
+          const elites = Math.min(rng.randInt(band.elites[0], band.elites[1]), Math.max(0, cap - rf.monsterCount() - 1));
           if (elites > 0) rf.placeMonsters(elites, true, pool);
-          rf.placeCornerChests(rng.randInt(band.chests[0], band.chests[1]));
+          const chests = rf.placeCornerChests(rng.randInt(band.chests[0], band.chests[1]));
+          rf.rollVault(chests); // 高风险房概率升级出「大宝箱」
           rf.placePotions(rng.randInt(band.potions[0], band.potions[1]));
           break;
         }
@@ -1149,8 +1268,14 @@ export class ContentFiller {
             // barrier 布局（含 throne/arena 因无怪池等原因落入此处的兜底）
             if (rf.blockPath(1, pool, true) === 0) rf.placeMonsters(1, true, pool);
           }
-          // 护卫杂兵：王座型分立在精英两侧，其余布局随机散布
-          const adds = rng.randInt(c.eliteRoom.monsters[0], c.eliteRoom.monsters[1]);
+          // 护宝预算（风险强化守军后尤其必要）：先定宝箱数量，为「宝箱守卫」预留密度余量——
+          // 否则守军会把密度上限吃满，宝箱必然无人看守（validate 报「宝箱无守护」）。
+          const eliteCap = this.densityCap(room);
+          const chestPlan = rng.randInt(c.eliteRoom.chests[0], c.eliteRoom.chests[1]);
+          const spare = Math.max(0, eliteCap - rf.monsterCount());
+          const addRoom = Math.max(0, spare - Math.min(chestPlan, spare));
+          // 护卫杂兵：王座型分立在精英两侧，其余布局随机散布；风险越高越多（受护宝预算约束）
+          const adds = Math.min(rng.randInt(c.eliteRoom.monsters[0], c.eliteRoom.monsters[1]), addRoom);
           if (layout === 'throne') {
             const mid = rf.pickMonsterId(pool);
             let n = 0;
@@ -1165,8 +1290,8 @@ export class ContentFiller {
           } else {
             rf.placeMonsters(adds, false, pool);
           }
-          const chests = rf.placeCornerChests(rng.randInt(c.eliteRoom.chests[0], c.eliteRoom.chests[1]), true);
-          const eliteCap = this.densityCap(room);
+          const chests = rf.placeCornerChests(chestPlan, true);
+          rf.rollVault(chests);
           for (const ch of chests) {
             if (rf.monsterCount() >= eliteCap) break; // 守护怪不突破密度上限
             rf.guardAround(ch.x, ch.y, 1, pool, false, 1);
@@ -1178,6 +1303,7 @@ export class ContentFiller {
         case 'boss': {
           // P1-2 Boss 房结构变体：按楼层解锁 标准型 / 竞技场型(15层起) / 关卡型(20层起)，
           // 实体全部复用现有怪物/柱子/宝箱类型；Boss 铁门与终点奖励房逻辑不变
+          const bossId = this.bossIdForFloor(floorId);
           const variants: string[] = ['standard'];
           if (floorId >= 15) variants.push('arena');
           if (floorId >= 20) variants.push('gauntlet');
@@ -1192,7 +1318,7 @@ export class ContentFiller {
               variant = 'standard'; // 立柱圈架设失败，回退标准型
             } else {
               rf.put({ kind: 'carpet', x: cx, y: cy });
-              rf.bossAt('ancient_dragon', { x: cx, y: cy });
+              rf.bossAt(bossId, { x: cx, y: cy });
               const mid = rf.pickMonsterId(pool);
               if (mid) {
                 const flanks: { x: number; y: number }[][] = [
@@ -1222,14 +1348,14 @@ export class ContentFiller {
               rf.placeMonsterAt(mid, false, path[2] ?? { x: cx, y: cy });
             }
             rf.put({ kind: 'carpet', x: seat.x, y: seat.y });
-            rf.bossAt('ancient_dragon', seat);
+            rf.bossAt(bossId, seat);
             variant = 'gauntlet_done';
           }
 
           if (variant === 'standard') {
             // 标准型：中心 Boss + 0~2 只精英护卫 + 角落宝箱
             rf.put({ kind: 'carpet', x: cx, y: cy });
-            rf.bossAt('ancient_dragon', { x: cx, y: cy });
+            rf.bossAt(bossId, { x: cx, y: cy });
             rf.guardAround(cx, cy, rng.randInt(c.bossRoom.elites[0], c.bossRoom.elites[1]), pool, true, 2);
           }
           room.layout = `boss_${variant === 'gauntlet_done' ? 'gauntlet' : variant}`;
@@ -1241,6 +1367,7 @@ export class ContentFiller {
 
       rf.placeRoomTorches();
       if (room.type !== 'witch') rf.placePillars(); // 女巫房用大锅/药架立身份，不立柱子
+      rf.furnish(); // 陈设填充（反「大而空」）：配光保底 + 长墙列柱 + 入口引导地毯
 
       // 文档六 6.2 + P0-5：逐房间验证（含不可绕过/精英主路径/连通修复），失败项就地修复并记录日志
       if (!(room.type === 'end' && (kind === 'initial' || kind === 'boss'))) {
@@ -1273,6 +1400,76 @@ export class ContentFiller {
     }
   }
 
+  /**
+   * 按楼层挑 Boss（每个层级有自己的 Boss）：
+   * 命中 floorMin~floorMax 区间者优先；未命中则回落列表首个（远古巨龙，覆盖塔顶与外推楼层）。
+   */
+  private bossIdForFloor(floorId: number): string {
+    const bosses = dataManager.monsters.monsters.filter(m => m.category === 'boss');
+    const hit = bosses.find(b => floorId >= b.floorMin && floorId <= b.floorMax);
+    return hit?.id ?? bosses[0]?.id ?? 'ancient_dragon';
+  }
+
+  /**
+   * 遗物宝箱落点：优先对角空位，其次房间中心；仍被占用则扫全房取第一个空位。
+   * 「必定生成」是设计约束，因此最后一步一定兜底（房间内几乎总有空格）。
+   */
+  private relicChestSpot(rf: RoomFill, room: RoomData): { x: number; y: number } | null {
+    const preferred = [
+      { x: room.x + room.width - 2, y: room.y + 1 },
+      { x: room.x + 1, y: room.y + room.height - 2 },
+      { x: room.centerX, y: room.centerY },
+    ];
+    for (const p of preferred) if (rf.freeAt(p.x, p.y)) return p;
+    for (let y = room.y + 1; y <= room.y + room.height - 2; y++) {
+      for (let x = room.x + 1; x <= room.x + room.width - 2; x++) {
+        if (rf.freeAt(x, y)) return { x, y };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 房间「风险-收益」分层（引导玩家权衡路线）：按累积分值定档 ——
+   *   支线绕路 +sideBonus（最重）／精英·Boss 房 +eliteBonus／大房（内面积 ≥ areaBonusAt）+1／深入（深度 ≥ depthBonusAt）+1／高层 +1；
+   *   分值 ≥3 → 风险 3；1~2 → 风险 2；0 → 风险 1。
+   * 风险 → 宝箱收益更高（rewardMul）、更易出「大宝箱」（vaultChance）、遗物掉率更高（relicMul，开箱时结算）。
+   * 注意：**刻意不按风险增加怪物数量**——怪物数量直接决定经验收入，一旦膨胀就会冲垮整体成长曲线
+   * （equipTest 会因此失败）。风险房「更危险」由房型（精英/Boss）、大房、深度本身承担。
+   * 只有战斗/精英/宝箱/Boss 房参与：安全房（商栈/女巫/休整/铁匠）不设风险，避免误导路线判断。
+   */
+  private riskScore(room: RoomData, floorId: number): 1 | 2 | 3 {
+    const r = dataManager.mapGen.content.risk;
+    const innerArea = (room.width - 2) * (room.height - 2);
+    let score = 0;
+    if (room.mountedOn) score += r.sideBonus;                                  // 支线：绕路 → 最险
+    if (room.type === 'elite' || room.type === 'boss') score += r.eliteBonus;  // 房型本身更凶险
+    if (innerArea >= r.areaBonusAt) score += 1;                                // 大房：守军铺得开
+    if (room.depth >= r.depthBonusAt) score += 1;                              // 深入：离起点越远越险
+    if (r.floorBonusEvery > 0 && floorId >= r.floorBonusEvery) score += 1;      // 高层：整体更险
+    return score >= 3 ? 3 : score >= 1 ? 2 : 1;
+  }
+
+  /**
+   * 楼层级风险分配 + **层内差异保底**：
+   *   ① 逐房间按 `riskScore` 定档；
+   *   ② 同层风险房 ≥2 且档位全同时，提最深一间（或全 3 时降最浅一间）——
+   *      否则玩家在一层里根本无从权衡「安全低收益 vs 危险高收益」。
+   * 保底规则本身也是可学习的：**越往深处越危险**。
+   */
+  private assignFloorRisk(rooms: RoomData[], floorId: number): void {
+    const riskRooms = rooms.filter(r => RISK_ROOM_TYPES.has(r.type));
+    for (const room of riskRooms) room.risk = this.riskScore(room, floorId);
+    if (riskRooms.length >= 2 && new Set(riskRooms.map(r => r.risk)).size === 1) {
+      const sorted = [...riskRooms].sort((a, b) => a.depth - b.depth);
+      const base = sorted[0].risk ?? 1;
+      if (base === 3) sorted[0].risk = 2;                              // 全 3 → 最浅一间降档，给出稳妥路线
+      else sorted[sorted.length - 1].risk = (base + 1) as 1 | 2 | 3;   // 否则提最深一间
+    }
+    const mul = dataManager.mapGen.content.risk.rewardMul;
+    for (const room of riskRooms) room.rewardMul = mul[(room.risk ?? 1) - 1] ?? 1;
+  }
+
   /** 怪物密度上限（按房间内面积） */
   private densityCap(room: RoomData): number {
     const c = dataManager.mapGen.content;
@@ -1302,7 +1499,7 @@ export class ContentFiller {
       { x: room.x + 1, y: room.y + room.height - 2 },
       { x: room.x + room.width - 2, y: room.y + room.height - 2 },
     ].sort((a, b) => (ent
-      ? (Math.abs(b.x - ent.x) + Math.abs(b.y - ent.y)) - (Math.abs(a.x - ent.x) + Math.abs(a.y - ent.y))
+      ? manhattan(b, ent) - manhattan(a, ent)
       : 0));
     const corner = corners.find(p => rf.freeAt(p.x, p.y)) ?? corners[0];
     rf.put({ kind: 'chest', chestTier: 'grand', x: corner.x, y: corner.y });

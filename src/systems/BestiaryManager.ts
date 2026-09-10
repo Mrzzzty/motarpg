@@ -3,6 +3,7 @@
  */
 import { dataManager } from '../core/DataManager';
 import { eventBus } from '../core/EventBus';
+import { gameState } from '../core/GameState';
 
 export class BestiaryManager {
   private static instance: BestiaryManager;
@@ -29,7 +30,10 @@ export class BestiaryManager {
 
   getKillCount(monsterId: string): number { return this.kills.get(monsterId) ?? 0; }
 
-  isUnlocked(monsterId: string): boolean { return this.getKillCount(monsterId) > 0; }
+  /** 是否已解锁（调试点亮开启时全部视作已解锁） */
+  isUnlocked(monsterId: string): boolean {
+    return gameState.debugUnlockAll || this.getKillCount(monsterId) > 0;
+  }
 
   /** 图鉴条目：全部怪物（未解锁显示???） */
   entries(): { def: typeof dataManager.monsters.monsters[number]; kills: number; unlocked: boolean }[] {

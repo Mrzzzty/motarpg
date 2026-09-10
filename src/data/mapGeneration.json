@@ -134,9 +134,9 @@
     "mediumAreaMax": 42,
     "largeAreaMax": 56,
     "density": {
-      "small": 2,
-      "medium": 3,
-      "large": 4,
+      "small": 3,
+      "medium": 4,
+      "large": 5,
       "xlarge": 5
     },
     "chestRoomMin": 2,
@@ -338,6 +338,26 @@
         3,
         3
       ]
+    },
+    "furnish": {
+      "torchPerArea": 12,
+      "torchMax": 8,
+      "colonnadeMinInnerW": 5,
+      "colonnadeMinInnerH": 4,
+      "colonnadeSpacing": 3,
+      "colonnadeMax": 8,
+      "guideCarpet": true
+    },
+    "risk": {
+      "sideBonus": 2,
+      "eliteBonus": 1,
+      "areaBonusAt": 70,
+      "depthBonusAt": 3,
+      "floorBonusEvery": 60,
+      "max": 3,
+      "rewardMul": [1, 1.35, 1.8],
+      "vaultChance": [0, 0.25, 0.6],
+      "relicMul": [1, 1.6, 2.4]
     }
   },
   "decor": {
@@ -347,6 +367,13 @@
       "chest",
       "boss"
     ]
+  },
+  "cliff": {
+    "minFloor": 4,
+    "chance": 0.3,
+    "minInnerArea": 20,
+    "patchMin": 1,
+    "patchMax": 3
   },
   "generation": {
     "maxAttempts": 40

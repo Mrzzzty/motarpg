@@ -16,6 +16,7 @@ import { eventBus } from '../core/EventBus';
 import { rng } from '../utils/MathUtils';
 import { EquipmentGenerator } from './EquipmentGenerator';
 import { ChestSystem } from './ChestSystem';
+import { RelicManager } from './RelicManager';
 
 /** 微操回合的玩家行动 */
 export type BattleAction = { type: 'attack' } | { type: 'potion' } | { type: 'flee' };
@@ -33,12 +34,18 @@ export class BattleSession {
   private turnCount = 0;
   private dmgTaken = 0;
   private potionUsedName: string | null = null;
+  /** 本场战斗剩余的「用药资格」：一次资格 = 一次补满生命的机会（默认 1，赫尔墨斯双蛇杖可提升） */
+  private potionUsesLeft: number;
   private outcome: BattleResult | null = null;
 
   constructor(entity: MapEntity, mon: MonsterStats) {
     this.entity = entity;
     this.mon = mon;
     this.monHp = mon.hp;
+    this.potionUsesLeft = Math.max(
+      dataManager.config.battle.potionUsesPerBattle,
+      RelicManager.getInstance().value('potionPerBattle'),
+    );
     this.line(`遭遇 ${mon.name}！`, 'system');
   }
 
@@ -47,6 +54,11 @@ export class BattleSession {
   get turns(): number { return this.turnCount; }
   get finished(): boolean { return this.outcome !== null; }
   get result(): BattleResult | null { return this.outcome; }
+
+  /** 本场剩余用药资格（UI 展示 / 按钮禁用判定） */
+  get potionUses(): number { return this.potionUsesLeft; }
+  /** 当前是否还能使用回复药剂（有资格 + 有可用药水） */
+  get potionAvailable(): boolean { return this.potionUsesLeft > 0 && !!this.bestPotion(); }
 
   /** 自上次调用以来的新增日志行（面板增量渲染用） */
   drainNewLines(): BattleLogLine[] {
@@ -77,10 +89,9 @@ export class BattleSession {
       this.playerAttack();
       if (this.monHp <= 0) break;
       this.monsterTurn();
-      // 自动喝药（生命<30%时）
-      if (player.state.hp > 0 && player.state.hp < player.maxHp * 0.3) {
-        const tier = player.bestPotionFor(player.maxHp - player.state.hp);
-        if (tier) this.drinkPotion(tier, true);
+      // 自动喝药（生命<30%时）：消耗一次用药资格，一次补满
+      if (player.state.hp > 0 && player.state.hp < player.maxHp * 0.3 && this.potionUsesLeft > 0) {
+        this.usePotionQualification(true);
       }
     }
     this.settle(this.turnCount >= cfg.maxTurns);
@@ -100,13 +111,18 @@ export class BattleSession {
       return this.drainNewLines();
     }
     if (action.type === 'potion') {
-      const tier = this.bestPotion();
-      if (!tier) {
+      if (this.potionUsesLeft <= 0) {
+        this.line('本场战斗的用药机会已经用完了', 'system');
+        this.turnCount--; // 无效行动不消耗回合
+        return this.drainNewLines();
+      }
+      if (!this.bestPotion()) {
         this.line('没有可用的药水', 'system');
         this.turnCount--; // 无效行动不消耗回合
         return this.drainNewLines();
       }
-      this.drinkPotion(tier, false);
+      const used = this.usePotionQualification(false);
+      this.line(`用掉一次用药机会，共饮下 ${used} 瓶，生命已补满`, 'system');
     } else {
       this.playerAttack();
     }
@@ -127,23 +143,42 @@ export class BattleSession {
     this.log.push({ turn: this.turnCount, text, kind });
   }
 
-  /** 玩家攻击回合（暴击/业火/屠龙/嗜血，公式与原实现一致） */
+  /** 玩家攻击回合（暴击/业火/屠龙/嗜血 + 遗物：暴击伤害/破防/精英增伤/追击/首击） */
   private playerAttack(): void {
     const player = Player.getInstance();
     const cfg = dataManager.config.battle;
     const stats = player.stats();
-    let dealt = 0;
-    if (rng.chance(stats.critRate / 100)) {
-      const base = Math.max(cfg.minDamage, Math.round((stats.attack - this.mon.defense) * (1 + (Math.random() * 2 - 1) * cfg.damageJitter)));
-      dealt = Math.round(base * cfg.critMultiplier) + stats.fireDamage;
-      this.line(`暴击！对${this.mon.name}造成 ${dealt} 点伤害`, 'player');
-    } else {
-      const base = Math.max(cfg.minDamage, Math.round((stats.attack - this.mon.defense) * (1 + (Math.random() * 2 - 1) * cfg.damageJitter)));
-      dealt = base + stats.fireDamage;
-      this.line(`对${this.mon.name}造成 ${dealt} 点伤害${stats.fireDamage > 0 ? `（业火+${stats.fireDamage}）` : ''}`, 'player');
+    const rm = RelicManager.getInstance();
+    const monDef = Math.max(0, this.mon.defense * (1 - stats.armorPen / 100));
+    const jitter = 1 + (Math.random() * 2 - 1) * cfg.damageJitter;
+    const crit = rng.chance(stats.critRate / 100);
+    const base = Math.max(cfg.minDamage, Math.round((stats.attack - monDef) * jitter));
+    let dealt = crit ? Math.round(base * (cfg.critMultiplier + stats.critDamage / 100)) : base;
+
+    // 每层首击加成（先攻之刃 ×2 / 疾影之靴 ×1.5）
+    const first = rm.consumeFirstStrike(player.state.currentFloor);
+    let firstMul = 1;
+    if (first) {
+      if (rm.value('firstStrikeDouble') >= 2) firstMul *= 2;
+      const boost = rm.value('firstStrikeBoost');
+      if (boost > 1) firstMul *= boost;
     }
+    if (firstMul !== 1) dealt = Math.round(dealt * firstMul);
+
+    dealt += stats.fireDamage;
     if (this.mon.isBoss) dealt = Math.round(dealt * (1 + stats.bossDamage / 100));
+    if (this.mon.isElite || this.mon.isBoss) dealt = Math.round(dealt * (1 + stats.eliteBossDamage / 100));
+
+    // 连击徽章：概率追击（50% 伤害）
+    if (rm.value('followUp') > 0 && rng.chance(rm.value('followUp') / 100)) {
+      const extra = Math.round(dealt * 0.5);
+      dealt += extra;
+      this.line(`连击徽章：追加 ${extra} 点伤害`, 'player');
+    }
+
     this.monHp -= dealt;
+    const tag = `${firstMul !== 1 ? '首击·' : ''}${crit ? '暴击！' : ''}`;
+    this.line(`${tag}对${this.mon.name}造成 ${dealt} 点伤害${stats.fireDamage > 0 ? `（业火+${stats.fireDamage}）` : ''}`, 'player');
     if (stats.lifesteal > 0 && player.state.hp < player.maxHp) {
       const heal = Math.round(dealt * stats.lifesteal / 100);
       if (heal > 0) {
@@ -153,18 +188,26 @@ export class BattleSession {
     }
   }
 
-  /** 怪物攻击回合（闪避判定） */
+  /** 怪物攻击回合（闪避判定 + 遗物：怪物攻击/减伤/增伤/荆棘反伤） */
   private monsterTurn(): void {
     const player = Player.getInstance();
     const cfg = dataManager.config.battle;
     const stats = player.stats();
     if (rng.chance(stats.dodgeRate / 100)) {
       this.line(`闪避了${this.mon.name}的攻击`, 'player');
-    } else {
-      const raw = Math.max(cfg.minDamage, Math.round((this.mon.attack - stats.defense) * (1 + (Math.random() * 2 - 1) * cfg.damageJitter)));
-      player.damage(raw);
-      this.dmgTaken += raw;
-      this.line(`${this.mon.name}对你造成 ${raw} 点伤害`, 'monster');
+      return;
+    }
+    const monAtk = this.mon.attack * (1 + stats.monsterAttackUp / 100);
+    let raw = Math.max(cfg.minDamage, Math.round((monAtk - stats.defense) * (1 + (Math.random() * 2 - 1) * cfg.damageJitter)));
+    raw = Math.max(cfg.minDamage, Math.round(raw * (1 - stats.damageReduction / 100) * (1 + stats.damageTaken / 100)));
+    player.damage(raw);
+    this.dmgTaken += raw;
+    this.line(`${this.mon.name}对你造成 ${raw} 点伤害`, 'monster');
+    // 荆棘反伤
+    if (stats.thorns > 0 && this.monHp > 0) {
+      const reflect = Math.max(1, Math.round(raw * stats.thorns / 100));
+      this.monHp -= reflect;
+      this.line(`荆棘之甲反弹 ${reflect} 点伤害`, 'player');
     }
   }
 
@@ -175,6 +218,26 @@ export class BattleSession {
     player.usePotion(tier);
     this.potionUsedName = potionDef.name;
     this.line(`${auto ? '自动' : ''}饮下${potionDef.name}`, 'system');
+  }
+
+  /**
+   * 用掉一次「用药资格」：连续饮用回复药剂，直至生命补满或药水耗尽。
+   * 一次资格 = 一次补满生命的机会（同次机会内不限瓶数）；资格耗尽后本场战斗不能再用药。
+   */
+  private usePotionQualification(auto: boolean): number {
+    const player = Player.getInstance();
+    if (this.potionUsesLeft <= 0) return 0;
+    let used = 0;
+    while (player.state.hp > 0 && player.state.hp < player.maxHp) {
+      const tier = this.bestPotion();
+      if (!tier) break;
+      const before = player.state.hp;
+      this.drinkPotion(tier, auto);
+      used++;
+      if (player.state.hp <= before) break; // 兜底：药水无效则停止，避免死循环
+    }
+    if (used > 0) this.potionUsesLeft--;
+    return used;
   }
 
   // ============ 结算（托管/微操同源） ============
@@ -220,9 +283,20 @@ export class BattleSession {
           this.line(`掉落了 ${dataManager.getPotion(tier)?.name}`, 'reward');
         }
       }
+      // 遗物掉落：Boss 必掉、精英低概率（relics.json 概率表）
+      if (this.mon.isBoss) {
+        const relic = RelicManager.getInstance().rollDrop('boss');
+        if (relic) this.line(`掉落了遗物【${relic.name}】`, 'reward');
+      } else if (this.mon.isElite) {
+        const relic = RelicManager.getInstance().rollDrop('elite');
+        if (relic) this.line(`掉落了遗物【${relic.name}】`, 'reward');
+      }
       if (this.potionUsedName) this.line(`战斗中消耗了${this.potionUsedName}`, 'system');
+      // 遗物击杀钩子（吸血獠牙 / 拾荒者 / 窃命之契）
+      for (const l of RelicManager.getInstance().onKill()) this.line(l, 'reward');
       eventBus.emit('monsterDefeated', {
-        entityId: this.entity.id, name: this.mon.name, isElite: this.mon.isElite, isBoss: this.mon.isBoss,
+        entityId: this.entity.id, name: this.mon.name, monsterId: this.entity.monsterId,
+        isElite: this.mon.isElite, isBoss: this.mon.isBoss,
       });
       if (this.mon.isBoss) eventBus.emit('bossDefeated', { floor: floorId, name: this.mon.name });
     } else if (player.state.hp <= 0) {

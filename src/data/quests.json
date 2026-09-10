@@ -47,6 +47,30 @@
       ],
       "prerequisites": ["quest_first_blood"],
       "guidance": "找到房间角落的发光楼梯。"
+    },
+    {
+      "id": "quest_use_potion",
+      "name": "药到病除",
+      "description": "使用一次药水，学会快速回复。",
+      "objectives": [{ "type": "use_potion", "quantity": 1 }],
+      "rewards": [{ "type": "gold", "value": 20 }],
+      "prerequisites": ["quest_talk_guide"],
+      "guidance": "按 B 打开背包 → 药水页点击「使用」；或把药水拖到底部快捷栏后按数字键 1-5。"
+    },
+    {
+      "id": "quest_deeper",
+      "name": "深入塔中",
+      "description": "击败 2 名敌人并到达第 3 层。",
+      "objectives": [
+        { "type": "defeat_monster", "quantity": 2 },
+        { "type": "reach_floor", "value": 3, "quantity": 1 }
+      ],
+      "rewards": [
+        { "type": "gold", "value": 80 },
+        { "type": "potion", "tier": "normal", "value": 1 }
+      ],
+      "prerequisites": ["quest_descend"],
+      "guidance": "继续清剿怪物，并沿楼梯抵达第 3 层。"
     }
   ]
 }

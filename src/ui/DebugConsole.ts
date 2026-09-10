@@ -5,11 +5,14 @@
  * 3. 点击传送开关：开启后点击地板 = 瞬移到该格（无视寻路）。
  */
 import { eventBus } from '../core/EventBus';
+import { gameState } from '../core/GameState';
 import { FloorManager } from '../core/FloorManager';
+import { ThreeRenderer } from '../effects/ThreeRenderer';
 import { CameraController } from '../core/CameraController';
 import { GameController } from '../core/GameController';
 import { Player } from '../entities/Player';
 import { MAX_FLOOR } from '../data/tiers';
+import { RoomEditor } from './RoomEditor';
 import type { Equipment } from '../types';
 import { IdGenerator } from '../utils/IdGenerator';
 
@@ -47,6 +50,9 @@ export class DebugConsole {
   private el: HTMLElement | null = null;
   private floorInput: HTMLInputElement | null = null;
   private teleportCheck: HTMLInputElement | null = null;
+  private unlockAllCheck: HTMLInputElement | null = null;
+  private perfEl: HTMLElement | null = null;
+  private perfTimer: number | null = null;
 
   private constructor() {}
 
@@ -65,14 +71,24 @@ export class DebugConsole {
       <div class="dc-row">
         <button id="dc-equip">⚔️ 调试装备 ×999999</button>
       </div>
+      <div class="dc-row">
+        <button id="dc-editor">🏗 房间编辑器（F2）</button>
+      </div>
       <label class="dc-row">
         <input type="checkbox" id="dc-teleport" />
         <span>点击传送（无视寻路）</span>
-      </label>`;
+      </label>
+      <label class="dc-row">
+        <input type="checkbox" id="dc-unlockall" ${gameState.debugUnlockAll ? 'checked' : ''} />
+        <span>点亮所有图鉴（遗物图鉴可点击获取）</span>
+      </label>
+      <div class="dc-perf dim" id="dc-perf">性能：—</div>`;
     host.appendChild(el);
     this.el = el;
     this.floorInput = el.querySelector('#dc-floor');
     this.teleportCheck = el.querySelector('#dc-teleport');
+    this.unlockAllCheck = el.querySelector('#dc-unlockall');
+    this.perfEl = el.querySelector('#dc-perf');
 
     el.querySelector('#dc-goto')!.addEventListener('click', () => this.gotoFloor());
     this.floorInput!.addEventListener('keydown', e => {
@@ -80,11 +96,24 @@ export class DebugConsole {
       e.stopPropagation(); // 输入框内按键不触发游戏快捷键
     });
     el.querySelector('#dc-equip')!.addEventListener('click', () => this.giveDebugGear());
+    el.querySelector('#dc-editor')!.addEventListener('click', () => {
+      RoomEditor.getInstance().toggle();
+    });
     this.teleportCheck!.addEventListener('change', () => {
       GameController.getInstance().teleportMode = this.teleportCheck!.checked;
       eventBus.emit('notification', {
         message: this.teleportCheck!.checked ? '点击传送：已开启（点击地板即瞬移）' : '点击传送：已关闭',
         type: 'info', icon: '🧪',
+      });
+    });
+    this.unlockAllCheck!.addEventListener('change', () => {
+      gameState.debugUnlockAll = this.unlockAllCheck!.checked;
+      eventBus.emit('debugFlagsChanged', {});
+      eventBus.emit('notification', {
+        message: gameState.debugUnlockAll
+          ? '图鉴：已全部点亮（遗物图鉴可点击直接获取）'
+          : '图鉴：已恢复为正常进度',
+        type: 'info', icon: '📖',
       });
     });
 
@@ -97,7 +126,30 @@ export class DebugConsole {
   }
 
   toggle(): void {
-    this.el?.classList.toggle('hidden');
+    const hidden = this.el?.classList.toggle('hidden');
+    if (hidden) this.stopPerf();
+    else this.startPerf();
+  }
+
+  /** 面板打开时轮询渲染统计（关闭即停 → 平时零开销） */
+  private startPerf(): void {
+    if (this.perfTimer !== null) return;
+    const update = (): void => {
+      if (!this.perfEl) return;
+      const s = ThreeRenderer.getInstance().stats();
+      this.perfEl.textContent =
+        `性能：${(1000 / Math.max(1, s.frameMs)).toFixed(0)} FPS（${s.frameMs.toFixed(1)} ms）`
+        + ` · draw ${s.calls} · 三角 ${(s.triangles / 1000).toFixed(0)}k`
+        + ` · program ${s.programs} · 几何 ${s.geometries} · 纹理 ${s.textures}`;
+    };
+    update();
+    this.perfTimer = window.setInterval(update, 500);
+  }
+
+  private stopPerf(): void {
+    if (this.perfTimer === null) return;
+    window.clearInterval(this.perfTimer);
+    this.perfTimer = null;
   }
 
   /** 直接跳层（1..110 封顶内取整） */

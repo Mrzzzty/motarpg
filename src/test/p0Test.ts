@@ -7,6 +7,7 @@ import { dataManager } from '../core/DataManager';
 import { MapGenerator } from '../map/MapGenerator';
 import { StatCalculator } from '../utils/StatCalculator';
 import { EquipmentGenerator } from '../systems/EquipmentGenerator';
+import { DIRS4 } from '../utils/Grid';
 import type { RoomData } from '../types';
 
 let failed = 0;
@@ -137,11 +138,15 @@ for (const f of [7, 20, 45]) {
       if (mons.length === 0) continue;
       floorsChecked++;
       for (const attr of ['hp', 'attack', 'defense'] as const) {
+        // 「普通极差」只在**确实存在普通怪**时校验：Boss 层可能一房普通怪都没有（只有精英护卫），
+        // 而精英按「自身基准 ×1.5」软封顶（见 convergeFloorStats 第 2 步）——本就允许 >1.4 的差异，
+        // 此时用普通怪的阈值去卡精英会出现假失败（下方 精英≤基准1.5倍 已单独校验）。
         const normals = mons.filter(m => !m.isElite);
-        const pool = normals.length > 0 ? normals : mons;
-        const nMin = Math.min(...pool.map(m => m.stats[attr]));
-        const nMax = Math.max(...pool.map(m => m.stats[attr]));
-        check(`普通极差≤1.4 f${f}`, nMax <= nMin * 1.4 + EPS, `${attr} ${nMin}~${nMax}`);
+        if (normals.length > 0) {
+          const nMin = Math.min(...normals.map(m => m.stats[attr]));
+          const nMax = Math.max(...normals.map(m => m.stats[attr]));
+          check(`普通极差≤1.4 f${f}`, nMax <= nMin * 1.4 + EPS, `${attr} ${nMin}~${nMax}`);
+        }
         const aMin = Math.min(...mons.map(m => m.stats[attr]));
         const aMax = Math.max(...mons.map(m => m.stats[attr]));
         check(`全怪极差≤1.8 f${f}`, aMax <= aMin * 1.8 + EPS, `${attr} ${aMin}~${aMax}`);
@@ -303,7 +308,7 @@ for (const f of [7, 20, 45]) {
           let connected = false;
           while (queue.length > 0 && !connected) {
             const cur = queue.shift()!;
-            for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]] as const) {
+            for (const [dx, dy] of DIRS4) {
               const nx = cur.x + dx, ny = cur.y + dy, k = `${nx},${ny}`;
               if (!inRoom(nx, ny) || connected) continue;
               if (floor.grid[ny][nx] !== 0 || blocked.has(k) || seen.has(k)) continue;

@@ -3,6 +3,8 @@
  * 验证失败自动重试整层（上限 maxAttempts 次）。
  */
 import type { FloorMap, RoomConnection, RoomData, TileCode } from '../types';
+import { rng } from '../utils/MathUtils';
+import { DIRS4, manhattan, doorInner } from '../utils/Grid';
 import { FloorGenerator } from './FloorGenerator';
 import { PathGenerator } from './PathGenerator';
 import { RoomGenerator } from './RoomGenerator';
@@ -89,6 +91,9 @@ export class MapGenerator {
       ? corridorGen.spawnHiddenRooms(rooms, corridorResult.corridors, grid, floorId)
       : [];
 
+    // 5.6 悬崖地形（编码 4）：不可通行深渊；校验通过才落地，内容填充紧随其后自然避开
+    this.carveCliffs(rooms, grid, floorId);
+
     // 6. 内容填充
     filler.fill(rooms, corridorResult.corridors, grid, floorId, alloc.kind, hiddenRooms);
 
@@ -122,6 +127,103 @@ export class MapGenerator {
     }
     lines.push(`入口: (${floor.entryX},${floor.entryY}) 路径数: 见验证器`);
     return lines.join('\n');
+  }
+
+  /**
+   * 悬崖地形（编码 4，规格 2.1.5）：在部分房间内挖出不可通行的不规则深渊。
+   *
+   * 约束：
+   * - 只作用于非关键房（战斗 / 精英 / 宝箱 / 商人 / 女巫 / 铁匠），起点、终点、Boss、休整房不挖；
+   * - 避开「门内侧格及其邻域」，保证进出房间的通道不被切断；
+   * - 每块深渊落地后立刻校验「房间内可行走格仍单连通且各门内侧可达」，不通过则**回滚**——
+   *   深渊绝不允许把房间切成两半或制造无法到达的口袋（内容校验器只能撤柱，救不了悬崖）。
+   */
+  private carveCliffs(rooms: RoomData[], grid: TileCode[][], floorId: number): void {
+    const cfg = dataManager.mapGen.cliff;
+    if (floorId < cfg.minFloor) return;
+    const allowance = new Set(['combat', 'elite', 'chest', 'merchant', 'witch', 'blacksmith']);
+
+    for (const room of rooms) {
+      if (!allowance.has(room.type)) continue;
+      const area = (room.width - 2) * (room.height - 2);
+      if (area < cfg.minInnerArea || !rng.chance(cfg.chance)) continue;
+
+      const doorInners = room.doors.map(d => doorInner(d));
+      const candidates: { x: number; y: number }[] = [];
+      for (let y = room.y + 1; y <= room.y + room.height - 2; y++) {
+        for (let x = room.x + 1; x <= room.x + room.width - 2; x++) {
+          if (grid[y]?.[x] !== 0) continue;
+          // 门内侧格及其邻域：保住进出通道不被切断
+          if (doorInners.some(p => Math.abs(x - p.x) <= 1 && Math.abs(y - p.y) <= 1)) continue;
+          // 房间中心及其邻域：商人 / 铁匠 / 女巫 / 竞技场精英等按中心固定落位，必须留空
+          if (Math.abs(x - room.centerX) <= 1 && Math.abs(y - room.centerY) <= 1) continue;
+          candidates.push({ x, y });
+        }
+      }
+      if (candidates.length === 0) continue;
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const size = rng.randInt(cfg.patchMin, cfg.patchMax);
+        const anchor = candidates[rng.randInt(0, candidates.length - 1)];
+        const patch = this.growCliffPatch(anchor, size, candidates);
+        if (patch.length === 0) continue;
+        for (const p of patch) grid[p.y][p.x] = 4;
+        if (this.roomStillConnected(room, grid)) break; // 落地成功
+        for (const p of patch) grid[p.y][p.x] = 0;      // 回滚后重试
+      }
+    }
+  }
+
+  /** 从锚点向四邻生长一小块连通深渊（仅取候选格 → 形状不规则且贴着可行走区） */
+  private growCliffPatch(
+    anchor: { x: number; y: number },
+    size: number,
+    allowed: { x: number; y: number }[],
+  ): { x: number; y: number }[] {
+    const key = (p: { x: number; y: number }): string => `${p.x},${p.y}`;
+    const allowedSet = new Set(allowed.map(key));
+    const patch = [anchor];
+    const inPatch = new Set([key(anchor)]);
+    while (patch.length < size) {
+      const frontier = allowed.filter(p => allowedSet.has(key(p)) && !inPatch.has(key(p))
+        && patch.some(q => manhattan(q, p) === 1));
+      if (frontier.length === 0) break;
+      const pick = frontier[rng.randInt(0, frontier.length - 1)];
+      patch.push(pick);
+      inPatch.add(key(pick));
+    }
+    return patch;
+  }
+
+  /** 房间内可行走格是否仍单连通，且各门内侧格都可达 */
+  private roomStillConnected(room: RoomData, grid: TileCode[][]): boolean {
+    const cells: { x: number; y: number }[] = [];
+    for (let y = room.y + 1; y <= room.y + room.height - 2; y++) {
+      for (let x = room.x + 1; x <= room.x + room.width - 2; x++) {
+        if (grid[y]?.[x] === 0) cells.push({ x, y });
+      }
+    }
+    if (cells.length === 0) return true;
+    const doorInners = room.doors
+      .map(d => doorInner(d))
+      .filter(p => grid[p.y]?.[p.x] === 0);
+    const source = doorInners[0] ?? cells[0];
+    const seen = new Set([`${source.x},${source.y}`]);
+    const queue = [source];
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      for (const [dx, dy] of DIRS4) {
+        const nx = cur.x + dx;
+        const ny = cur.y + dy;
+        if (nx < room.x + 1 || nx > room.x + room.width - 2) continue;
+        if (ny < room.y + 1 || ny > room.y + room.height - 2) continue;
+        const k = `${nx},${ny}`;
+        if (seen.has(k) || grid[ny]?.[nx] !== 0) continue;
+        seen.add(k);
+        queue.push({ x: nx, y: ny });
+      }
+    }
+    return seen.size === cells.length && doorInners.every(p => seen.has(`${p.x},${p.y}`));
   }
 
   private roomsSorted(floor: FloorMap): RoomData[] {

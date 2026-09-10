@@ -6,6 +6,7 @@
 import { eventBus } from '../core/EventBus';
 import { WorldManager } from '../core/WorldManager';
 import { Player } from '../entities/Player';
+import { QuestManager } from '../systems/QuestManager';
 import type { RoomData, RoomType } from '../types';
 
 /** 房间类型 → 图标与颜色 */
@@ -38,6 +39,11 @@ export class MiniMap {
     eventBus.on('floorChanged', () => this.refresh());
     eventBus.on('saveLoaded', () => this.refresh());
     eventBus.on('gameRestarted', () => this.refresh());
+    eventBus.on('hiddenRoomDiscovered', () => this.refresh());
+    // 任务目标位置变化 → 刷新高亮
+    for (const ev of ['questUpdated', 'questAccepted', 'questCompleted', 'monsterDefeated', 'chestOpened'] as const) {
+      eventBus.on(ev, () => this.refresh());
+    }
   }
 
   refresh(): void {
@@ -106,6 +112,16 @@ export class MiniMap {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(icon, p.x + cell / 2, p.y + cell / 2 + 1);
+
+      // 风险标记（路线权衡引导）：高风险房左下角 ★，黄 → 红随风险递增
+      const risk = room.risk ?? 1;
+      if (risk > 1) {
+        ctx.fillStyle = risk >= 3 ? '#ff5b3c' : '#ffcc55';
+        ctx.font = `${Math.floor(cell * 0.42)}px "Microsoft YaHei", sans-serif`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('★'.repeat(risk), p.x + 2, p.y + cell - 1);
+      }
     }
 
     // 主角所在房间：金色外框（单独最后画，避免被相邻房间覆盖）
@@ -115,6 +131,24 @@ export class MiniMap {
       ctx.strokeStyle = '#ffdd44';
       ctx.lineWidth = 2;
       ctx.strokeRect(p.x - 2.5, p.y - 2.5, cell + 5, cell + 5);
+    }
+
+    // 任务目标房间：青色虚线框 + ★ 标记（引导玩家前往）
+    const tracked = QuestManager.getInstance().trackedQuest;
+    const guide = tracked ? QuestManager.getInstance().guideFor(tracked.quest, tracked.def) : null;
+    const targetRoom = guide?.target ? floor.rooms.find(r => r.id === guide.target!.roomId) : null;
+    if (targetRoom) {
+      const p = pos(targetRoom);
+      ctx.strokeStyle = '#6bebff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(p.x - 3.5, p.y - 3.5, cell + 7, cell + 7);
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#6bebff';
+      ctx.font = `${Math.floor(cell * 0.55)}px "Microsoft YaHei", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('★', p.x + cell - 5, p.y + 6);
     }
   }
 }

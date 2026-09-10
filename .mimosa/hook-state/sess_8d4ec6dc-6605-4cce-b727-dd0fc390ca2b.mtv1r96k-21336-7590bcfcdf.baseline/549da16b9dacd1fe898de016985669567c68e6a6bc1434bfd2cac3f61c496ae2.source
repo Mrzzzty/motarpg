@@ -1,0 +1,105 @@
+/**
+ * 楼层管理器：楼层进入/切换生命周期（生成或恢复）、入口定位、楼层事件。
+ * 支持预生成缓存：开始冒险时提前构筑后续楼层，进入时直接取用（免等待）。
+ */
+import type { FloorMap } from '../types';
+import { MapGenerator } from '../map/MapGenerator';
+import { WorldManager } from './WorldManager';
+import { Player } from '../entities/Player';
+import { eventBus } from './EventBus';
+import { Logger } from '../utils/Logger';
+import { MAX_FLOOR } from '../data/tiers';
+
+/** 预生成层数：进入某层后，缓存中始终保有其后 N 层的地图 */
+export const PREGEN_AHEAD = 5;
+
+export class FloorManager {
+  private static instance: FloorManager;
+  private constructor() {}
+  static getInstance(): FloorManager {
+    if (!FloorManager.instance) FloorManager.instance = new FloorManager();
+    return FloorManager.instance;
+  }
+
+  /** 预生成缓存：floorId → 已构筑完成的楼层 */
+  private pregen = new Map<number, FloorMap>();
+  /** 后台补足计时器 */
+  private topUpTimer: number | null = null;
+
+  /** 生成并进入新楼层（上行楼梯）。优先取用预生成缓存；塔身 110 层封顶 */
+  enterFloor(floorId: number, viaStair = true): FloorMap {
+    const capped = Math.min(floorId, MAX_FLOOR);
+    const player = Player.getInstance();
+    const fromFloor = player.state.currentFloor;
+    const cached = this.pregen.get(capped);
+    const floor = cached ?? MapGenerator.getInstance().generate(capped);
+    if (cached) this.pregen.delete(capped);
+    WorldManager.getInstance().loadFloor(floor);
+
+    player.state.currentFloor = capped;
+    player.state.x = floor.entryX;
+    player.state.y = floor.entryY;
+    const startRoom = WorldManager.getInstance().getRoomAt(floor.entryX, floor.entryY);
+    player.state.currentRoomId = startRoom?.id ?? floor.rooms[0].id;
+
+    eventBus.emit('floorChanged', { fromFloor, toFloor: capped });
+    if (!viaStair) Logger.debug(`[Floor] 直接载入楼层${capped}`);
+    this.scheduleTopUp(capped + 1);
+    return floor;
+  }
+
+  /** 读档恢复楼层（使用已序列化的地图，不重新生成） */
+  restoreFloor(floor: FloorMap): void {
+    const player = Player.getInstance();
+    WorldManager.getInstance().loadFloor(floor);
+    player.state.currentFloor = floor.floorId;
+    const room = WorldManager.getInstance().getRoomAt(player.state.x, player.state.y);
+    player.state.currentRoomId = room?.id ?? floor.rooms[0].id;
+  }
+
+  /** 预生成一层（已存在则跳过） */
+  pregenerateOne(floorId: number): void {
+    if (!this.pregen.has(floorId)) {
+      this.pregen.set(floorId, MapGenerator.getInstance().generate(floorId));
+    }
+  }
+
+  /** 清空预生成缓存（新开局/重新开始时） */
+  clearPregen(): void {
+    this.pregen.clear();
+    if (this.topUpTimer !== null) {
+      window.clearTimeout(this.topUpTimer);
+      this.topUpTimer = null;
+    }
+  }
+
+  /** 后台逐层补足缓存（每层之间让出主线程，避免长任务卡顿）；塔身封顶不预生成 */
+  private scheduleTopUp(fromId: number): void {
+    if (this.topUpTimer !== null) window.clearTimeout(this.topUpTimer);
+    let id = fromId;
+    const step = (): void => {
+      if (id < fromId + PREGEN_AHEAD && id <= MAX_FLOOR) {
+        this.pregenerateOne(id++);
+        this.topUpTimer = window.setTimeout(step, 30);
+      } else {
+        this.topUpTimer = null;
+      }
+    };
+    this.topUpTimer = window.setTimeout(step, 60);
+  }
+
+  /** 载入预制地图（调试/未来关卡用）：玩家置于入口并广播楼层事件 */
+  enterPrefabFloor(floor: FloorMap): FloorMap {
+    const player = Player.getInstance();
+    const fromFloor = player.state.currentFloor;
+    WorldManager.getInstance().loadFloor(floor);
+    player.state.currentFloor = floor.floorId;
+    player.state.x = floor.entryX;
+    player.state.y = floor.entryY;
+    const startRoom = WorldManager.getInstance().getRoomAt(floor.entryX, floor.entryY);
+    player.state.currentRoomId = startRoom?.id ?? floor.rooms[0].id;
+    eventBus.emit('floorChanged', { fromFloor, toFloor: floor.floorId });
+    Logger.debug(`[Floor] 载入预制楼层${floor.floorId}`);
+    return floor;
+  }
+}

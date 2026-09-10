@@ -49,6 +49,16 @@
     { "minEquipLevel": 41, "maxEquipLevel": 50, "values": { "poor": null, "common": null, "fine": [35, 45], "rare": [45, 65], "epic": [65, 95], "legendary": [95, 140] } }
   ],
   "mythicFromLegendary": 1.43,
+  "accessoryTable": [
+    { "minEquipLevel": 1, "maxEquipLevel": 5,   "values": { "poor": [0.5, 1.0], "common": [1.0, 1.5], "fine": [1.5, 2.5], "rare": [2.5, 4.0], "epic": null, "legendary": null } },
+    { "minEquipLevel": 6, "maxEquipLevel": 10,  "values": { "poor": [0.8, 1.5], "common": [1.5, 2.5], "fine": [2.5, 4.0], "rare": [4.0, 6.0], "epic": [6.0, 8.0], "legendary": null } },
+    { "minEquipLevel": 11, "maxEquipLevel": 20, "values": { "poor": null, "common": [2.0, 3.5], "fine": [3.5, 5.5], "rare": [5.5, 8.0], "epic": [8.0, 11.0], "legendary": [11.0, 14.0] } },
+    { "minEquipLevel": 21, "maxEquipLevel": 30, "values": { "poor": null, "common": [2.5, 4.5], "fine": [4.5, 7.0], "rare": [7.0, 10.0], "epic": [10.0, 14.0], "legendary": [14.0, 18.0] } },
+    { "minEquipLevel": 31, "maxEquipLevel": 40, "values": { "poor": null, "common": null, "fine": [5.5, 8.5], "rare": [8.5, 12.0], "epic": [12.0, 16.0], "legendary": [16.0, 21.0] } },
+    { "minEquipLevel": 41, "maxEquipLevel": 50, "values": { "poor": null, "common": null, "fine": [6.5, 10.0], "rare": [10.0, 14.0], "epic": [14.0, 19.0], "legendary": [19.0, 24.0] } }
+  ],
+  "slotWeights": { "weapon": 40, "armor": 40, "accessory": 20 },
+  "accessoryStatWeights": { "crit": 50, "dodge": 50 },
   "baseNames": {
     "weapon": [
       { "minEquipLevel": 1, "maxEquipLevel": 10, "names": ["铁剑"] },
@@ -63,6 +73,13 @@
       { "minEquipLevel": 21, "maxEquipLevel": 30, "names": ["板甲"] },
       { "minEquipLevel": 31, "maxEquipLevel": 40, "names": ["符文甲"] },
       { "minEquipLevel": 41, "maxEquipLevel": 50, "names": ["龙鳞甲"] }
+    ],
+    "accessory": [
+      { "minEquipLevel": 1, "maxEquipLevel": 10, "names": ["护符"] },
+      { "minEquipLevel": 11, "maxEquipLevel": 20, "names": ["指环"] },
+      { "minEquipLevel": 21, "maxEquipLevel": 30, "names": ["徽记"] },
+      { "minEquipLevel": 31, "maxEquipLevel": 40, "names": ["符石"] },
+      { "minEquipLevel": 41, "maxEquipLevel": 50, "names": ["星环"] }
     ]
   },
   "equipLevelFormula": { "playerLevelFactor": 0.5, "floorFactor": 1.0, "randomMin": -2, "randomMax": 3, "min": 1, "max": 50 },

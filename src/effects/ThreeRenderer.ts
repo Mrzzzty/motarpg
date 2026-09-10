@@ -21,14 +21,23 @@ import { projection } from '../render/Projection';
 import { textureGen } from '../render/TextureGenerator';
 import { getHeroAtlas } from '../render/HeroAtlas';
 import { HeroAnimator, type HeroAction, type HeroFacing } from '../render/HeroAnimator';
-import { canvasTexture, wallTexture, windowTexture, groundTexture } from './ThreeTextures';
+import {
+  canvasTexture, wallTexture, windowTexture, groundTexture, setMaxAnisotropy,
+  applyRelief, propNormal, propRoughness, PROP_NOISE,
+} from './ThreeTextures';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { roundedBox, cyl, sphere, torus } from './ThreeGeometry';
+import {
+  makeDecorMats, planRoomDecor, planRoomLandmark, buildDecorObject, seededRand,
+  decorBaseY, type DecorMats,
+} from './ThreeDecor';
 import { getNpcPortrait } from '../render/NpcArt';
 import { ParticleSystem } from './ParticleSystem';
 import { ThreeParticleSystem } from './ThreeParticleSystem';
 import { AmbientParticles } from './AmbientParticles';
 import { postProcessing } from './PostProcessing';
-import { tierOfFloor, isTierStartFloor, type TierTheme } from '../data/tiers';
-import type { MapEntity, MonsterDef, RoomData } from '../types';
+import { tierOfFloor, isTierStartFloor, type TierTheme, type TierCorridor } from '../data/tiers';
+import type { CorridorData, MapEntity, MonsterDef, RoomData } from '../types';
 
 /**
  * 3D 相机机位（实际值取自 gameConfig.camera3D，此处仅说明几何关系）：
@@ -111,6 +120,18 @@ export class ThreeRenderer {
   private wallGroup = new THREE.Group();
   private entityGroup = new THREE.Group();
   private particleGroup = new THREE.Group();
+  /** 环境陈设层（木桶/书堆/旗帜/贴片…；纯装饰，不参与逻辑） */
+  private decorGroup = new THREE.Group();
+  /** 玩家所在组：独立于 entityGroup，实体重建时不被清理（避免重建精灵与重传图集纹理） */
+  private playerGroup = new THREE.Group();
+  /** 实体层脏标记（同帧多次事件合并为一次重建） */
+  private entitiesDirty = false;
+  /** 着色器是否已异步预热（每次运行只做一次） */
+  private shaderPrecompiled = false;
+  /** 平滑帧时（ms），供调试面板展示 */
+  private frameMsAvg = 16.7;
+  /** 本层陈设材质调色板（随区段主题重建） */
+  private decorMats: DecorMats | null = null;
   private hoverMesh: THREE.Mesh | null = null;
   /** 玩家纸片人（Player 单例不在 allEntities() 中，需单独维护） */
   private playerSprite: THREE.Sprite | null = null;
@@ -218,12 +239,14 @@ export class ThreeRenderer {
       container.innerHTML = '<div style="padding:24px;color:#ff8888">当前环境不支持 WebGL，无法启动游戏渲染。</div>';
       return;
     }
-    renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, 1.5), 2)); // 抗锯齿②：1x 屏强制 1.5x SSAA 超采样
+    renderer.setPixelRatio(window.devicePixelRatio); // 1:1 物理像素（强制超采样会使画面变软）
     renderer.setSize(w, h);
     renderer.shadowMap.enabled = true;
-    // VSM（光影 v2 §1）：月光柔影需要真正的模糊阴影——PCFSoft 下 radius 是死代码，
-    // VSM 下 radius + blurSamples 生效，二值硬边变为可见的软过渡带
-    renderer.shadowMap.type = THREE.VSMShadowMap;
+    // 阴影采样：three r165+ 已废弃 PCFSoftShadowMap —— 传入后会被静默降级成 PCFShadowMap
+    // 并每次渲染打一条弃用警告（即此前"以为在用柔化阴影、实际用的是硬 PCF"）。
+    // 这里显式写 PCFShadowMap，与真实生效的效果保持一致；VSM 虽能柔化但边缘发糊（早前已否决）。
+    // 注意：PCF 下 shadow.radius 不生效，柔化程度只能靠 shadow.mapSize 提升。
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     // 电影感色调映射：高光柔和过渡（火把不再死白炸开），暗部保留细节
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -236,8 +259,14 @@ export class ThreeRenderer {
     container.appendChild(renderer.domElement);
     this.renderer = renderer;
 
+    // 纹理各向异性拉满（斜视地面/墙面纹理更清晰）
+    setMaxAnisotropy(renderer.capabilities.getMaxAnisotropy());
+
     this.setupLights();
-    scene.add(this.floorGroup, this.wallGroup, this.entityGroup, this.particleGroup);
+    scene.add(
+      this.floorGroup, this.wallGroup, this.decorGroup,
+      this.playerGroup, this.entityGroup, this.particleGroup,
+    );
     this.buildHoverMesh();
     this.buildStars();
 
@@ -261,9 +290,14 @@ export class ThreeRenderer {
     });
     eventBus.on('saveLoaded', () => this.rebuildFloor());
     eventBus.on('gameRestarted', () => this.rebuildFloor());
-    eventBus.on('monsterDefeated', () => this.rebuildEntities());
-    eventBus.on('chestOpened', () => this.rebuildEntities());
-    eventBus.on('potionPicked', () => this.rebuildEntities());
+    // 实体层重建改为「标记脏 + 下一帧统一重建」：一次战斗结算/开箱常同时触发多个事件，
+    // 逐个同步全量重建会造成多次卡顿（此前直接调用 rebuildEntities）
+    eventBus.on('monsterDefeated', () => { this.entitiesDirty = true; });
+    eventBus.on('chestOpened', () => { this.entitiesDirty = true; });
+    eventBus.on('potionPicked', () => { this.entitiesDirty = true; });
+    // 隐藏房间发现：地形（墙圈雕刻）与新实体（大宝箱等）需要整体重建才会可见。
+    // 此前无消费者 → 进入隐藏房间后一切内容"透明"（逻辑存在、渲染缺失）
+    eventBus.on('hiddenRoomDiscovered', () => this.rebuildFloor());
     // 屏幕震动（文档 L.2）：受大伤害 / Boss 被击败 / 玩家阵亡
     eventBus.on('battleEnded', p => {
       if (p.result.damageTaken > Player.getInstance().maxHp * 0.3) this.shake(0.3, 320);
@@ -271,6 +305,12 @@ export class ThreeRenderer {
     eventBus.on('bossDefeated', () => this.shake(0.45, 520));
     eventBus.on('playerDied', () => this.shake(0.35, 420));
     window.addEventListener('resize', () => this.resize());
+    // 容器尺寸观测（修复开局画面偏移）：标题屏阶段 game-root 隐藏 → 容器 0×0，
+    // 画布按窗口兜底尺寸创建；进入游戏容器获得真实尺寸时由此自动触发 resize
+    if (typeof ResizeObserver !== 'undefined' && container) {
+      this.containerObserver = new ResizeObserver(() => this.resize());
+      this.containerObserver.observe(container);
+    }
   }
 
   /**
@@ -300,9 +340,6 @@ export class ThreeRenderer {
     dir.shadow.camera.bottom = -d;
     dir.shadow.bias = -0.0006;
     dir.shadow.normalBias = 0.02;
-    // VSM 模式下 radius/blurSamples 生效（PCFSoft 下 radius 是无效参数），toon 柔影
-    dir.shadow.radius = 6;
-    dir.shadow.blurSamples = 12;
     this.scene.add(dir);
     this.scene.add(dir.target);
     this.dirLight = dir;
@@ -413,6 +450,35 @@ export class ThreeRenderer {
     this.scene.add(this.starField);
   }
 
+  /**
+   * 纯色道具材质：挂一层噪声法线（石 / 木 / 金属 各自种子）。
+   * 纯色大面在光下毫无细节，是"塑料感"的主因；噪声法线让石料有颗粒、木料有纤维、铁件有磨痕。
+   */
+  private propDetail(
+    mat: THREE.MeshStandardMaterial,
+    kind: keyof typeof PROP_NOISE,
+    repeat = 3,
+    strength = 1.1,
+  ): THREE.MeshStandardMaterial {
+    const seed = PROP_NOISE[kind];
+    mat.normalMap = propNormal(seed, repeat, strength);
+    // 粗糙度同步斑驳化：镜面高光沿表面起伏，金属/石材不再"整面一块塑料"
+    mat.roughnessMap = propRoughness(seed, repeat, mat.roughness, 0.18);
+    mat.roughness = 1;
+    mat.needsUpdate = true;
+    return mat;
+  }
+
+  /** 给标准材质挂上程序化法线 / 粗糙度（源画布 = 其 colorMap 的同一张画布，UV 像素级对齐） */
+  private attachRelief(
+    mat: THREE.MeshStandardMaterial,
+    tex: THREE.Texture,
+    opts: { normal?: number; rough?: number; roughRange?: number },
+  ): void {
+    const src = tex.image as HTMLCanvasElement | undefined;
+    if (src && typeof src.getContext === 'function') applyRelief(mat, src, opts);
+  }
+
   /** 悬浮格高亮（贴合地面的方框） */
   private buildHoverMesh(): void {
     const geo = new THREE.RingGeometry(0.34, 0.46, 4);
@@ -442,12 +508,31 @@ export class ThreeRenderer {
     this.fadeCells.clear();
     this.clearGroup(this.floorGroup);
     this.clearGroup(this.wallGroup);
+    this.clearGroup(this.decorGroup);
     this.buildGround(floor);
     this.buildFloorTiles(floor);
     this.buildRoomCarpets(floor);
     this.buildWalls(floor);
+    this.buildCorridorRailings(floor); // 走廊栏杆：由走廊开放边缘推导（含隐藏房入口的"连续无缺口"处理）
     this.buildWindows(floor);
+    this.buildRoomDecor(floor);
+    this.buildDoorFrames(floor);
+    this.mergeStaticDraws(); // 静态件按材质合并：draw call 与阴影 pass 开销大降
+
+    // 着色器异步预热（只做一次）：three 会在「某材质特征首次出现在视野里」时同步编译 program，
+    // 表现为首次遇怪 / 开箱 / 换区段时突然卡一下。这里提前把 program 编译掉（不阻塞主线程）。
+    if (!this.shaderPrecompiled && this.renderer && this.scene && this.camera) {
+      this.shaderPrecompiled = true;
+      const r = this.renderer as THREE.WebGLRenderer & {
+        compileAsync?: (s: THREE.Scene, c: THREE.Camera) => Promise<unknown>;
+      };
+      if (typeof r.compileAsync === 'function') {
+        void r.compileAsync(this.scene, this.camera).catch(() => { /* 不支持则忽略 */ });
+      }
+    }
     this.rebuildEntities();
+    // 悬崖最后构建：井口阴影贴地，且不依赖 entityGroup（战斗重建不清除）
+    this.buildCliffs(floor);
   }
 
   /**
@@ -469,6 +554,12 @@ export class ThreeRenderer {
         }
       }
     }
+    // 悬崖格（编码 4）同样留洞：深渊向下贯通，不铺世界地面
+    for (let row = 0; row < floor.height; row++) {
+      for (let col = 0; col < floor.width; col++) {
+        if (floor.grid[row][col] === 4) holes.add(`${col},${row}`);
+      }
+    }
     const cells: [number, number][] = [];
     for (let row = -GROUND_MARGIN; row < floor.height + GROUND_MARGIN; row++) {
       for (let col = -GROUND_MARGIN; col < floor.width + GROUND_MARGIN; col++) {
@@ -481,6 +572,7 @@ export class ThreeRenderer {
       map: groundTexture(), roughness: 0.92, metalness: 0.02,
       color: this.currentTier.floorTint, // 与室内地板同一区段色温倾向
     });
+    this.attachRelief(mat, groundTexture(), { normal: 1.5, rough: 0.92, roughRange: 0.14 });
     const inst = new THREE.InstancedMesh(
       new THREE.BoxGeometry(1, GROUND_THICKNESS, 1), mat, cells.length,
     );
@@ -491,10 +583,10 @@ export class ThreeRenderer {
       dummy.position.set(col + 0.5, GROUND_Y - GROUND_THICKNESS / 2, row + 0.5);
       dummy.updateMatrix();
       inst.setMatrixAt(i, dummy.matrix);
-      // 与室内地板一致的 ±6% 逐格亮度抖动（posterize 后呈现自然块面）
+      // 室外地面保留轻微抖动（±4%：自然地貌感；光照交互弱于室内）
       const h = Math.sin(col * 127.1 + row * 311.7 + 7.7) * 43758.5453;
       const frac = h - Math.floor(h);
-      jitter.setScalar(0.94 + frac * 0.12);
+      jitter.setScalar(0.96 + frac * 0.08);
       inst.setColorAt(i, jitter);
     });
     inst.instanceMatrix.needsUpdate = true;
@@ -536,18 +628,72 @@ export class ThreeRenderer {
       const w = room.width - 2;  // 去掉墙圈
       const h = room.height - 2;
       if (w <= 0 || h <= 0) continue;
-      const mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(w, h),
-        new THREE.MeshStandardMaterial({
-          map: canvasTexture(textureGen.roomCarpet(w, h)),
-          roughness: 0.94, metalness: 0.02,
-          polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
-        }),
-      );
+      const carpet = textureGen.roomCarpet(w, h);
+      const carpetMat = new THREE.MeshStandardMaterial({
+        map: canvasTexture(carpet),
+        roughness: 0.94, metalness: 0.02,
+        polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+      });
+      // 地毯不做程序化凹凸：其为平面织物、视觉收益小，而 Sobel 派生贴图要占用**启动**时间
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), carpetMat);
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(room.x + 1 + w / 2, 0.012, room.y + 1 + h / 2);
       mesh.receiveShadow = true;
       this.floorGroup.add(mesh);
+    }
+  }
+
+  /**
+   * 悬崖（地形编码 4，规格 2.1.5）：八角形深渊井。
+   * - 井壁：开口八棱柱向下延伸，每格随机朝向 + 半径微差 → 井口边缘「锯齿化」；
+   * - 井底：深色封底（避免透到世界背景）；
+   * - 渐变阴影：井口覆盖一张径向黑渐变贴图，形成深渊周边的 AO 过渡。
+   * 该格不铺地板（buildFloorTiles 只画 code 0）、不铺世界地面（buildGround 留洞）。
+   */
+  private buildCliffs(floor: { grid: number[][]; width: number; height: number }): void {
+    const cells: [number, number][] = [];
+    for (let row = 0; row < floor.height; row++) {
+      for (let col = 0; col < floor.width; col++) {
+        if (floor.grid[row][col] === 4) cells.push([col, row]);
+      }
+    }
+    if (cells.length === 0) return;
+
+    const DEPTH = 1.2;
+    const wallMat = new THREE.MeshStandardMaterial({
+      color: 0x191c22, roughness: 0.98, metalness: 0.02, side: THREE.DoubleSide,
+    });
+    const bottomMat = new THREE.MeshBasicMaterial({ color: 0x04060a });
+    const shadowMat = new THREE.MeshBasicMaterial({
+      map: canvasTexture(textureGen.glow('#000000')),
+      transparent: true, opacity: 0.5, depthWrite: false,
+    });
+
+    for (const [col, row] of cells) {
+      const r = 0.60 + ((col * 37 + row * 61) % 11) * 0.012; // 半径微差 → 边缘不齐
+      const rotY = ((col * 13 + row * 29) % 8) * (Math.PI / 8); // 随机朝向 → 锯齿状井口
+
+      const shaft = new THREE.Mesh(
+        new THREE.CylinderGeometry(r * 1.18, r, DEPTH, 8, 1, true), wallMat,
+      );
+      shaft.position.set(col + 0.5, 0.02 - DEPTH / 2, row + 0.5);
+      shaft.rotation.y = rotY;
+      shaft.receiveShadow = true;
+      this.floorGroup.add(shaft);
+
+      // 井底（半径略大于井壁，避免旋转造成的缝隙）
+      const bottom = new THREE.Mesh(new THREE.CircleGeometry(r * 1.25, 8), bottomMat);
+      bottom.rotation.x = -Math.PI / 2;
+      bottom.rotation.z = rotY;
+      bottom.position.set(col + 0.5, 0.02 - DEPTH + 0.03, row + 0.5);
+      this.floorGroup.add(bottom);
+
+      // 井口渐变阴影（贴在地板层，周边 AO）
+      const shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), shadowMat);
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.position.set(col + 0.5, 0.014, row + 0.5);
+      shadow.renderOrder = 1;
+      this.floorGroup.add(shadow);
     }
   }
 
@@ -600,47 +746,44 @@ export class ThreeRenderer {
         map: canvasTexture(canvas), roughness: 0.85, metalness: 0.05,
         color: this.currentTier.floorTint, // 区段色温倾向（乘法叠加在房间配色上）
       });
+      // 地砖缝凹陷 + 砖面略光滑：受光后出现真实的地面起伏（此前只有一张平贴图）
+      this.attachRelief(mat, canvasTexture(canvas), { normal: 1.9, rough: 0.85, roughRange: 0.2 });
       // 走廊地板加厚：呈现悬空栈道的体积感（顶面仍与房间地面平齐）
       const thick = g.roomKey === 'corridor' ? CORRIDOR_THICKNESS : FLOOR_THICKNESS;
       const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, thick, 1), mat, g.cells.length);
       inst.receiveShadow = true;
-      // 逐格亮度抖动（光影 v2 §7）：±6% 确定性抖动，posterize 后呈现块面色差而非平涂
-      const jitter = new THREE.Color();
+      // 注意：室内地板不做逐格亮度抖动——抖动会与任何亮度分级叠加，
+      // 把点光的连续径向渐变碎裂成砖形色斑（光照块状问题根因）
       g.cells.forEach(([col, row], i) => {
         dummy.position.set(col + 0.5, -thick / 2, row + 0.5);
         dummy.updateMatrix();
         inst.setMatrixAt(i, dummy.matrix);
-        const h = Math.sin(col * 127.1 + row * 311.7) * 43758.5453;
-        const frac = h - Math.floor(h); // [0,1) 确定性伪随机（重渲染不跳变）
-        jitter.setScalar(0.94 + frac * 0.12);
-        inst.setColorAt(i, jitter);
       });
       inst.instanceMatrix.needsUpdate = true;
-      if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
       this.floorGroup.add(inst);
     }
   }
 
   /** 墙（1）与柱（2）：按高度/房间分组的 InstancedMesh，纯色 MeshStandardMaterial */
-  private buildWalls(floor: { grid: number[][]; width: number; height: number; rooms: RoomData[] }): void {
+  private buildWalls(floor: { grid: number[][]; width: number; height: number; rooms: RoomData[]; hiddenRooms?: RoomData[] }): void {
     const roomGrid = this.roomGridOf(floor);
     const heights = dataManager.config.heights;
     const ts = projection.tileSize;
     const wallGroups = new Map<string, { h: number; cells: [number, number][] }>();
     const pillarGroups = new Map<string, { h: number; cells: [number, number][] }>();
-    /** 不属于任何房间的墙 → 走廊边界，改用栅栏包裹（不封死视野） */
-    const fenceCells: [number, number][] = [];
+    /** 隐藏房入口：地形上是一格墙，但渲染必须与周围**虚空一致（什么都不画）**，否则暗门一眼可辨 */
+    const hiddenEntrances = new Set<string>();
+    for (const h of floor.hiddenRooms ?? []) {
+      if (h.hiddenEntrance) hiddenEntrances.add(`${h.hiddenEntrance.x},${h.hiddenEntrance.y}`);
+    }
 
     for (let row = 0; row < floor.height; row++) {
       for (let col = 0; col < floor.width; col++) {
         const tile = floor.grid[row][col];
         if (tile !== 1 && tile !== 2) continue;
+        if (hiddenEntrances.has(`${col},${row}`)) continue; // 隐藏房入口：不渲染（与周围虚空一致）
         const isPillar = tile === 2;
         const roomKey = roomGrid[`${col},${row}`];
-        if (!isPillar && !roomKey) {
-          fenceCells.push([col, row]);
-          continue;
-        }
         const wallH = isPillar ? heights.pillar : heights.wallByRoom[roomKey] ?? heights.corridorWall;
         const h = Math.max(0.5, wallH / ts);
         const key = h.toFixed(2);
@@ -660,6 +803,8 @@ export class ThreeRenderer {
     const wallMat = new THREE.MeshStandardMaterial({
       map: wallTexture(this.currentTier.wall), roughness: 0.8, metalness: 0.08,
     });
+    // 砖缝凹陷 + 砖面反射差异：砌体在月光下呈现真实凹凸，而非一张平贴纸
+    this.attachRelief(wallMat, wallTexture(this.currentTier.wall), { normal: 2.6, rough: 0.8, roughRange: 0.26 });
     for (const g of wallGroups.values()) {
       // 砖缝纹理（文档 5.3：Canvas → Texture，无外部图片依赖）
       const mat = wallMat;
@@ -679,88 +824,248 @@ export class ThreeRenderer {
 
       // 塔身截面已移除（改为外部世界地面，见 buildGround）
     }
+    // 墙柱：与室内装饰柱共用同一套形体语言（基座 + 线脚 + 收分柱身 + 柱冠）。
+    // 材质提到循环外：此前每根柱子各建一份材质实例，白白增加状态切换。
+    const stone = this.propDetail(
+      new THREE.MeshStandardMaterial({ color: 0x6f7f74, roughness: 0.72, metalness: 0.12 }), 'stone', 3, 1.0,
+    );
+    const stoneDark = this.propDetail(
+      new THREE.MeshStandardMaterial({ color: 0x57655c, roughness: 0.8, metalness: 0.1 }), 'stone', 3, 0.9,
+    );
     for (const g of pillarGroups.values()) {
-      // 精细柱子：基座 + 收分柱身 + 柱冠（原为纯方盒）
       for (const [col, row] of g.cells) {
-        const pillar = new THREE.Group();
-        const stone = new THREE.MeshStandardMaterial({ color: 0x6f7f74, roughness: 0.72, metalness: 0.12 });
-        const stoneDark = new THREE.MeshStandardMaterial({ color: 0x57655c, roughness: 0.8, metalness: 0.1 });
-        const base = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.14, 0.52), stoneDark);
-        base.position.y = 0.07;
-        const shaftH = Math.max(0.2, g.h - 0.26);
-        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.19, shaftH, 10), stone);
-        shaft.position.y = 0.14 + shaftH / 2;
-        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.12, 0.48), stoneDark);
-        cap.position.y = 0.14 + shaftH + 0.06;
-        for (const m of [base, shaft, cap]) { m.castShadow = true; m.receiveShadow = true; pillar.add(m); }
+        const pillar = this.buildPillarMesh(g.h, stone, stoneDark);
         pillar.position.set(col + 0.5, -0.14, row + 0.5); // 柱基沉入外部地面，避免悬空
         this.wallGroup.add(pillar);
       }
     }
 
-    // 走廊栅栏：代替实心墙包裹走廊两侧
-    if (fenceCells.length > 0) {
-      this.buildFences(fenceCells, Math.max(0.5, heights.corridorWall / ts), floor.grid);
+  }
+
+  /**
+   * 立柱建模（墙柱 / 室内装饰柱共用）：方础 → 圆线脚 → 收分柱身 → 颈环 → 方冠。
+   * 全部倒角或带线脚，转角接光形成高光线，比"方盒 + 光杆"精致得多。
+   */
+  private buildPillarMesh(totalH: number, stone: THREE.Material, stoneDark: THREE.Material): THREE.Group {
+    const g = new THREE.Group();
+    const baseH = 0.14;
+    const capH = 0.12;
+    const base = new THREE.Mesh(roundedBox(0.52, baseH, 0.52, 0.028), stoneDark);
+    base.position.y = baseH / 2;
+    const plinth = new THREE.Mesh(cyl(0.205, 0.225, 0.05), stone); // 柱础线脚
+    plinth.position.y = baseH + 0.025;
+    const shaftTop = baseH + 0.05;
+    const shaftH = Math.max(0.2, totalH - shaftTop - capH - 0.1);
+    const shaft = new THREE.Mesh(cyl(0.145, 0.19, shaftH), stone); // 收分柱身（下粗上细）
+    shaft.position.y = shaftTop + shaftH / 2;
+    const neck = new THREE.Mesh(cyl(0.195, 0.15, 0.055), stone); // 柱头颈环
+    neck.position.y = shaftTop + shaftH + 0.028;
+    const cap = new THREE.Mesh(roundedBox(0.46, capH, 0.46, 0.028), stoneDark);
+    cap.position.y = shaftTop + shaftH + 0.055 + capH / 2;
+    for (const m of [base, plinth, shaft, neck, cap]) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+      g.add(m);
+    }
+    return g;
+  }
+
+  /** 栏杆材质：按区段走廊样式（配色 / 金属度 / 自发光）+ 石料噪声法线 */
+  private railingMats(cfg: TierCorridor): {
+    post: THREE.MeshStandardMaterial; rail: THREE.MeshStandardMaterial; accent: THREE.MeshStandardMaterial | null;
+  } {
+    const post = this.propDetail(new THREE.MeshStandardMaterial({
+      color: cfg.postColor, roughness: cfg.roughness, metalness: cfg.metalness,
+    }), 'stone', 3, 1.0);
+    const rail = this.propDetail(new THREE.MeshStandardMaterial({
+      color: cfg.railColor, roughness: Math.max(0.22, cfg.roughness - 0.08), metalness: cfg.metalness,
+    }), 'stone', 3, 0.9);
+    let accent: THREE.MeshStandardMaterial | null = null;
+    if (cfg.glow) {
+      // 星辉 / 黄铜暖光：金属段更亮
+      const e = cfg.metalness > 0.5 ? 0.45 : 0.24;
+      rail.emissive = new THREE.Color(cfg.glow);
+      rail.emissiveIntensity = e;
+      post.emissive = new THREE.Color(cfg.glow);
+      post.emissiveIntensity = e * 0.3;
+      accent = new THREE.MeshStandardMaterial({
+        color: cfg.glow, emissive: new THREE.Color(cfg.glow), emissiveIntensity: 0.9,
+        roughness: 0.4, metalness: 0.35,
+      });
+    }
+    return { post, rail, accent };
+  }
+
+  /**
+   * 一段栏杆（**按区段样式**建模：栏柱式 / 木质横板式 / 栏板式 + 柱头 + 点缀）。
+   * `vertical=true` 表示沿 Z 走向、`fixed` 为 X 坐标；否则沿 X 走向、`fixed` 为 Z 坐标；
+   * `a0..a0+len` 为沿走向的起止（**格边界**，间距 1）→ 立柱天然落在两端。
+   */
+  private addRailingRun(
+    vertical: boolean, fixed: number, a0: number, len: number,
+    cfg: TierCorridor,
+    mats: { post: THREE.Material; rail: THREE.Material; accent: THREE.Material | null },
+    railH: number,
+  ): void {
+    const mid = a0 + len / 2;
+    const px = vertical ? fixed : mid;
+    const pz = vertical ? mid : fixed;
+    // 金属 / 观星段更纤细，石质段更厚重
+    const slim = cfg.metalness > 0.5;
+    const postW = cfg.variant === 'panel' ? 0.16 : (slim ? 0.12 : 0.15);
+    const railW = slim ? 0.1 : 0.14;
+    const at = (a: number): { x: number; z: number } => ({ x: vertical ? fixed : a, z: vertical ? a : fixed });
+    const addRail = (geo: THREE.BufferGeometry, mat: THREE.Material, y: number, recv = true): void => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(px, y, pz);
+      m.castShadow = true;
+      m.receiveShadow = recv;
+      this.wallGroup.add(m);
+    };
+
+    // 上扶手 + 下横档（三种变体共有）
+    addRail(roundedBox(vertical ? railW : len + 0.12, railW * 0.72, vertical ? len + 0.12 : railW, 0.03), mats.rail, railH);
+    addRail(roundedBox(vertical ? 0.09 : len, 0.07, vertical ? len : 0.09, 0.02), mats.post, 0.12);
+
+    const dummy = new THREE.Object3D();
+    if (cfg.variant === 'timber') {
+      // 木质：两道横板（代替栏柱）
+      for (const y of [railH * 0.42, railH * 0.72]) {
+        addRail(roundedBox(vertical ? 0.055 : len, 0.085, vertical ? len : 0.055, 0.02), mats.rail, y, false);
+      }
+    } else if (cfg.variant === 'panel') {
+      // 栏板：实心薄板 + 顶部线脚（书架侧板感）
+      const panelH = Math.max(0.2, railH - 0.26);
+      addRail(roundedBox(vertical ? 0.05 : len, panelH, vertical ? len : 0.05, 0.015), mats.rail, 0.12 + panelH / 2, false);
+      addRail(roundedBox(vertical ? 0.085 : len, 0.055, vertical ? len : 0.085, 0.018), mats.post, 0.12 + panelH, false);
+    } else {
+      // 栏柱式：中横档 + 逐格均分的细栏柱
+      addRail(roundedBox(vertical ? 0.07 : len, 0.045, vertical ? len : 0.07, 0.016), mats.rail, railH * 0.55, false);
+      const perCell = Math.max(2, cfg.balusters);
+      const balH = Math.max(0.2, railH - 0.18);
+      const bw = slim ? 0.032 : 0.05;
+      const bals = new THREE.InstancedMesh(roundedBox(bw, balH, bw, bw * 0.35), mats.rail, len * perCell);
+      bals.castShadow = true;
+      let bi = 0;
+      for (let i = 0; i < len; i++) {
+        for (let k = 0; k < perCell; k++) {
+          const p = at(a0 + i + (k + 0.5) / perCell);
+          dummy.position.set(p.x, 0.1 + balH / 2, p.z);
+          dummy.updateMatrix();
+          bals.setMatrixAt(bi++, dummy.matrix);
+        }
+      }
+      bals.instanceMatrix.needsUpdate = true;
+      this.wallGroup.add(bals);
+    }
+
+    // 立柱（格子边界，两端各封一根）+ 可选柱头
+    const posts = new THREE.InstancedMesh(roundedBox(postW, railH + 0.06, postW, 0.03), mats.post, len + 1);
+    posts.castShadow = true;
+    posts.receiveShadow = true;
+    const finials = cfg.finial ? new THREE.InstancedMesh(sphere(postW * 0.38), mats.rail, len + 1) : null;
+    for (let i = 0; i <= len; i++) {
+      const p = at(a0 + i);
+      dummy.position.set(p.x, (railH + 0.06) / 2, p.z);
+      dummy.updateMatrix();
+      posts.setMatrixAt(i, dummy.matrix);
+      if (finials) {
+        dummy.position.set(p.x, railH + 0.06 + postW * 0.3, p.z);
+        dummy.updateMatrix();
+        finials.setMatrixAt(i, dummy.matrix);
+      }
+    }
+    posts.instanceMatrix.needsUpdate = true;
+    this.wallGroup.add(posts);
+    if (finials) {
+      finials.castShadow = true;
+      finials.instanceMatrix.needsUpdate = true;
+      this.wallGroup.add(finials);
+    }
+
+    // 点缀：黄铜铆钉 / 观星符文（沿扶手等距排布）
+    if (mats.accent && cfg.accents) {
+      const step = cfg.accents === 'rune' ? 2 : 0.5;
+      const n = Math.max(1, Math.floor(len / step));
+      const acc = new THREE.InstancedMesh(
+        cfg.accents === 'rune' ? roundedBox(0.07, 0.07, 0.07, 0.02) : sphere(0.028),
+        mats.accent, n,
+      );
+      acc.castShadow = cfg.accents === 'rune';
+      for (let i = 0; i < n; i++) {
+        const a = a0 + (i + 0.5) * step;
+        if (a > a0 + len) break;
+        const p = at(a);
+        dummy.position.set(p.x, railH + (cfg.accents === 'rune' ? 0.1 : 0.05), p.z);
+        dummy.updateMatrix();
+        acc.setMatrixAt(i, dummy.matrix);
+      }
+      acc.instanceMatrix.needsUpdate = true;
+      this.wallGroup.add(acc);
     }
   }
 
   /**
-   * 走廊栅栏：竖条 + 顶部横梁，代替实心墙包裹走廊两侧。
-   * 按墙走向（沿 X / 沿 Z）分组，保证栅栏与走廊平行。
+   * 走廊栏杆：沿走廊**两侧开放边缘**生成（立柱 + 上/中/下横档 + 栏柱）。
+   *
+   * 为什么不能"按墙格生成"：程序化地图初始全是**虚空(-1)**，走廊是从虚空里开凿的 0 线，
+   * 两侧本就是虚空、没有可依附的墙；地图上唯一的"非房间墙格"其实是**隐藏房入口**——
+   * 按墙格生成栏杆 = 只在暗门处冒出一段栏杆，等于把秘密标出来。
+   *
+   * 因此栏杆改为**由走廊边缘推导**：
+   *   - 开放边缘 = 走廊格四邻里「虚空(-1) / 悬崖(4) / 隐藏房入口」；
+   *   - 隐藏房入口同样按开放边处理 → 栏杆**连续无缺口**，暗门不会因缺一段栏而暴露；
+   *   - 相邻是房间墙/门 → 不开栏（那儿本来就有墙，也是走廊两端的出入口）。
    */
-  private buildFences(cells: [number, number][], wallH: number, grid: number[][]): void {
-    const alongX: [number, number][] = [];
-    const alongZ: [number, number][] = [];
-    for (const [col, row] of cells) {
-      const horiz = grid[row]?.[col - 1] === 1 || grid[row]?.[col + 1] === 1;
-      (horiz ? alongX : alongZ).push([col, row]);
+  private buildCorridorRailings(floor: { grid: number[][]; corridors: CorridorData[]; hiddenRooms?: RoomData[] }): void {
+    if (!floor.corridors || floor.corridors.length === 0) return;
+    const hidden = new Set<string>();
+    for (const h of floor.hiddenRooms ?? []) {
+      if (h.hiddenEntrance) hidden.add(`${h.hiddenEntrance.x},${h.hiddenEntrance.y}`);
     }
-    const barH = Math.max(0.4, wallH * 0.62); // 比实心墙矮，留出上方视野
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0x6b6152, roughness: 0.75, metalness: 0.25,
-    });
-    const dummy = new THREE.Object3D();
+    const corridor = new Set<string>();
+    for (const c of floor.corridors) for (const t of c.tiles) corridor.add(`${t.x},${t.y}`);
 
-    const strip = (list: [number, number][], vertical: boolean): void => {
-      if (list.length === 0) return;
-      // 竖条：每格 2 根（下移 0.13：栅脚沉入外部地面）
-      const bars = new THREE.InstancedMesh(
-        new THREE.BoxGeometry(0.08, barH, 0.08), mat, list.length * 2,
-      );
-      bars.castShadow = true;
-      bars.receiveShadow = true;
-      let i = 0;
-      for (const [col, row] of list) {
-        for (const off of [-0.24, 0.24]) {
-          dummy.position.set(
-            col + 0.5 + (vertical ? 0 : off),
-            barH / 2 - 0.13,
-            row + 0.5 + (vertical ? off : 0),
-          );
-          dummy.updateMatrix();
-          bars.setMatrixAt(i++, dummy.matrix);
+    // 开放边缘 → 1 格长的边界线段，按「走向 + 固定坐标」归组成可连成段的集合
+    const groups = new Map<string, { vertical: boolean; fixed: number; alongs: number[] }>();
+    const dirs: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for (const c of floor.corridors) {
+      for (const t of c.tiles) {
+        for (const [dx, dy] of dirs) {
+          const nx = t.x + dx, ny = t.y + dy;
+          if (corridor.has(`${nx},${ny}`)) continue;              // 相邻也是走廊 → 内部，无栏
+          const tile = floor.grid[ny]?.[nx];
+          const open = tile === -1 || tile === 4 || hidden.has(`${nx},${ny}`);
+          if (!open) continue;                                     // 相邻是房间墙/门 → 不开栏
+          const vertical = dx !== 0;
+          const fixed = vertical ? t.x + 0.5 + dx * 0.5 : t.y + 0.5 + dy * 0.5;
+          const along = vertical ? t.y : t.x;
+          const key = `${vertical ? 1 : 0}|${fixed}`;
+          let g = groups.get(key);
+          if (!g) { g = { vertical, fixed, alongs: [] }; groups.set(key, g); }
+          g.alongs.push(along);
         }
       }
-      bars.instanceMatrix.needsUpdate = true;
-      this.wallGroup.add(bars);
+    }
+    if (groups.size === 0) return;
 
-      // 顶部横梁：每格 1 根（随竖条下移）
-      const beams = new THREE.InstancedMesh(
-        new THREE.BoxGeometry(vertical ? 0.1 : 0.98, 0.08, vertical ? 0.98 : 0.1), mat, list.length,
-      );
-      beams.castShadow = true;
-      let j = 0;
-      for (const [col, row] of list) {
-        dummy.position.set(col + 0.5, barH * 0.86 - 0.13, row + 0.5);
-        dummy.updateMatrix();
-        beams.setMatrixAt(j++, dummy.matrix);
+    const ts = projection.tileSize;
+    const railH = Math.min(0.95, Math.max(0.55, (dataManager.config.heights.corridorWall / ts) * 0.72));
+    const cfg = this.currentTier.corridor;
+    const mats = this.railingMats(cfg);
+    for (const g of groups.values()) {
+      const alongs = [...new Set(g.alongs)].sort((a, b) => a - b);
+      let start = alongs[0];
+      let prev = alongs[0];
+      const flush = (s: number, e: number): void => this.addRailingRun(g.vertical, g.fixed, s, e - s + 1, cfg, mats, railH);
+      for (let i = 1; i < alongs.length; i++) {
+        if (alongs[i] === prev + 1) { prev = alongs[i]; continue; }
+        flush(start, prev);
+        start = alongs[i];
+        prev = alongs[i];
       }
-      beams.instanceMatrix.needsUpdate = true;
-      this.wallGroup.add(beams);
-    };
-
-    strip(alongX, false);
-    strip(alongZ, true);
+      flush(start, prev);
+    }
   }
 
   /**
@@ -842,6 +1147,94 @@ export class ThreeRenderer {
   }
 
   /**
+   * 门洞门套（2026-09-10）：给每个房门加石制门套（两侧门柱 + 过梁 + 拱券），
+   * 让门从「墙上的一个缺口」变成真正的门洞，房间之间的过渡更有建筑感。
+   * 门格本身是可通行地板（不在 wallCells 中），故墙高取自相邻墙格。
+   */
+  private buildDoorFrames(floor: { grid: number[][]; rooms: RoomData[] }): void {
+    const stone = this.propDetail(new THREE.MeshStandardMaterial({
+      color: 0x7f8a84, roughness: 0.78, metalness: 0.1,
+    }), 'stone', 2, 0.9);
+    const trim = this.propDetail(new THREE.MeshStandardMaterial({
+      color: 0x6a7570, roughness: 0.6, metalness: 0.25,
+    }), 'stone', 2, 0.8);
+    const wallHeightNear = (x: number, y: number): number => {
+      let h = 0;
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+        const c = this.wallCells.get(`${x + dx},${y + dy}`);
+        if (c && c.h > h) h = c.h;
+      }
+      return h > 0 ? h : 1.2;
+    };
+    const built = new Set<string>();
+    for (const room of floor.rooms) {
+      for (const d of room.doors) {
+        const key = `${d.x},${d.y}`;
+        if (built.has(key)) continue; // 一道门两侧房间都会列出，去重
+        built.add(key);
+        const vertical = d.direction === 'east' || d.direction === 'west'; // 墙沿 Z 走向
+        const h = wallHeightNear(d.x, d.y);
+        const g = new THREE.Group();
+        const jambH = Math.max(0.5, h - 0.12);
+        for (const s of [-1, 1]) {
+          const jamb = new THREE.Mesh(
+            roundedBox(vertical ? 0.14 : 0.1, jambH, vertical ? 0.1 : 0.14, 0.022), stone,
+          );
+          jamb.position.set(vertical ? 0 : s * 0.5, jambH / 2, vertical ? s * 0.5 : 0);
+          jamb.castShadow = true;
+          g.add(jamb);
+        }
+        const lintel = new THREE.Mesh(
+          roundedBox(vertical ? 0.18 : 1.14, 0.12, vertical ? 1.14 : 0.18, 0.03), trim,
+        );
+        lintel.position.y = jambH + 0.06;
+        lintel.castShadow = true;
+        g.add(lintel);
+        if (h >= 1.05) {
+          const arch = new THREE.Mesh(torus(0.44, 0.05, Math.PI), trim);
+          arch.position.y = jambH + 0.1;
+          arch.rotation.y = vertical ? Math.PI / 2 : 0;
+          g.add(arch);
+        }
+        g.position.set(d.x + 0.5, 0, d.y + 0.5);
+        this.wallGroup.add(g);
+      }
+    }
+  }
+
+  /**
+   * 房间环境陈设（2026-09-10 新增，见 `effects/ThreeDecor.ts`）：
+   * 按「房间类型 + 区段主题」在墙根摆陈设、在墙面挂旗帜 / 壁烛 / 蛛网、在地面撒贴片，
+   * 补上此前"每房只有墙 + 地板 + 功能实体"的空旷感。
+   *
+   * 纯装饰层：不写入 `room.entities`，不影响寻路、碰撞与战斗；
+   * 位置 / 种类由房间坐标哈希决定 → 同层重渲染不跳变。密度见 `render.roomDecorDensity`（0 = 关闭）。
+   */
+  private buildRoomDecor(floor: { grid: number[][]; rooms: RoomData[]; floorId: number }): void {
+    const density = dataManager.config.render.roomDecorDensity;
+    if (!density || density <= 0) return;
+    const mats = makeDecorMats(this.currentTier);
+    this.decorMats = mats;
+    for (const room of floor.rooms) {
+      const items = planRoomDecor(room, floor.grid, floor.floorId, this.currentTier, density);
+      const landmark = planRoomLandmark(room, floor.grid, floor.floorId); // 每房地标（王座/篝火/吊灯）
+      if (landmark) items.push(landmark);
+      for (const item of items) {
+        const g = buildDecorObject(item.kind, mats, seededRand(item.seed));
+        g.position.set(item.wx, decorBaseY(item.kind), item.wz);
+        g.rotation.y = item.yaw;
+        // 墙面挂饰：按所依附墙格的实际高度抬到墙上（旗帜偏高、蛛网靠顶、壁烛腰高）
+        if (item.cellX !== undefined && item.cellY !== undefined) {
+          const h = this.wallCells.get(`${item.cellX},${item.cellY}`)?.h ?? 1.2;
+          const ratio = item.kind === 'web' ? 0.8 : item.kind === 'banner' ? 0.6 : 0.5;
+          g.position.y = Math.max(0.3, Math.min(h * ratio, h - 0.1));
+        }
+        this.decorGroup.add(g);
+      }
+    }
+  }
+
+  /**
    * 计算需要虚化的墙格。
    * 相机位于注视点南侧上方，遮挡玩家 / 可交互物的墙 = 相机到该目标的视线穿过的墙格，
    * 且只取紧贴目标的那些（OCCLUDE_MAX_DIST）——玩家走到墙前一格才虚化，隔着一格地板不虚化。
@@ -858,7 +1251,7 @@ export class ThreeRenderer {
     const camX = this.focusX;
     const camZ = this.focusZ + cam3d.distance;
 
-    /** 只虚化实心砖墙：走廊栅栏不在 wallCells 中，保持通透 */
+    /** 只虚化实心砖墙：走廊栏杆不在 wallCells 中，保持通透 */
     const mark = (c: number, r: number): void => {
       if (grid[r]?.[c] !== 1) return;
       const key = `${c},${r}`;
@@ -964,13 +1357,13 @@ export class ThreeRenderer {
     if (!slot) {
       slot = this.fadePool.find(s => s.key === null);
       if (!slot) {
-        const mesh = new THREE.Mesh(
-          new THREE.BoxGeometry(1, 1, 1),
-          new THREE.MeshStandardMaterial({
-            map: wallTexture(this.currentTier.wall), roughness: 0.8, metalness: 0.08,
-            transparent: true, opacity: 1, depthWrite: false,
-          }),
-        );
+        const fadeMat = new THREE.MeshStandardMaterial({
+          map: wallTexture(this.currentTier.wall), roughness: 0.8, metalness: 0.08,
+          transparent: true, opacity: 1, depthWrite: false,
+        });
+        // 与实心墙同款细节：虚化过程中墙面质感不发生跳变
+        this.attachRelief(fadeMat, wallTexture(this.currentTier.wall), { normal: 2.6, rough: 0.8, roughRange: 0.26 });
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), fadeMat);
         mesh.castShadow = true; // 虚化期间仍投影：实心实例已移出视野，若替代墙不投影，墙影会突然消失
         slot = { mesh, key: null };
         this.fadePool.push(slot);
@@ -1014,9 +1407,7 @@ export class ThreeRenderer {
     this.dustItems = [];
     this.spiritFx = null; // 引导者灵体特效随实体重建（下方 addEntity 重新登记）
     this.spiritDots = [];
-    this.playerSprite = null;
-    this.playerShadow = null;
-    this.playerContact = null;
+    // 玩家不在 entityGroup 内（常驻 playerGroup），此处不得置空 —— 见 ensurePlayerSprite()
     this.litSprites = []; // 纸片人已随 clearGroup 释放，登记表一并清空
     const prevGates = this.gates; // 保留铁门开合进度，避免重建时瞬间跳变
     this.gates = [];
@@ -1041,34 +1432,52 @@ export class ThreeRenderer {
       this.addEntity(entity, room, def, height, ts);
     }
 
-    // 玩家（单例不在 allEntities 中）—— 优先用精灵图集（帧动画），加载失败回退原烘焙纹理
+    // 玩家（单例不在 allEntities 中）：常驻 playerGroup，仅首次创建（见 ensurePlayerSprite）
+    this.ensurePlayerSprite();
+    this.syncPlayer();
+    if (this.playerSprite) this.litSprites.push({ sprite: this.playerSprite });
+
+    // Boss 铁门：Boss 存活时封锁出口，击败后自动开启
+    this.buildGates(prevGates);
+  }
+
+  /**
+   * 玩家纸片人：**只创建一次**，常驻 `playerGroup`（不参与实体重建）。
+   *
+   * 此前玩家随 `rebuildEntities()` 重建，而重建会：
+   *   ① 新建 Sprite 材质；② 对图集纹理置 `needsUpdate` → **整张 384×832 图集重传 GPU**（约 1.3MB）；
+   *   ③ 重建 `HeroAnimator`。开箱 / 击杀后都要走一遍 → 表现为「偶发卡一下」。
+   */
+  private ensurePlayerSprite(): void {
+    if (this.playerSprite) return;
+    // 优先用精灵图集（帧动画），加载失败回退原烘焙纹理
     const atlas = getHeroAtlas();
+    const heights = dataManager.config.heights;
+    const ts = projection.tileSize;
     // 图集帧为 64×64 方格（角色约占格高 5/6），世界高度单独定；旧烘焙贴图沿用原比例
     const heroH = atlas ? 2.0 : Math.max(1.35, (heights.player / ts) * 1.6);
-    const heroCanvas = atlas ?? textureGen.player();
-    this.playerSprite = this.makePaperSprite(heroCanvas, heroH);
+    this.playerSprite = this.makePaperSprite(atlas ?? textureGen.player(), heroH);
     if (atlas) {
       // 图集帧是 64×64 方格：makePaperSprite 按整图宽高比(384/832≈0.46)算宽会把角色压窄，这里覆盖为 1:1
       this.playerSprite.scale.set(heroH, heroH, 1);
       this.playerSprite.userData.footRatio = 5 / 64; // 帧内角色脚底约在第 59/64 行
-    }
-    this.heroBaseW = Math.abs(this.playerSprite.scale.x);
-    this.playerShadow = this.addGroundShadow(0, 0, heroH * 0.28); // 位置由 syncPlayer 跟随
-    // 主角 contact AO（光影 v2 §3 [建议]）：点光源关闭投影后补偿体积感——更小更深一层
-    this.playerContact = this.addGroundShadow(
-      0, 0, heroH * 0.28 * 0.6, Math.min(0.85, dataManager.config.shadow.staticAlpha * 1.3));
-    if (atlas) {
+      // 图集用 UV 裁格取帧：开 mipmap 会在低层级混入相邻帧（串帧），关 mipmap 只用线性放大
       const tex = this.playerSprite.material.map as THREE.Texture;
+      tex.magFilter = THREE.LinearFilter;
+      tex.minFilter = THREE.LinearFilter;
+      tex.generateMipmaps = false;
+      tex.needsUpdate = true;
       this.heroAnimator = new HeroAnimator(tex);
     } else {
       this.heroAnimator = null;
     }
-    this.syncPlayer();
-    this.entityGroup.add(this.playerSprite);
-    this.litSprites.push({ sprite: this.playerSprite });
-
-    // Boss 铁门：Boss 存活时封锁出口，击败后自动开启
-    this.buildGates(prevGates);
+    this.heroBaseW = Math.abs(this.playerSprite.scale.x);
+    this.playerShadow = this.addGroundShadow(0, 0, heroH * 0.28, undefined, this.playerGroup);
+    // 主角 contact AO（光影 v2 §3 [建议]）：点光源关闭投影后补偿体积感——更小更深一层
+    this.playerContact = this.addGroundShadow(
+      0, 0, heroH * 0.28 * 0.6,
+      Math.min(0.85, dataManager.config.shadow.staticAlpha * 1.3), this.playerGroup);
+    this.playerGroup.add(this.playerSprite);
   }
 
   /** 单个实体的 3D 表现：静态物 → Mesh；动态实体 → 纸片人 Sprite */
@@ -1165,13 +1574,14 @@ export class ThreeRenderer {
     }
 
     if (entity.kind === 'chest') {
-      // 宝箱：木箱身 + 半圆柱拱盖 + 金属包边 + 正面锁扣（开启时盖子向后掀开）
-      const chest = this.buildChest(opened, entity.chestTier === 'grand');
+      // 宝箱：三档独立造型（普通 / 大宝箱 / 遗物），开启时盖子向后掀开
+      const tier = entity.chestTier ?? 'normal';
+      const chest = this.buildChest(opened, tier);
       chest.position.set(cx, 0, cz);
       this.entityGroup.add(chest);
-      // 未开启的宝箱：金色氛围光 + 急促闪烁（文档：宝箱光 #ffdd44）
+      // 未开启的宝箱：氛围光（普通/大宝箱金色，遗物紫辉）
       if (!opened) {
-        this.addGlowLight(entity.id, 0xffcc44, 0.55, 5, cx, 0.7, cz);
+        this.addGlowLight(entity.id, tier === 'relic' ? 0xd9a6ff : 0xffcc44, 0.55, 5, cx, 0.7, cz);
       }
       return;
     }
@@ -1203,7 +1613,7 @@ export class ThreeRenderer {
       // 旧版单格楼梯：4 级递增台阶（文档 3.3，兼容旧存档/预制图）
       for (let i = 0; i < 4; i++) {
         const step = new THREE.Mesh(
-          new THREE.BoxGeometry(0.86, 0.12, 0.22),
+          roundedBox(0.86, 0.12, 0.22, 0.028), // 圆角石阶：棱线接光，不再是无细节的方块
           new THREE.MeshStandardMaterial({ color: 0x8899aa, roughness: 0.8 }),
         );
         step.position.set(cx, 0.06 + i * 0.12, cz - 0.33 + i * 0.22);
@@ -1220,16 +1630,18 @@ export class ThreeRenderer {
     // 女巫大锅：3D 建模（圆锅 + 锅沿 + 三足 + 药液面），替代纸片人
     if (entity.kind === 'cauldron') {
       const g = new THREE.Group();
-      const iron = new THREE.MeshStandardMaterial({ color: 0x2c2f33, roughness: 0.55, metalness: 0.75 });
-      const pot = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12, 0, Math.PI * 2, Math.PI * 0.35, Math.PI * 0.65), iron);
+      const iron = this.propDetail(
+        new THREE.MeshStandardMaterial({ color: 0x2c2f33, roughness: 0.55, metalness: 0.75 }), 'iron', 3, 0.9,
+      );
+      const pot = new THREE.Mesh(sphere(0.34, 0, Math.PI * 2, Math.PI * 0.35, Math.PI * 0.65), iron);
       pot.position.y = 0.36;
       pot.castShadow = true;
-      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.035, 10, 24), iron);
+      const rim = new THREE.Mesh(torus(0.3, 0.035), iron);
       rim.rotation.x = Math.PI / 2;
       rim.position.y = 0.55;
       g.add(pot, rim);
       for (const a of [0, 2.1, 4.2]) {
-        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, 0.3, 8), iron);
+        const leg = new THREE.Mesh(cyl(0.03, 0.045, 0.3), iron);
         leg.position.set(Math.cos(a) * 0.2, 0.15, Math.sin(a) * 0.2);
         g.add(leg);
       }
@@ -1249,14 +1661,14 @@ export class ThreeRenderer {
     // 药架：木架 + 三层隔板 + 彩色药瓶排，替代纸片人
     if (entity.kind === 'shelf') {
       const g = new THREE.Group();
-      const wood = new THREE.MeshStandardMaterial({ color: 0x5f452c, roughness: 0.8 });
-      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.86, 1.0, 0.16), wood);
+      const wood = this.propDetail(new THREE.MeshStandardMaterial({ color: 0x5f452c, roughness: 0.8 }), 'wood', 3, 1.0);
+      const frame = new THREE.Mesh(roundedBox(0.86, 1.0, 0.16, 0.02), wood);
       frame.position.y = 0.5;
       frame.castShadow = true;
       g.add(frame);
       const bottleColors = [0x9a4ddb, 0x3fae6a, 0xd9553f, 0x3f7fd9, 0xd9a92b, 0x64d93f];
       for (let lvl = 0; lvl < 3; lvl++) {
-        const board = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.05, 0.26), wood);
+        const board = new THREE.Mesh(roundedBox(0.8, 0.05, 0.26, 0.018), wood);
         board.position.set(0, 0.22 + lvl * 0.34, 0.08);
         board.castShadow = true;
         g.add(board);
@@ -1266,7 +1678,7 @@ export class ThreeRenderer {
             roughness: 0.25, metalness: 0.1, emissive: bottleColors[(lvl * 3 + b) % bottleColors.length],
             emissiveIntensity: 0.25,
           });
-          const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.13, 8), glass);
+          const bottle = new THREE.Mesh(cyl(0.035, 0.045, 0.13, 12), glass);
           bottle.position.set(-0.26 + b * 0.26, 0.32 + lvl * 0.34, 0.08);
           g.add(bottle);
         }
@@ -1279,20 +1691,20 @@ export class ThreeRenderer {
     // 治疗喷泉：石盆 + 内层水面 + 中柱涌泉，替代纸片人
     if (entity.kind === 'fountain') {
       const g = new THREE.Group();
-      const stone = new THREE.MeshStandardMaterial({ color: 0x7d8a94, roughness: 0.75 });
-      const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 0.22, 20), stone);
+      const stone = this.propDetail(new THREE.MeshStandardMaterial({ color: 0x7d8a94, roughness: 0.75 }), 'stone', 2, 0.9);
+      const basin = new THREE.Mesh(cyl(0.42, 0.48, 0.22, 32), stone);
       basin.position.y = 0.11;
       basin.castShadow = true;
       basin.receiveShadow = true;
       const water = new THREE.Mesh(
-        new THREE.CircleGeometry(0.36, 20),
+        new THREE.CircleGeometry(0.36, 28),
         new THREE.MeshStandardMaterial({ color: 0x59d8e8, emissive: 0x1f7a8a, emissiveIntensity: 0.7, roughness: 0.2 }),
       );
       water.rotation.x = -Math.PI / 2;
       water.position.y = 0.2;
-      const column = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.42, 10), stone);
+      const column = new THREE.Mesh(cyl(0.06, 0.1, 0.42), stone);
       column.position.y = 0.4;
-      const top = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 10),
+      const top = new THREE.Mesh(sphere(0.09),
         new THREE.MeshStandardMaterial({ color: 0x9fe8f2, emissive: 0x3fb8cc, emissiveIntensity: 0.9, roughness: 0.2 }));
       top.position.y = 0.64;
       g.add(basin, water, column, top);
@@ -1309,19 +1721,19 @@ export class ThreeRenderer {
       const stoneMat = new THREE.MeshStandardMaterial({ color: 0xd8d2c0, roughness: 0.55, metalness: 0.12 });
       const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4af6a, roughness: 0.32, metalness: 0.82 });
       for (const px of [-0.62, 0.62]) {
-        const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.26, 2.7, 0.26), stoneMat);
+        const pillar = new THREE.Mesh(roundedBox(0.26, 2.7, 0.26, 0.035), stoneMat);
         pillar.position.set(px, 1.35, 0);
         pillar.castShadow = true;
         g.add(pillar);
-        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.12, 0.34), goldMat);
+        const cap = new THREE.Mesh(roundedBox(0.34, 0.12, 0.34, 0.03), goldMat);
         cap.position.set(px, 2.76, 0);
         g.add(cap);
       }
-      const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.78, 0.28, 0.3), stoneMat);
+      const lintel = new THREE.Mesh(roundedBox(1.78, 0.28, 0.3, 0.04), stoneMat);
       lintel.position.set(0, 2.85, 0);
       lintel.castShadow = true;
       g.add(lintel);
-      const keystone = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.24, 0.26), goldMat);
+      const keystone = new THREE.Mesh(roundedBox(0.3, 0.24, 0.26, 0.035), goldMat);
       keystone.position.set(0, 3.08, 0);
       g.add(keystone);
       // 门扉：纯光面（空无一物的暗示），微微透亮
@@ -1395,21 +1807,13 @@ export class ThreeRenderer {
     if (entity.kind === 'pillar') {
       const totalH = Math.max(0.6, heightPx / ts);
       const tint = new THREE.Color(this.currentTier.floorTint);
-      const stone = new THREE.MeshStandardMaterial({
+      const stone = this.propDetail(new THREE.MeshStandardMaterial({
         color: new THREE.Color(0x77877c).multiply(tint), roughness: 0.72, metalness: 0.12,
-      });
-      const stoneDark = new THREE.MeshStandardMaterial({
+      }), 'stone', 3, 1.0);
+      const stoneDark = this.propDetail(new THREE.MeshStandardMaterial({
         color: new THREE.Color(0x5d6b62).multiply(tint), roughness: 0.8, metalness: 0.1,
-      });
-      const g = new THREE.Group();
-      const base = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.14, 0.52), stoneDark);
-      base.position.y = 0.07;
-      const shaftH = Math.max(0.2, totalH - 0.26);
-      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.19, shaftH, 10), stone);
-      shaft.position.y = 0.14 + shaftH / 2;
-      const cap = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.12, 0.48), stoneDark);
-      cap.position.y = 0.14 + shaftH + 0.06;
-      for (const m of [base, shaft, cap]) { m.castShadow = true; m.receiveShadow = true; g.add(m); }
+      }), 'stone', 3, 0.9);
+      const g = this.buildPillarMesh(totalH, stone, stoneDark);
       g.position.set(cx, 0, cz);
       this.entityGroup.add(g);
       return;
@@ -1458,21 +1862,21 @@ export class ThreeRenderer {
     for (let i = 0; i < steps; i++) {
       const top = -0.1 - i * 0.17;
       const h = top - pitBottom;
-      const step = new THREE.Mesh(new THREE.BoxGeometry(2, h, depth / steps), stepMat);
+      const step = new THREE.Mesh(roundedBox(2, h, depth / steps, 0.02), stepMat);
       step.position.set(x + 1, top - h / 2, y + 2 - (i + 0.5) * (depth / steps));
       step.castShadow = true;
       step.receiveShadow = true;
       this.entityGroup.add(step);
     }
     // 两侧沿壁（盖住地板截面的细缝，也强化"竖井"感）
-    const sideMat = new THREE.MeshStandardMaterial({ color: 0x4c5a66, roughness: 0.9 });
+    const sideMat = this.propDetail(new THREE.MeshStandardMaterial({ color: 0x4c5a66, roughness: 0.9 }), 'stone', 2, 0.9);
     for (const sx of [x + 0.04, x + 1.96]) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.09, 1.32, 2.08), sideMat);
+      const wall = new THREE.Mesh(roundedBox(0.09, 1.32, 2.08, 0.02), sideMat);
       wall.position.set(sx, -0.55, y + 1);
       this.entityGroup.add(wall);
     }
     // 南缘压条（入口处遮住 0.1 厚的地板侧缝）
-    const lip = new THREE.Mesh(new THREE.BoxGeometry(2, 0.26, 0.1), sideMat);
+    const lip = new THREE.Mesh(roundedBox(2, 0.26, 0.1, 0.02), sideMat);
     lip.position.set(x + 1, -0.13, y + 2.02);
     this.entityGroup.add(lip);
   }
@@ -1514,39 +1918,81 @@ export class ThreeRenderer {
   }
 
   /**
-   * 宝箱：木质箱身 + 半圆柱拱形盖 + 金属包边 + 正面锁扣。
-   * 开启时盖子绕后沿向后掀开（约 115°）；grand（Boss 奖励大宝箱）整体放大 1.25 倍。
+   * 宝箱：木箱身 + 拱形盖 + 金属包边 + 合页 + 锁扣，**三档独立造型**——
+   *   normal 普通（橡木 + 黄铜）／grand 大宝箱（1.25× 红木 + 镀金 + 三道箍 + 宝石锁）／
+   *   relic 遗物宝箱（1.25× 紫檀 + 秘银 + 星辉宝石，自发光）。
+   * 开启时盖子绕后沿向后掀开约 115°，可看到内衬（绒布）。
    */
-  private buildChest(opened: boolean, grand: boolean): THREE.Group {
+  private buildChest(opened: boolean, tier: 'normal' | 'grand' | 'relic'): THREE.Group {
     const g = new THREE.Group();
-    const s = grand ? 1.25 : 1;
+    const s = tier === 'normal' ? 1 : 1.25;
     const bw = 0.66 * s; // 宽（X）
     const bh = 0.32 * s; // 箱身高
     const bd = 0.46 * s; // 深（Z）
 
-    const woodMat = new THREE.MeshStandardMaterial({
-      color: opened ? 0x6b573a : 0x8a5a2b, roughness: 0.78, metalness: 0.08,
-    });
-    const lidMat = new THREE.MeshStandardMaterial({
-      color: opened ? 0x4a3d26 : 0x5f3b1a, roughness: 0.72, metalness: 0.12,
-    });
-    const metalMat = new THREE.MeshStandardMaterial({
-      color: opened ? 0x7c7c7c : 0xd9a92b, roughness: 0.35, metalness: 0.85,
-    });
+    // 分档配色：普通=橡木黄铜 / 大宝箱=红木镀金 / 遗物=紫檀秘银
+    const P = tier === 'relic'
+      ? { wood: 0x3d2a5e, lid: 0x2b1c45, metal: 0xc9a6ff, lock: 0xe8d4ff, lining: 0x1c1030, gem: 0xd9a6ff }
+      : tier === 'grand'
+        ? { wood: 0x6d3f1d, lid: 0x4e2a12, metal: 0xf0c552, lock: 0xffe08a, lining: 0x3a1420, gem: 0xffdd66 }
+        : { wood: 0x8a5a2b, lid: 0x5f3b1a, metal: 0xd9a92b, lock: 0xffd75e, lining: 0x2f2013, gem: 0 };
+    const shade = (c: number, k: number): number => new THREE.Color(c).multiplyScalar(k).getHex();
 
-    // 箱身
-    const body = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), woodMat);
-    body.position.y = bh / 2;
+    const woodMat = this.propDetail(new THREE.MeshStandardMaterial({
+      color: opened ? shade(P.wood, 0.78) : P.wood, roughness: 0.8, metalness: 0.06,
+    }), 'wood', 2, 1.0);
+    const lidMat = this.propDetail(new THREE.MeshStandardMaterial({
+      color: opened ? shade(P.lid, 0.85) : P.lid, roughness: 0.74, metalness: 0.1,
+    }), 'wood', 2, 1.0);
+    const metalMat = this.propDetail(new THREE.MeshStandardMaterial({
+      color: opened ? 0x7c7c7c : P.metal, roughness: 0.34, metalness: 0.88,
+    }), 'metal', 3, 0.8);
+
+    // ① 底座木台：避免箱子"浮"在地板上
+    const base = new THREE.Mesh(roundedBox(bw * 1.08, 0.055 * s, bd * 1.08, 0.018), lidMat);
+    base.position.y = 0.0275 * s;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    g.add(base);
+    const y0 = 0.055 * s; // 箱身底面
+
+    // ② 箱身
+    const body = new THREE.Mesh(roundedBox(bw, bh, bd, 0.03), woodMat);
+    body.position.y = y0 + bh / 2;
     body.castShadow = true;
     body.receiveShadow = true;
     g.add(body);
 
-    // 拱形盖：半圆柱沿 X 延伸（rotation.z = π/2 把圆柱轴由 Y 转到 X，半圆朝上）
+    // ③ 箱身竖板：前后各 2 道木条（木板拼缝的立体感）
+    for (const sz of [-1, 1]) {
+      for (const ox of [-bw * 0.31, bw * 0.31]) {
+        const batten = new THREE.Mesh(roundedBox(0.045 * s, bh * 0.84, 0.018 * s, 0.006), lidMat);
+        batten.position.set(ox, y0 + bh / 2, sz * (bd / 2 + 0.004 * s));
+        batten.castShadow = true;
+        g.add(batten);
+      }
+    }
+
+    // ④ 上沿金属口条 + 四角包边
+    const rim = new THREE.Mesh(roundedBox(bw * 1.02, 0.03 * s, bd * 1.02, 0.008), metalMat);
+    rim.position.y = y0 + bh - 0.012 * s;
+    rim.castShadow = true;
+    g.add(rim);
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        const strip = new THREE.Mesh(roundedBox(0.035 * s, bh, 0.035 * s, 0.01), metalMat);
+        strip.position.set(sx * (bw / 2 - 0.02 * s), y0 + bh / 2, sz * (bd / 2 - 0.02 * s));
+        strip.castShadow = true;
+        g.add(strip);
+      }
+    }
+
+    // ⑤ 拱形盖（半圆柱沿 X 延伸）+ 金属箍 + 合页
     const pivot = new THREE.Group();
-    pivot.position.set(0, bh, -bd / 2); // 铰链在箱身后上沿
+    pivot.position.set(0, y0 + bh, -bd / 2); // 铰链在箱身后上沿
     const lidR = bd / 2;
     const lid = new THREE.Mesh(
-      new THREE.CylinderGeometry(lidR, lidR, bw, 20, 1, false, 0, Math.PI),
+      new THREE.CylinderGeometry(lidR, lidR, bw, 32, 1, false, 0, Math.PI), // 拱盖加密：弧面不再有折线
       lidMat,
     );
     lid.rotation.z = Math.PI / 2;
@@ -1554,42 +2000,63 @@ export class ThreeRenderer {
     lid.castShadow = true;
     pivot.add(lid);
 
-    // 盖子上的金属箍（半圆环，绕 X 轴方向）
-    for (const ox of [-bw * 0.28, bw * 0.28]) {
-      const band = new THREE.Mesh(
-        new THREE.TorusGeometry(lidR * 1.02, 0.018 * s, 8, 18, Math.PI),
-        metalMat,
-      );
+    // 盖面金属箍：普通 2 道，大宝箱/遗物 3 道（更华丽）
+    for (const ox of tier === 'normal' ? [-bw * 0.28, bw * 0.28] : [-bw * 0.34, 0, bw * 0.34]) {
+      const band = new THREE.Mesh(torus(lidR * 1.02, 0.018 * s, Math.PI), metalMat);
       band.rotation.y = Math.PI / 2; // 环平面由 XY 转到 ZY
       band.position.set(ox, 0, bd / 2);
       pivot.add(band);
     }
-
+    // 合页：两片铰链板 + 贯穿铰链轴
+    for (const ox of [-bw * 0.3, bw * 0.3]) {
+      const plate = new THREE.Mesh(roundedBox(0.07 * s, 0.05 * s, 0.03 * s, 0.008), metalMat);
+      plate.position.set(ox, -0.008 * s, 0.014 * s);
+      plate.castShadow = true;
+      pivot.add(plate);
+    }
+    const pin = new THREE.Mesh(cyl(0.014 * s, 0.014 * s, bw * 0.74, 12), metalMat);
+    pin.rotation.z = Math.PI / 2;
+    pivot.add(pin);
+    // 宝箱宝石（盖子顶面）：大宝箱镀金宝石 / 遗物星辉宝石（自发光）
+    if (P.gem) {
+      const gem = new THREE.Mesh(sphere(0.052 * s), new THREE.MeshStandardMaterial({
+        color: P.gem, emissive: new THREE.Color(P.gem), emissiveIntensity: 0.8, roughness: 0.2, metalness: 0.5,
+      }));
+      gem.position.set(0, lidR * 0.96, bd / 2);
+      gem.castShadow = true;
+      pivot.add(gem);
+    }
     if (opened) pivot.rotation.x = -2.0; // 开启：向后掀开约 115°
     g.add(pivot);
 
-    // 箱身四角金属包边
-    for (const sx of [-1, 1]) {
-      for (const sz of [-1, 1]) {
-        const strip = new THREE.Mesh(
-          new THREE.BoxGeometry(0.035 * s, bh, 0.035 * s),
-          metalMat,
-        );
-        strip.position.set(sx * (bw / 2 - 0.02 * s), bh / 2, sz * (bd / 2 - 0.02 * s));
-        strip.castShadow = true;
-        g.add(strip);
-      }
+    // ⑥ 开启态：可见内衬（绒布）+ 内部余光
+    if (opened) {
+      const lining = new THREE.Mesh(roundedBox(bw * 0.84, 0.07 * s, bd * 0.66, 0.02),
+        new THREE.MeshStandardMaterial({
+          color: P.lining, roughness: 0.96, metalness: 0,
+          emissive: new THREE.Color(P.lining), emissiveIntensity: 0.3,
+        }));
+      lining.position.y = y0 + bh * 0.62;
+      g.add(lining);
     }
 
-    // 正面锁扣
-    const lock = new THREE.Mesh(
-      new THREE.BoxGeometry(0.11 * s, 0.1 * s, 0.03 * s),
-      new THREE.MeshStandardMaterial({
-        color: opened ? 0x5a5a5a : 0xffd75e, roughness: 0.3, metalness: 0.9,
-      }),
-    );
-    lock.position.set(0, bh * 0.8, bd / 2 + 0.012 * s);
+    // ⑦ 正面锁扣：锁板 + 吊环 + 钥匙孔
+    const lockMat = new THREE.MeshStandardMaterial({
+      color: opened ? 0x5a5a5a : P.lock, roughness: 0.3, metalness: 0.9,
+    });
+    const lock = new THREE.Mesh(roundedBox(0.12 * s, 0.11 * s, 0.028 * s, 0.012), lockMat);
+    lock.position.set(0, y0 + bh * 0.8, bd / 2 + 0.014 * s);
+    lock.castShadow = true;
     g.add(lock);
+    const ring = new THREE.Mesh(torus(0.036 * s, 0.011 * s, Math.PI * 1.55), lockMat);
+    ring.rotation.y = Math.PI / 2; // 吊环面朝前
+    ring.position.set(0, y0 + bh * 0.64, bd / 2 + 0.03 * s);
+    ring.castShadow = true;
+    g.add(ring);
+    const keyhole = new THREE.Mesh(roundedBox(0.016 * s, 0.032 * s, 0.012, 0.004),
+      new THREE.MeshStandardMaterial({ color: 0x140d06, roughness: 0.9, metalness: 0.2 }));
+    keyhole.position.set(0, y0 + bh * 0.81, bd / 2 + 0.03 * s);
+    g.add(keyhole);
 
     return g;
   }
@@ -1627,7 +2094,9 @@ export class ThreeRenderer {
    * 水平放置后会随透视压缩成椭圆，比把阴影画在竖直贴图上自然得多。
    * 默认不透明度取配置 shadow.staticAlpha（光影 v2 §3：0.2 → 0.45，此前配置未被消费）。
    */
-  private addGroundShadow(x: number, z: number, radius: number, opacity?: number): THREE.Mesh {
+  private addGroundShadow(
+    x: number, z: number, radius: number, opacity?: number, group: THREE.Group = this.entityGroup,
+  ): THREE.Mesh {
     const alpha = opacity ?? dataManager.config.shadow.staticAlpha;
     const mat = new THREE.MeshBasicMaterial({
       map: canvasTexture(textureGen.glow('#000000')),
@@ -1639,24 +2108,24 @@ export class ThreeRenderer {
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.set(x, 0.015, z);
     mesh.renderOrder = 1;
-    this.entityGroup.add(mesh);
+    group.add(mesh);
     return mesh;
   }
 
   /** 铁栅栏：5 根竖条 + 2 根横梁（深灰金属） */
   private buildGateMesh(vertical: boolean): THREE.Group {
     const g = new THREE.Group();
-    const mat = new THREE.MeshStandardMaterial({
+    const mat = this.propDetail(new THREE.MeshStandardMaterial({
       color: 0x59606b, roughness: 0.45, metalness: 0.85,
-    });
+    }), 'metal', 2, 0.8);
     for (let i = 0; i < 5; i++) {
-      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.2, 0.1), mat);
+      const bar = new THREE.Mesh(roundedBox(0.1, 1.2, 0.1, 0.022), mat);
       bar.position.set((i - 2) * 0.21, 0.6, 0);
       bar.castShadow = true;
       g.add(bar);
     }
     for (const by of [0.28, 0.95]) {
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(1.06, 0.11, 0.13), mat);
+      const beam = new THREE.Mesh(roundedBox(1.06, 0.11, 0.13, 0.025), mat);
       beam.position.set(0, by, 0);
       beam.castShadow = true;
       g.add(beam);
@@ -1767,13 +2236,16 @@ export class ThreeRenderer {
   /** 上一帧使用的容器尺寸（检测"进入游戏时容器才获得实际尺寸"的变化） */
   private lastContainerW = 0;
   private lastContainerH = 0;
+  /** 容器尺寸观测器（容器可见性/布局变化时自动 resize） */
+  private containerObserver: ResizeObserver | null = null;
 
   render(timeMs: number): void {
     if (!this.ready || !this.renderer || !this.scene || !this.camera) return;
-    // 容器尺寸变化即同步（进入游戏时 game-root 才显示，首帧前容器尺寸为 0/窗口兜底值 → 歪斜根因）
+    // 容器尺寸变化即同步（进入游戏时 game-root 才显示，首帧前容器尺寸为 0/窗口兜底值 → 歪斜根因）。
+    // 任一维 >0 即触发（修复：容器高度曾恒为 0 导致 ch>0 永不成立、监测失效）
     const cw = this.container?.clientWidth ?? 0;
     const ch = this.container?.clientHeight ?? 0;
-    if (cw > 0 && ch > 0 && (cw !== this.lastContainerW || ch !== this.lastContainerH)) {
+    if ((cw > 0 || ch > 0) && (cw !== this.lastContainerW || ch !== this.lastContainerH)) {
       this.lastContainerW = cw;
       this.lastContainerH = ch;
       this.resize();
@@ -1781,6 +2253,11 @@ export class ThreeRenderer {
     const floor = WorldManager.getInstance().currentFloor;
     if (!floor) return;
     if (floor.floorId !== this.builtFloorId) this.rebuildFloor();
+    // 实体层脏标记：击杀 / 开箱 / 拾取在同一帧内的多次触发合并为一次重建
+    if (this.entitiesDirty) {
+      this.entitiesDirty = false;
+      this.rebuildEntities();
+    }
 
     // 相机注视点（世界坐标）：
     // 不采用 CameraController 的 cam.x/cam.y —— 那套是 2D 投影像素，camY 含物体高度 wallH 偏移，
@@ -1818,6 +2295,7 @@ export class ThreeRenderer {
       this.focusZ += (targetZ - this.focusZ) * t;
     }
     this.lastTimeMs = timeMs;
+    this.frameMsAvg += (dt - this.frameMsAvg) * 0.1; // 平滑帧时（调试面板展示用）
 
     // 遮挡虚化：挡住玩家 / 可交互物的墙与其左右两块渐隐（碰撞仍是实体）
     this.updateWallFade(dt);
@@ -2153,6 +2631,134 @@ export class ThreeRenderer {
   }
 
   /** 清空容器并释放几何体/材质（贴图由 ThreeTextures 缓存共享，不在此销毁） */
+  /**
+   * 静态绘制合并（性能优化）：
+   * 装饰 / 门套 / 窗框 / 柱子这类**静态**件按「材质」合并成少量 Mesh。
+   *
+   * 此前一层有数百个 Mesh（装饰平均 5.9 件/房 × 每件 2~13 个 Mesh + 门套 + 窗框 + 柱件），
+   * 每个 Mesh 在主渲染 **和** 月光阴影 pass 里各要一次 draw call —— 集显上这是帧时大头。
+   * 合并后收敛到十几件（按材质），两侧开销同时下降一个数量级。
+   *
+   * 只合并静态件：`InstancedMesh`（墙 / 柱 / 栏杆）与 `Sprite` 原样保留。
+   * 合并前先 `updateMatrixWorld`，几何做**世界变换后**合并，故画面位置不变。
+   */
+  private mergeStaticDraws(): void {
+    const sources = [this.decorGroup, this.wallGroup];
+    for (const g of sources) g.updateMatrixWorld(true);
+    // 先快照原始静态子对象：合并结果稍后也挂进 decorGroup，
+    // 收尾时必须「只移除快照里的原始对象」，否则会把刚合并好的结果一起删掉。
+    const originals = sources.map(g => ({ group: g, kids: [...g.children] }));
+
+    // 分桶键 = 材质 + 属性签名：只有「材质与属性集都一致」的几何才能合并，
+    // 否则 mergeGeometries 会失败并打告警（这里提前分桶，直接规避）
+    const meshBuckets = new Map<string, {
+      mat: THREE.Material; geos: THREE.BufferGeometry[]; cast: boolean; recv: boolean;
+    }>();
+    const lineBuckets = new Map<THREE.Material, number[]>();
+    const tmp = new THREE.Vector3();
+
+    const visit = (o: THREE.Object3D): void => {
+      for (const child of o.children) {
+        const line = child as THREE.LineSegments;
+        if (line.isLineSegments) {
+          const pos = line.geometry.getAttribute('position');
+          if (pos) {
+            const arr = lineBuckets.get(line.material as THREE.Material) ?? [];
+            for (let i = 0; i < pos.count; i++) {
+              tmp.fromBufferAttribute(pos as THREE.BufferAttribute, i).applyMatrix4(line.matrixWorld);
+              arr.push(tmp.x, tmp.y, tmp.z);
+            }
+            lineBuckets.set(line.material as THREE.Material, arr);
+          }
+          continue;
+        }
+        const mesh = child as THREE.Mesh;
+        if (mesh.isMesh && !(mesh as unknown as THREE.InstancedMesh).isInstancedMesh) {
+          const mat = mesh.material as THREE.Material;
+          const sig = Object.keys(mesh.geometry.attributes).sort().join(',');
+          const key = `${mat.uuid}|${sig}`;
+          let b = meshBuckets.get(key);
+          if (!b) {
+            b = { mat, geos: [], cast: false, recv: false };
+            meshBuckets.set(key, b);
+          }
+          const clone = mesh.geometry.clone();
+          clone.applyMatrix4(mesh.matrixWorld);
+          b.geos.push(clone.index ? clone.toNonIndexed() : clone);
+          b.cast = b.cast || mesh.castShadow;
+          b.recv = b.recv || mesh.receiveShadow;
+          continue;
+        }
+        if (child.children.length > 0) visit(child);
+      }
+    };
+    for (const g of sources) visit(g);
+
+    // 先只产出结果、不动现场：任一步失败都直接放弃合并（保留原有对象，绝不半合并）
+    const results: THREE.Object3D[] = [];
+    try {
+      for (const b of meshBuckets.values()) {
+        const merged = mergeGeometries(b.geos, false);
+        if (merged) {
+          const mesh = new THREE.Mesh(merged, b.mat);
+          mesh.castShadow = b.cast;
+          mesh.receiveShadow = b.recv;
+          results.push(mesh);
+        } else {
+          // 兼容性异常：该桶退回逐个 Mesh（不丢内容）
+          for (const geo of b.geos) {
+            const mesh = new THREE.Mesh(geo, b.mat);
+            mesh.castShadow = b.cast;
+            mesh.receiveShadow = b.recv;
+            results.push(mesh);
+          }
+        }
+      }
+      for (const [mat, arr] of lineBuckets) {
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr), 3));
+        results.push(new THREE.LineSegments(geo, mat));
+      }
+    } catch (err) {
+      console.warn('[Three] 静态合并失败，退回未合并渲染', err);
+      return;
+    }
+
+    for (const obj of results) this.decorGroup.add(obj);
+    // 合并完成：移除并入前的原始对象（InstancedMesh / Sprite 保留）
+    for (const { group, kids } of originals) {
+      for (const child of kids) {
+        const inst = child as THREE.InstancedMesh;
+        if (inst.isInstancedMesh || (child as THREE.Sprite).isSprite) continue;
+        group.remove(child);
+        this.disposeSubtreeGeometries(child);
+      }
+    }
+  }
+
+  /** 释放被合并掉的子树中「非共享」的几何（材质已被合并结果复用，不释放） */
+  private disposeSubtreeGeometries(node: THREE.Object3D): void {
+    const geo = (node as THREE.Mesh).geometry;
+    if (geo && !geo.userData?.shared) geo.dispose();
+    for (const child of node.children) this.disposeSubtreeGeometries(child);
+  }
+
+  /** 渲染统计（调试面板 `~` 展示）：帧时 / draw call / 三角面 / program / 几何 / 纹理 */
+  stats(): {
+    frameMs: number; calls: number; triangles: number;
+    programs: number; geometries: number; textures: number;
+  } {
+    const info = this.renderer?.info;
+    return {
+      frameMs: this.frameMsAvg,
+      calls: info?.render.calls ?? 0,
+      triangles: info?.render.triangles ?? 0,
+      programs: info?.programs?.length ?? 0,
+      geometries: info?.memory.geometries ?? 0,
+      textures: info?.memory.textures ?? 0,
+    };
+  }
+
   private clearGroup(group: THREE.Group): void {
     for (let i = group.children.length - 1; i >= 0; i--) {
       const child = group.children[i];
@@ -2161,10 +2767,13 @@ export class ThreeRenderer {
       const asGroup = child as THREE.Group;
       if (asGroup.children && asGroup.children.length > 0) this.clearGroup(asGroup);
       const obj = child as THREE.Mesh | THREE.InstancedMesh | THREE.Sprite;
-      if (obj.geometry) obj.geometry.dispose();
+      // ⚠️ 只释放「本对象独占」的资源：几何/材质可能来自共享缓存
+      // （ThreeGeometry 的圆角盒/圆柱、ThreeTextures 的贴图），
+      // 误 dispose 会让下一层/下一次重建重新上传 GPU buffer，是换层与开箱卡顿的来源之一。
+      if (obj.geometry && !obj.geometry.userData?.shared) obj.geometry.dispose();
       const mat = (obj as THREE.Mesh).material;
-      if (Array.isArray(mat)) mat.forEach(m => m.dispose());
-      else mat?.dispose();
+      if (Array.isArray(mat)) mat.forEach(m => { if (!m.userData?.shared) m.dispose(); });
+      else if (mat && !mat.userData?.shared) mat.dispose();
     }
   }
 }

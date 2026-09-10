@@ -93,7 +93,9 @@ export class ShopPanel {
         return `<div class="shop-row shop-item" data-hover-sell="${e.id}">
           <div>
             <div><span style="color:${q.color}">${e.name}</span> <span class="dim">Lv.${e.level}</span> ${tags}</div>
-            <div class="dim">${e.slot === 'weapon' ? '🗡️ 武器' : '🛡️ 胸甲'} · ⚔️${e.attack} 🛡️${e.defense}</div>
+            <div class="dim">${e.slot === 'weapon' ? '🗡️ 武器' : e.slot === 'armor' ? '🛡️ 胸甲' : '💍 饰品'} · ${e.slot === 'accessory'
+              ? `${e.accessoryStat === 'crit' ? '暴击' : '闪避'} ${e.accessoryValue ?? 0}%`
+              : `⚔️${e.attack} 🛡️${e.defense}`}</div>
           </div>
           <button data-sell="${e.id}" ${locked ? 'disabled' : ''}>+${e.sellPrice} 💰</button>
         </div>`;
@@ -161,21 +163,27 @@ export class ShopPanel {
   /** 商品 + 当前同栏位已穿戴装备：两个竖排卡片并排 */
   private compareHtml(e: Equipment): string {
     const player = Player.getInstance();
-    const current = e.slot === 'weapon' ? player.weapon : player.armor;
+    const current = e.slot === 'weapon' ? player.weapon
+      : e.slot === 'armor' ? player.armor : player.accessory;
+    const slotIcon = e.slot === 'weapon' ? '🗡️ 武器' : e.slot === 'armor' ? '🛡️ 胸甲' : '💍 饰品';
+    const kind = e.slot === 'accessory' ? (e.accessoryStat === 'crit' ? '暴击' : '闪避') : slotIcon.slice(2);
     const currentHtml = current
       ? this.equipCard(current, '已穿戴')
-      : `<div class="hover-card"><div class="tt-title dim">${e.slot === 'weapon' ? '🗡️ 武器' : '🛡️ 胸甲'}栏</div><div class="dim">未穿戴装备</div></div>`;
-    return this.equipCard(e, e.slot === 'weapon' ? '购买（武器）' : '购买（胸甲）') + currentHtml;
+      : `<div class="hover-card"><div class="tt-title dim">${slotIcon}栏</div><div class="dim">未穿戴装备</div></div>`;
+    return this.equipCard(e, `购买（${kind}）`) + currentHtml;
   }
 
   private equipCard(e: Equipment, heading: string): string {
     const q = dataManager.equipment.quality[e.quality];
+    const statRows = e.slot === 'accessory'
+      ? `<div>${e.accessoryStat === 'crit' ? '🎯 暴击率' : '🌀 闪避率'} <b>${e.accessoryValue ?? 0}%</b></div>`
+      : `<div>⚔️ 攻击力 <b>${e.attack}</b></div>
+         <div>🛡️ 防御力 <b>${e.defense}</b></div>`;
     return `<div class="hover-card" style="border-color:${q.color}">
       <div class="tt-title" style="color:${q.color}">${e.name}</div>
       <div class="dim">${heading} · ${q.name} · Lv.${e.level}</div>
       <div class="hover-stats">
-        <div>⚔️ 攻击力 <b>${e.attack}</b></div>
-        <div>🛡️ 防御力 <b>${e.defense}</b></div>
+        ${statRows}
       </div>
       ${e.affixes.length > 0
         ? `<div class="affix-list">${e.affixes.map(a => {

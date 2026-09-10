@@ -4,6 +4,7 @@
 import type { MonsterDef, MonsterStats } from '../types';
 import { dataManager } from '../core/DataManager';
 import type { GameConfig } from '../core/DataManager';
+import { DifficultySystem } from '../systems/DifficultySystem';
 
 export class StatCalculator {
   private static instance: StatCalculator;
@@ -59,17 +60,21 @@ export class StatCalculator {
     const round = (v: number) => Math.max(1, Math.round(v));
     const isBoss = def.category === 'boss';
     const depthMul = this.depthMultiplier(floorId, depth);
-    let hp = this.anchorValue(a.hp, floorId, a.overflowPerFloor.hp) * def.hpMul * depthMul;
-    let atk = this.anchorValue(a.atk, floorId, a.overflowPerFloor.atk) * def.atkMul * depthMul;
-    let defv = this.anchorValue(a.def, floorId, a.overflowPerFloor.def) * def.defMul * depthMul;
-    let exp = this.anchorValue(a.exp, floorId, a.overflowPerFloor.exp) * def.expMul * depthMul;
-    let gold = this.anchorValue(a.gold, floorId, a.overflowPerFloor.gold) * def.goldMul * depthMul;
+    // 难度系数（简化难度系统）：作用于怪物属性与金币/经验
+    const diff = DifficultySystem.getInstance();
+    const dmul = diff.monsterMul();
+    let hp = this.anchorValue(a.hp, floorId, a.overflowPerFloor.hp) * def.hpMul * depthMul * dmul;
+    let atk = this.anchorValue(a.atk, floorId, a.overflowPerFloor.atk) * def.atkMul * depthMul * dmul;
+    let defv = this.anchorValue(a.def, floorId, a.overflowPerFloor.def) * def.defMul * depthMul * dmul;
+    let exp = this.anchorValue(a.exp, floorId, a.overflowPerFloor.exp) * def.expMul * depthMul * diff.expMul();
+    let gold = this.anchorValue(a.gold, floorId, a.overflowPerFloor.gold) * def.goldMul * depthMul * diff.goldMul();
 
     if (isBoss) {
-      // Boss在楼层基准上额外放大（bossStatBonus.hp 为乘法加成基数）
-      hp *= 1 + cfg.bossStatBonus.hp;
-      atk *= 1 + cfg.bossStatBonus.atk;
-      defv *= 1 + cfg.bossStatBonus.def;
+      // Boss在楼层基准上额外放大（bossStatBonus.hp 为乘法加成基数；再乘难度 Boss 强度）
+      const bmul = diff.bossMul();
+      hp *= (1 + cfg.bossStatBonus.hp) * bmul;
+      atk *= (1 + cfg.bossStatBonus.atk) * bmul;
+      defv *= (1 + cfg.bossStatBonus.def) * bmul;
     } else if (isElite) {
       hp *= dataManager.monsters.eliteStatMultiplier;
       atk *= dataManager.monsters.eliteStatMultiplier;

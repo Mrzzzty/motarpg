@@ -7,6 +7,7 @@ import type {
 import { eventBus } from '../core/EventBus';
 import { dataManager } from '../core/DataManager';
 import { StatCalculator } from '../utils/StatCalculator';
+import { RelicManager } from '../systems/RelicManager';
 
 const QUALITY_ORDER: Quality[] = ['poor', 'common', 'fine', 'rare', 'epic', 'legendary', 'mythic'];
 
@@ -32,7 +33,9 @@ export class Player {
       hotbar: [null, null, null, null, null],
       weaponId: null,
       armorId: null,
+      accessoryId: null,
       bag: [],
+      relics: [],
       x: 0,
       y: 0,
       currentFloor: 1,
@@ -55,7 +58,8 @@ export class Player {
   // ============ 属性聚合（基础 + 装备 + 词条） ============
 
   private equipped(): Equipment[] {
-    return this.state.bag.filter(e => e.id === this.state.weaponId || e.id === this.state.armorId);
+    const { weaponId, armorId, accessoryId } = this.state;
+    return this.state.bag.filter(e => e.id === weaponId || e.id === armorId || e.id === accessoryId);
   }
 
   stats(): PlayerStats {
@@ -75,6 +79,9 @@ export class Player {
     for (const equip of this.equipped()) {
       attack += equip.attack;
       defense += equip.defense;
+      // 饰品主属性：暴击率 / 闪避率（百分点）
+      if (equip.accessoryStat === 'crit') critRate += equip.accessoryValue ?? 0;
+      else if (equip.accessoryStat === 'dodge') dodgeRate += equip.accessoryValue ?? 0;
     }
     const affixes: AffixInstance[] = this.equipped().flatMap(e => e.affixes);
     for (const a of affixes) {
@@ -93,9 +100,55 @@ export class Player {
         case 'dragonslayer': bossDamage += a.value; break;
       }
     }
+
+    // ===== 遗物加成（按当前生命比例聚合：含低血/高血条件与组合质变） =====
+    const relics = RelicManager.getInstance();
+    const hpRatio = maxHp > 0 ? this.state.hp / maxHp : 1;
+    const snap = relics.snapshot(hpRatio);
+    const F = snap.flat;
+    const P = snap.pct;
+    let critDamage = 0;
+    let damageReduction = 0;
+    let damageTaken = 0;
+    let thorns = 0;
+    let armorPen = 0;
+    let eliteBossDamage = 0;
+    let monsterAttackUp = 0;
+    let potionBonus = 0;
+    let potionExtraPct = 0;
+    let pctMaxHp = 0;
+
+    attack += F.attack ?? 0; pctAtk += P.attack ?? 0;
+    defense += F.defense ?? 0; pctDef += P.defense ?? 0;
+    maxHp += F.maxHp ?? 0; pctMaxHp += P.maxHp ?? 0;
+    critRate += F.critRate ?? 0;
+    dodgeRate += F.dodgeRate ?? 0;
+    lifesteal += F.lifesteal ?? 0;
+    fireDamage += F.fireDamage ?? 0;
+    goldBonus += F.goldBonus ?? 0;
+    expBonus += F.expBonus ?? 0;
+    bossDamage += F.bossDamage ?? 0;
+    critDamage += F.critDamage ?? 0;
+    damageReduction += F.damageReduction ?? 0;
+    damageTaken += F.damageTaken ?? 0;
+    thorns += F.thorns ?? 0;
+    armorPen += F.armorPen ?? 0;
+    eliteBossDamage += F.eliteBossDamage ?? 0;
+    monsterAttackUp += F.monsterAttackUp ?? 0;
+    potionBonus += F.potionBonus ?? 0;
+    potionExtraPct += F.potionExtraPct ?? 0;
+
+    let finalMaxHp = Math.round(maxHp * (1 + pctMaxHp / 100));
+    // 献祭组合：生命上限锁定为 1
+    if (snap.combos.includes('sacrifice')) finalMaxHp = 1;
+
+    let finalAttack = Math.round(attack * (1 + pctAtk / 100));
+    // 血怒组合：生命低于 35% 时攻击 ×2（覆盖狂战士之血的 +45%）
+    if (snap.combos.includes('bloodrage') && hpRatio < 0.35) finalAttack *= 2;
+
     return {
-      maxHp: Math.round(maxHp),
-      attack: Math.round(attack * (1 + pctAtk / 100)),
+      maxHp: Math.max(1, finalMaxHp),
+      attack: finalAttack,
       defense: Math.round(defense * (1 + pctDef / 100)),
       critRate: Math.min(75, critRate),
       dodgeRate: Math.min(50, dodgeRate),
@@ -104,6 +157,15 @@ export class Player {
       goldBonus,
       expBonus,
       bossDamage,
+      critDamage,
+      damageReduction,
+      damageTaken,
+      thorns,
+      armorPen,
+      eliteBossDamage,
+      monsterAttackUp,
+      potionBonus,
+      potionExtraPct,
     };
   }
 
@@ -127,6 +189,16 @@ export class Player {
     const before = this.state.hp;
     this.state.hp = Math.max(0, this.state.hp - amount);
     eventBus.emit('hpChanged', { oldValue: before, newValue: this.state.hp, delta: this.state.hp - before });
+  }
+
+  /** 生命上限变化后夹取当前生命（如遗物降低上限） */
+  clampHp(): void {
+    const max = this.maxHp;
+    if (this.state.hp > max) {
+      const before = this.state.hp;
+      this.state.hp = max;
+      eventBus.emit('hpChanged', { oldValue: before, newValue: this.state.hp, delta: this.state.hp - before });
+    }
   }
 
   gainExp(amount: number): void {
@@ -195,19 +267,24 @@ export class Player {
     this.state.potions[tier] = this.getPotionCount(tier) + count;
   }
 
-  /** 使用药水：百分比回复 */
+  /** 使用药水：百分比回复（含遗物药水加成；贪婪之匣禁止用药） */
   usePotion(tier: PotionTier): boolean {
     if (this.getPotionCount(tier) <= 0) return false;
+    if (RelicManager.getInstance().value('noPotion') > 0) return false;
     const def = dataManager.getPotion(tier);
     if (!def) return false;
     this.state.potions[tier] -= 1;
-    const healed = this.heal(Math.round(this.maxHp * def.healPct));
+    const s = this.stats();
+    const pct = def.healPct * (1 + s.potionBonus / 100);
+    const extra = s.potionExtraPct > 0 ? this.maxHp * s.potionExtraPct / 100 : 0;
+    const healed = this.heal(Math.round(this.maxHp * pct + extra));
     eventBus.emit('potionUsed', { tier, healed });
     return true;
   }
 
-  /** 自动选最优药水（战斗中扣血超过其回复量时用） */
+  /** 自动选最优药水（战斗中扣血超过其回复量时用；贪婪之匣禁用） */
   bestPotionFor(missing: number): PotionTier | null {
+    if (RelicManager.getInstance().value('noPotion') > 0) return null;
     const order: PotionTier[] = ['crude', 'normal', 'quality', 'strong', 'holy'];
     for (const tier of order) {
       const def = dataManager.getPotion(tier);
@@ -225,10 +302,12 @@ export class Player {
 
   get weapon(): Equipment | null { return this.state.bag.find(e => e.id === this.state.weaponId) ?? null; }
   get armor(): Equipment | null { return this.state.bag.find(e => e.id === this.state.armorId) ?? null; }
+  get accessory(): Equipment | null { return this.state.bag.find(e => e.id === this.state.accessoryId) ?? null; }
 
   /** 背包中未穿戴的装备 */
   get unequippedBag(): Equipment[] {
-    return this.state.bag.filter(e => e.id !== this.state.weaponId && e.id !== this.state.armorId);
+    const { weaponId, armorId, accessoryId } = this.state;
+    return this.state.bag.filter(e => e.id !== weaponId && e.id !== armorId && e.id !== accessoryId);
   }
 
   addEquipment(equip: Equipment): void {
@@ -236,21 +315,33 @@ export class Player {
     eventBus.emit('equipmentGenerated', { equipment: equip, source: equip.source });
   }
 
+  /** 槽位当前穿戴的装备 ID（未知槽位 → null） */
+  private equippedIdOf(slot: EquipSlot): string | null {
+    if (slot === 'weapon') return this.state.weaponId;
+    if (slot === 'armor') return this.state.armorId;
+    if (slot === 'accessory') return this.state.accessoryId;
+    return null;
+  }
+
+  private setEquippedId(slot: EquipSlot, id: string | null): void {
+    if (slot === 'weapon') this.state.weaponId = id;
+    else if (slot === 'armor') this.state.armorId = id;
+    else if (slot === 'accessory') this.state.accessoryId = id;
+  }
+
   equip(equipId: string): boolean {
     const equip = this.state.bag.find(e => e.id === equipId);
     if (!equip) return false;
     const slot: EquipSlot = equip.slot;
-    const current = slot === 'weapon' ? this.state.weaponId : this.state.armorId;
+    const current = this.equippedIdOf(slot);
     if (current === equipId) return false;
-    if (slot === 'weapon') this.state.weaponId = equipId;
-    else this.state.armorId = equipId;
+    this.setEquippedId(slot, equipId);
     eventBus.emit('equipmentEquipped', { slot, equipmentId: equipId, oldId: current });
     return true;
   }
 
   unequip(slot: EquipSlot): void {
-    if (slot === 'weapon') this.state.weaponId = null;
-    else this.state.armorId = null;
+    this.setEquippedId(slot, null);
     eventBus.emit('equipmentEquipped', { slot, equipmentId: '', oldId: null });
   }
 
@@ -259,6 +350,7 @@ export class Player {
     if (idx < 0) return null;
     if (this.state.weaponId === equipId) this.state.weaponId = null;
     if (this.state.armorId === equipId) this.state.armorId = null;
+    if (this.state.accessoryId === equipId) this.state.accessoryId = null;
     const [removed] = this.state.bag.splice(idx, 1);
     return removed;
   }

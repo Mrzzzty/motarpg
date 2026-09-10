@@ -1,0 +1,252 @@
+/**
+ * 第1层：楼层生成器（文档二 第二节）
+ * 决定：特殊楼层判定、普通楼层房间数量、房间类型分配（运气平衡器 Tension 机制）、商人数量限制。
+ *
+ * P0-3：Tension 权重/阈值更新（精英+2 战斗+1 宝箱-1 商人/女巫/铁匠-2，强制正面≥5 负面≤-4）；
+ * 路径A/B 各自独立计算 Tension 并应用差异化权重系数（A=高风险高收益，B=平稳探索），
+ * 侧室/公共房间按原值计入；新增精英房保底（普通楼层且房间总数≥6 时维持 1~2 个）。
+ */
+import type { FloorKind, RoomType } from '../types';
+import { dataManager } from '../core/DataManager';
+import { rng } from '../utils/MathUtils';
+import { Logger } from '../utils/Logger';
+import { MAX_FLOOR } from '../data/tiers';
+
+export interface FloorAllocation {
+  floorId: number;
+  kind: FloorKind;
+  /** 按生成顺序的房间类型列表（首个为起点/休整，末尾为终点） */
+  roomTypes: RoomType[];
+  /**
+   * 与 roomTypes 对齐的主干路径归属提示（P0-3）：
+   * 'A'/'B' = 该房间为对应主干路径的战斗/精英房；null = 侧室或公共房间。
+   * 缺省（旧调用方/特殊层）时 PathGenerator 回退到旧版精英靠前分配。
+   */
+  railHints?: ('A' | 'B' | null)[];
+}
+
+/** 双路径差异化参数（P0-3）：Tension 权重系数 + 负面房间中精英房概率（A 高风险高收益线） */
+const RAIL_TENSION_FACTOR: Record<'A' | 'B', { combat: number; elite: number }> = {
+  A: { combat: 0.8, elite: 0.7 },
+  B: { combat: 1.0, elite: 1.2 },
+};
+/** 负面房间精英倾向：A 线 45% / B 线 15%（均值≈原 30% 设计；使精英集中于高风险线） */
+const RAIL_ELITE_CHANCE: Record<'A' | 'B', number> = { A: 0.45, B: 0.15 };
+
+export class FloorGenerator {
+  private static instance: FloorGenerator;
+
+  private constructor() {}
+  static getInstance(): FloorGenerator {
+    if (!FloorGenerator.instance) FloorGenerator.instance = new FloorGenerator();
+    return FloorGenerator.instance;
+  }
+
+  /** 判定楼层类型：第1层固定初始层；第110层固定塔顶（假终点）；楼层号%5===0 为Boss层 */
+  getFloorKind(floorId: number): FloorKind {
+    const cfg = dataManager.mapGen;
+    if (floorId === cfg.initialFloor) return 'initial';
+    if (floorId === MAX_FLOOR) return 'summit';
+    if (floorId % cfg.bossFloorInterval === 0) return 'boss';
+    return 'normal';
+  }
+
+  /**
+   * 分配楼层房间类型。
+   * 初始层/Boss层/塔顶层不参与随机分配，直接返回固定结构。
+   */
+  allocate(floorId: number): FloorAllocation {
+    const kind = this.getFloorKind(floorId);
+
+    if (kind === 'initial') {
+      // 初始层：起点 → 终点
+      return { floorId, kind, roomTypes: ['start', 'end'] };
+    }
+    if (kind === 'boss') {
+      // Boss层：休整房 → Boss房 → 终点奖励房
+      return { floorId, kind, roomTypes: ['rest', 'boss', 'end'] };
+    }
+    if (kind === 'summit') {
+      // 塔顶层（§4 假终点）：起点 → 空旷登顶平台（无敌人、无杂物，只有终局之门）
+      return { floorId, kind, roomTypes: ['start', 'end'] };
+    }
+
+    const count = this.rollRoomCount(floorId);
+    const allocatable = count - 2; // 起点、终点固定
+    const { types, hints } = this.allocateByTension(floorId, allocatable);
+    // 精英房保底（P0-3）：分配层先保证数量；路径连续约束替换后的复核在 PathGenerator 兜底
+    this.guaranteeEliteRoomsFloor(types, hints);
+    return {
+      floorId,
+      kind,
+      roomTypes: ['start', ...types, 'end'],
+      railHints: [null, ...hints, null],
+    };
+  }
+
+  /** 普通楼层房间数量（文档二 2.2） */
+  private rollRoomCount(floorId: number): number {
+    const cfg = dataManager.mapGen;
+    const band = cfg.floorRoomCounts.find(b => floorId >= b.minFloor && floorId <= b.maxFloor)
+      ?? cfg.floorRoomCounts[cfg.floorRoomCounts.length - 1];
+    const count = rng.randInt(band.min, band.max);
+    return Math.min(count, cfg.maxRooms);
+  }
+
+  /**
+   * 运气平衡器（文档二 2.4 / P0-3 修订）：张力值 Tension 机制。
+   * 正面概率 = 1/(1+e^(-Tension))；Tension≥5 强制正面，≤-4 强制负面；每层重置。
+   * 双路径独立计算：主干槽位在 A/B 间轮转（A 先拿，保证路径长度差≤1），
+   * 正负判定用当前归属路径的 Tension；负面权重乘路径系数，正面/侧室按原值计入。
+   * 特殊约束：商人数量限制（总数≤7 最多1个，8-12 最多2个），优先级高于平衡器。
+   */
+  private allocateByTension(floorId: number, allocatable: number): { types: RoomType[]; hints: ('A' | 'B' | null)[] } {
+    const cfg = dataManager.mapGen;
+    const weights = cfg.tension.weights;
+    const tension = { A: 0, B: 0 };
+    let merchantCount = 0;
+    const result: RoomType[] = [];
+    const hints: ('A' | 'B' | null)[] = [];
+    let rail: 'A' | 'B' = 'A'; // 下一个主干槽位归属（仅负面房间消耗主干名额）
+
+    const addTension = (value: number): void => { tension[rail] += value; };
+
+    for (let i = 0; i < allocatable; i++) {
+      const totalSoFar = result.length + 2; // 含起点终点
+      const merchantCap = totalSoFar <= cfg.merchantLimit.fewMaxRooms
+        ? cfg.merchantLimit.fewCount
+        : cfg.merchantLimit.manyCount;
+
+      // 正面/负面判定（用当前归属路径的 Tension）
+      let positive: boolean;
+      if (tension[rail] >= cfg.tension.forcePositiveAt) {
+        positive = true; // 强制干预：正面
+      } else if (tension[rail] <= cfg.tension.forceNegativeAt) {
+        positive = false; // 强制干预：负面
+      } else {
+        positive = rng.chance(1 / (1 + Math.exp(-tension[rail])));
+      }
+
+      let type: RoomType;
+      if (positive) {
+        // 正面分类：宝箱 / 商人（商人受数量限制）；侧室不享受权重修正，按原值计入
+        const merchantAllowed = merchantCount < merchantCap;
+        type = merchantAllowed && rng.chance(0.3) ? 'merchant' : 'chest';
+        if (type === 'merchant') merchantCount++;
+        addTension(weights[type] ?? 0);
+        result.push(type);
+        hints.push(null);
+      } else {
+        // 负面分类：战斗 / 精英（精英倾向按路径差异化：A 高风险线更易出精英）
+        type = rng.chance(RAIL_ELITE_CHANCE[rail]) ? 'elite' : 'combat';
+        const factor = type === 'elite' ? RAIL_TENSION_FACTOR[rail].elite : RAIL_TENSION_FACTOR[rail].combat;
+        addTension((weights[type] ?? 0) * factor);
+        result.push(type);
+        hints.push(rail);
+        rail = rail === 'A' ? 'B' : 'A'; // 主干名额消耗，归属轮转
+      }
+    }
+
+    // 女巫酿药间：按间隔强制安排一间安全房（优先替换宝箱位，保证玩家能遇到）
+    if (this.isWitchFloor(floorId)) {
+      const idx = result.findIndex(t => t === 'chest');
+      const target = idx >= 0 ? idx : result.length - 1;
+      if (target >= 0) {
+        this.swapSafeRoom(result, hints, target, 'witch', tension);
+      }
+    }
+
+    // 铁匠铺：与女巫同类的安全房，按间隔安排且与女巫楼层错开
+    if (this.isBlacksmithFloor(floorId) && !this.isWitchFloor(floorId)) {
+      const idx = result.findIndex(t => t === 'chest');
+      const target = idx >= 0 ? idx : result.length - 1;
+      if (target >= 0) {
+        this.swapSafeRoom(result, hints, target, 'blacksmith', tension);
+      }
+    }
+
+    Logger.debug(`[FloorGen] 楼层${floorId} 类型分配=${result.join(',')} 终态Tension A=${tension.A} B=${tension.B}`);
+    return { types: result, hints };
+  }
+
+  /** 安全房替换宝箱位：张力按原值差量同步到双路径（侧室为全层安全阀） */
+  private swapSafeRoom(
+    types: RoomType[], hints: ('A' | 'B' | null)[], idx: number, type: RoomType,
+    tension: { A: number; B: number },
+  ): void {
+    const weights = dataManager.mapGen.tension.weights;
+    const delta = (weights[type] ?? 0) - (weights[types[idx]] ?? 0);
+    tension.A += delta;
+    tension.B += delta;
+    types[idx] = type;
+    hints[idx] = null;
+  }
+
+  /**
+   * 精英房数量保底（P0-3）：普通楼层且房间总数≥6 时，每层 1~2 个精英房。
+   * 不足时优先把路径 A 中第 2 个战斗房替换为精英房（避开相邻精英，防连续违规）；
+   * 超出时保留最深的 2 个，多余者降为战斗房。初始层/Boss 层不执行（入口处已分流）。
+   */
+  private guaranteeEliteRoomsFloor(types: RoomType[], hints: ('A' | 'B' | null)[]): void {
+    if (types.length + 2 < 6) return;
+    const eliteIdx = types.reduce<number[]>((acc, t, i) => {
+      if (t === 'elite') acc.push(i);
+      return acc;
+    }, []);
+
+    if (eliteIdx.length > 2) {
+      for (const i of eliteIdx.slice(0, eliteIdx.length - 2)) {
+        types[i] = 'combat';
+      }
+      return;
+    }
+    if (eliteIdx.length > 0) return;
+
+    // 不足保底：候选按优先级 A第2战斗房 → A非首位战斗房 → B非首位战斗房 → 任意战斗房 → 最深槽位
+    const railSeq = (rail: 'A' | 'B'): number[] =>
+      types.reduce<number[]>((acc, _t, i) => {
+        if (hints[i] === rail) acc.push(i);
+        return acc;
+      }, []);
+    const noEliteNeighbor = (seq: number[], pos: number): boolean =>
+      (pos <= 0 || types[seq[pos - 1]] !== 'elite') && (pos + 1 >= seq.length || types[seq[pos + 1]] !== 'elite');
+
+    const pickFrom = (rail: 'A' | 'B', minSeqPos: number): number => {
+      const seq = railSeq(rail);
+      const combatPos = seq.map((ti, pos) => ({ ti, pos })).filter(p => types[p.ti] === 'combat');
+      if (combatPos.length >= 2 && combatPos[1].pos >= minSeqPos && noEliteNeighbor(seq, combatPos[1].pos)) {
+        return combatPos[1].ti; // 优先：第 2 个战斗房（深度≥2 位置）
+      }
+      for (let k = combatPos.length - 1; k >= 0; k--) {
+        if (combatPos[k].pos >= minSeqPos && noEliteNeighbor(seq, combatPos[k].pos)) return combatPos[k].ti;
+      }
+      return -1;
+    };
+
+    let pick = pickFrom('A', 1);
+    if (pick < 0) pick = pickFrom('B', 1);
+    if (pick < 0) pick = pickFrom('A', 0);
+    if (pick >= 0) {
+      types[pick] = 'elite';
+    } else {
+      // 无战斗房可替换：占用最深的中间槽位
+      const last = types.length - 1;
+      if (last >= 0) {
+        types[last] = 'elite';
+        hints[last] = 'A';
+      }
+    }
+  }
+
+  /** 女巫酿药间出现楼层：最早 minFloor 起，每 interval 层一间（5~8 层区间内） */
+  private isWitchFloor(floorId: number): boolean {
+    const cfg = dataManager.mapGen.witchLimit;
+    return floorId >= cfg.minFloor && (floorId - cfg.minFloor) % cfg.interval === 0;
+  }
+
+  /** 铁匠铺出现楼层：最早 minFloor 起，每 interval 层一间 */
+  private isBlacksmithFloor(floorId: number): boolean {
+    const cfg = dataManager.mapGen.blacksmithLimit;
+    return floorId >= cfg.minFloor && (floorId - cfg.minFloor) % cfg.interval === 0;
+  }
+}

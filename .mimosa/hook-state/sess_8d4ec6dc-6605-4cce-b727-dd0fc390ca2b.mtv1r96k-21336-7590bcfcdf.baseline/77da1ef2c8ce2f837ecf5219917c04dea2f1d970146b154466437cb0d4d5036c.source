@@ -1,0 +1,656 @@
+/**
+ * Three 纹理工厂：把 TextureGenerator 产出的 HTMLCanvasElement 包装为 THREE.CanvasTexture。
+ *
+ * 纹理本体（Canvas）由 textureGen 按变体键缓存，此处只负责引擎侧包装与采样设置，
+ * 保证同一个 canvas 始终复用同一个 GPU 纹理实例（避免重复上传）。
+ */
+import * as THREE from 'three';
+import type { TierWall, TierWindow } from '../data/tiers';
+
+const cache = new WeakMap<HTMLCanvasElement, THREE.CanvasTexture>();
+
+/** 纹理各向异性上限（ThreeRenderer.init 时设为 renderer 最大值） */
+let maxAnisotropy = 4;
+export function setMaxAnisotropy(v: number): void {
+  maxAnisotropy = Math.max(1, Math.floor(v));
+}
+
+/**
+ * 高分辨率重绘：painter 以 128 逻辑坐标绘制，经 ctx 缩放输出 size×size 画布。
+ * 纹理分辨率升级（抗锯齿清单④）：128 → 256，texel 密度翻倍，配合线性采样消除块状 texel 感。
+ */
+function repaintHiRes(painter: (canvas: HTMLCanvasElement) => void, size: number): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(size / 128, size / 128);
+  const logical = { width: 128, height: 128, getContext: () => ctx } as unknown as HTMLCanvasElement;
+  painter(logical);
+  return canvas;
+}
+
+/** Canvas → CanvasTexture（同 canvas 复用同一纹理实例）。
+ * 采样：LinearFilter 放大 + 三线性 mipmap 缩小（抗锯齿清单②：
+ * Nearest 放大会在墙/地板/道具贴图上产生硬边像素台阶） */
+export function canvasTexture(canvas: HTMLCanvasElement): THREE.CanvasTexture {
+  let t = cache.get(canvas);
+  if (!t) {
+    t = new THREE.CanvasTexture(canvas);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.magFilter = THREE.LinearFilter;
+    t.minFilter = THREE.LinearMipmapLinearFilter;
+    t.anisotropy = maxAnisotropy;
+    cache.set(canvas, t);
+  }
+  return t;
+}
+
+/** 纯色 1x1 贴图（程序化材质用，避免为纯色重复建 canvas） */
+const solidCache = new Map<number, THREE.CanvasTexture>();
+export function solidTexture(hex: number): THREE.CanvasTexture {
+  let t = solidCache.get(hex);
+  if (!t) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = `#${hex.toString(16).padStart(6, '0')}`;
+    ctx.fillRect(0, 0, 1, 1);
+    t = new THREE.CanvasTexture(canvas);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.magFilter = THREE.NearestFilter;
+    solidCache.set(hex, t);
+  }
+  return t;
+}
+
+/** 地面/墙面砖块纹理（文档 5.3：Canvas → Texture，无外部图片）。青砖质感：青灰绿砖体 + 深色灰缝 */
+/** 青砖墙面绘制（128 逻辑坐标）；brickTexture 以 256 物理分辨率重绘 */
+function paintBrickWall(canvas: HTMLCanvasElement): void {
+  const size = 128;
+  const ctx = canvas.getContext('2d')!;
+  // 灰缝底色（深青灰）
+  ctx.fillStyle = '#39423c';
+  ctx.fillRect(0, 0, size, size);
+  const bw = 32;
+  const bh = 16;
+  for (let row = 0; row < size / bh; row++) {
+    for (let col = -1; col < size / bw + 1; col++) {
+      const x = col * bw + (row % 2) * (bw / 2);
+      const y = row * bh;
+      // 青砖体：每块微调青灰绿色相，模拟窑变
+      const v = 0.88 + ((row * 7 + col * 13) % 5) * 0.06;
+      const r = Math.round(84 * v);
+      const g = Math.round(100 * v);
+      const b = Math.round(88 * v);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(x + 1, y + 1, bw - 2, bh - 2);
+      // 砖面高光边（上/左）+ 暗边（下/右），增加立体感
+      ctx.fillStyle = 'rgba(210,225,210,0.16)';
+      ctx.fillRect(x + 1, y + 1, bw - 2, 1);
+      ctx.fillRect(x + 1, y + 1, 1, bh - 2);
+      ctx.fillStyle = 'rgba(10,16,12,0.28)';
+      ctx.fillRect(x + 1, y + bh - 2, bw - 2, 1);
+      ctx.fillRect(x + bw - 2, y + 1, 1, bh - 2);
+      // 风化斑点
+      if ((row * 3 + col * 5) % 4 === 0) {
+        ctx.fillStyle = 'rgba(30,42,34,0.3)';
+        ctx.beginPath();
+        ctx.arc(x + 8 + ((row * 11 + col * 7) % 16), y + 4 + ((row * 5 + col * 3) % 8), 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+let brickTex: THREE.CanvasTexture | null = null;
+/** 青砖纹理：256×256 高分辨率重绘（ 抗锯齿清单④） */
+export function brickTexture(): THREE.CanvasTexture {
+  if (!brickTex) {
+    brickTex = new THREE.CanvasTexture(repaintHiRes(paintBrickWall, 256));
+    brickTex.colorSpace = THREE.SRGBColorSpace;
+    brickTex.wrapS = THREE.RepeatWrapping;
+    brickTex.wrapT = THREE.RepeatWrapping;
+  }
+  return brickTex;
+}
+
+// ============ 区段主题墙面（游戏文案+美术规格 v1 §2/§3） ============
+
+/** 面上高光/暗边（与青砖一致的上左亮、下右暗块面语言） */
+function bevel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, light = 0.16, dark = 0.28): void {
+  ctx.fillStyle = `rgba(230,240,235,${light})`;
+  ctx.fillRect(x + 1, y + 1, w - 2, 1);
+  ctx.fillRect(x + 1, y + 1, 1, h - 2);
+  ctx.fillStyle = `rgba(8,12,10,${dark})`;
+  ctx.fillRect(x + 1, y + h - 2, w - 2, 1);
+  ctx.fillRect(x + w - 2, y + 1, 1, h - 2);
+}
+
+/** 苔园锻窟墙：绿灰砖 + 苔斑 + 垂藤（16–40 层） */
+function paintMossWall(canvas: HTMLCanvasElement): void {
+  const size = 128;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#2c3a2a';
+  ctx.fillRect(0, 0, size, size);
+  const bw = 32;
+  const bh = 16;
+  for (let row = 0; row < size / bh; row++) {
+    for (let col = -1; col < size / bw + 1; col++) {
+      const x = col * bw + (row % 2) * (bw / 2);
+      const y = row * bh;
+      const v = 0.86 + ((row * 5 + col * 11) % 5) * 0.07;
+      ctx.fillStyle = `rgb(${Math.round(64 * v)},${Math.round(94 * v)},${Math.round(58 * v)})`;
+      ctx.fillRect(x + 1, y + 1, bw - 2, bh - 2);
+      bevel(ctx, x, y, bw, bh);
+      // 砖顶苔斑（湿气上浮）
+      if ((row * 2 + col * 7) % 3 === 0) {
+        ctx.fillStyle = 'rgba(96,142,70,0.5)';
+        ctx.beginPath();
+        ctx.ellipse(x + 10 + ((row * 7 + col) % 12), y + 3, 6.5, 2.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  // 垂藤：几条从上缘垂下的弯曲线 + 叶点
+  for (let i = 0; i < 4; i++) {
+    const x0 = 16 + i * 32 + ((i * 13) % 10);
+    const len = 34 + ((i * 29) % 46);
+    ctx.strokeStyle = 'rgba(58,102,48,0.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x0, 0);
+    ctx.bezierCurveTo(x0 - 6, len * 0.4, x0 + 7, len * 0.7, x0 - 2, len);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(88,138,64,0.9)';
+    for (let t = 6; t < len; t += 9) {
+      ctx.beginPath();
+      ctx.ellipse(x0 + Math.sin(t * 0.35) * 4, t, 2.4, 3.6, 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+/** 图书馆墙：木框 + 三层书架（暖棕木色 + 米黄书脊）（41–60 层） */
+function paintShelfWall(canvas: HTMLCanvasElement): void {
+  const size = 128;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#38291a';
+  ctx.fillRect(0, 0, size, size);
+  const books = ['#8a4b3a', '#6a563a', '#55684a', '#7a5560', '#9a7a44', '#4c5a6e', '#8a6a2e', '#5e4a6a'];
+  const rows = [14, 52, 90];
+  for (const ry of rows) {
+    // 层板
+    ctx.fillStyle = '#4a3626';
+    ctx.fillRect(4, ry + 34, size - 8, 5);
+    ctx.fillStyle = 'rgba(230,200,150,0.18)';
+    ctx.fillRect(4, ry + 34, size - 8, 1);
+    // 书脊
+    let x = 6;
+    let i = ((ry * 7) % 8) | 0;
+    while (x < size - 10) {
+      const w = 7 + ((x * 13 + ry * 3) % 6);
+      const h = 26 + ((x * 7 + ry) % 8);
+      const tilt = (x * 17 + ry * 5) % 23 === 0 ? 0.16 : 0; // 偶尔一本斜书
+      ctx.save();
+      ctx.translate(x + w / 2, ry + 34);
+      ctx.rotate(tilt);
+      ctx.fillStyle = books[i % books.length];
+      ctx.fillRect(-w / 2, -h, w, h);
+      ctx.fillStyle = 'rgba(255,240,210,0.22)';
+      ctx.fillRect(-w / 2, -h, w, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(-w / 2 + w - 1, -h, 1, h);
+      ctx.restore();
+      x += w + 1;
+      i++;
+    }
+  }
+  // 木框（整块墙是一个书架单元）
+  ctx.strokeStyle = '#2c2013';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(3, 3, size - 6, size - 6);
+  ctx.strokeStyle = 'rgba(230,200,150,0.14)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(6.5, 6.5, size - 13, size - 13);
+}
+
+/** 观星台墙：深蓝紫大石块 + 星屑微光（61–80 层） */
+function paintStarstoneWall(canvas: HTMLCanvasElement): void {
+  const size = 128;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#232840';
+  ctx.fillRect(0, 0, size, size);
+  const bw = 64;
+  const bh = 43;
+  for (let row = 0; row < 4; row++) {
+    for (let col = -1; col < 3; col++) {
+      const x = col * bw + (row % 2) * (bw / 2);
+      const y = row * bh;
+      const v = 0.9 + ((row * 3 + col * 7) % 4) * 0.05;
+      ctx.fillStyle = `rgb(${Math.round(52 * v)},${Math.round(60 * v)},${Math.round(92 * v)})`;
+      ctx.fillRect(x + 1, y + 1, bw - 2, bh - 2);
+      bevel(ctx, x, y, bw, bh, 0.12, 0.32);
+      if ((row + col) % 2 === 0) {
+        ctx.fillStyle = 'rgba(120,100,180,0.10)';
+        ctx.fillRect(x + 3, y + 3, bw - 6, bh - 6);
+      }
+    }
+  }
+  // 星屑：微光小面片（1px 亮核 + 2px 柔光晕）
+  for (let i = 0; i < 26; i++) {
+    const x = (i * 37 + 11) % size;
+    const y = (i * 61 + 23) % size;
+    ctx.fillStyle = 'rgba(160,180,255,0.25)';
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(235,240,255,0.8)';
+    ctx.fillRect(x - 0.5, y - 0.5, 1, 1);
+  }
+}
+
+/** 钟楼墙：黄铜铆钉板 + 油润斜光带（81–100 层） */
+function paintBrassWall(canvas: HTMLCanvasElement): void {
+  const size = 128;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#6a5030';
+  ctx.fillRect(0, 0, size, size);
+  const pw = 64;
+  const ph = 64;
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 2; col++) {
+      const x = col * pw;
+      const y = row * ph;
+      const v = 0.92 + ((row * 3 + col * 5) % 3) * 0.06;
+      ctx.fillStyle = `rgb(${Math.round(122 * v)},${Math.round(97 * v)},${Math.round(56 * v)})`;
+      ctx.fillRect(x + 2, y + 2, pw - 4, ph - 4);
+      bevel(ctx, x + 1, y + 1, pw - 2, ph - 2, 0.22, 0.3);
+      // 铆钉四角
+      for (const [rx, ry] of [[10, 10], [pw - 10, 10], [10, ph - 10], [pw - 10, ph - 10]]) {
+        ctx.fillStyle = '#3a2c14';
+        ctx.beginPath();
+        ctx.arc(x + rx + 0.8, y + ry + 0.8, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#d9b878';
+        ctx.beginPath();
+        ctx.arc(x + rx, y + ry, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,240,200,0.8)';
+        ctx.beginPath();
+        ctx.arc(x + rx - 0.7, y + ry - 0.7, 0.9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  // 竖向拉丝
+  ctx.globalAlpha = 0.07;
+  ctx.fillStyle = '#ffffff';
+  for (let x = 5; x < size; x += 7) ctx.fillRect(x, 0, 1, size);
+  ctx.globalAlpha = 1;
+  // 油润高光：对角柔光带（块面感，非 PBR 反射）
+  const grad = ctx.createLinearGradient(0, size, size, 0);
+  grad.addColorStop(0.3, 'rgba(255,230,170,0)');
+  grad.addColorStop(0.5, 'rgba(255,230,170,0.12)');
+  grad.addColorStop(0.7, 'rgba(255,230,170,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+}
+
+/** 塔顶墙：白金大理石板 + 金纹（101–110 层，高留白） */
+function paintMarbleWall(canvas: HTMLCanvasElement): void {
+  const size = 128;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#cdc7b6';
+  ctx.fillRect(0, 0, size, size);
+  const bw = 64;
+  const bh = 32;
+  for (let row = 0; row < 4; row++) {
+    for (let col = -1; col < 3; col++) {
+      const x = col * bw + (row % 2) * (bw / 2);
+      const y = row * bh;
+      const v = 0.96 + ((row * 5 + col * 3) % 4) * 0.03;
+      ctx.fillStyle = `rgb(${Math.round(222 * v)},${Math.round(216 * v)},${Math.round(200 * v)})`;
+      ctx.fillRect(x + 1, y + 1, bw - 2, bh - 2);
+      bevel(ctx, x, y, bw, bh, 0.32, 0.12);
+      // 柔金纹理
+      ctx.strokeStyle = 'rgba(190,160,100,0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + 6, y + bh - 5);
+      ctx.bezierCurveTo(x + bw * 0.4, y + 4, x + bw * 0.6, y + bh - 8, x + bw - 6, y + 6);
+      ctx.stroke();
+    }
+  }
+  // 稀疏金箔点
+  for (let i = 0; i < 6; i++) {
+    ctx.fillStyle = 'rgba(212,175,106,0.55)';
+    ctx.fillRect((i * 47 + 19) % size, (i * 71 + 31) % size, 1.4, 1.4);
+  }
+}
+
+const wallPainters: Record<TierWall, (c: HTMLCanvasElement) => void> = {
+  brick: () => brickTexture(), // 青砖已有专用实现
+  moss: paintMossWall,
+  shelf: paintShelfWall,
+  starstone: paintStarstoneWall,
+  brass: paintBrassWall,
+  marble: paintMarbleWall,
+};
+
+const wallTexCache = new Map<TierWall, THREE.CanvasTexture>();
+
+/** 区段主题墙面纹理（按变体缓存；brick 复用既有青砖）。256×256 高分辨率重绘 */
+export function wallTexture(variant: TierWall): THREE.CanvasTexture {
+  if (variant === 'brick') return brickTexture();
+  let t = wallTexCache.get(variant);
+  if (!t) {
+    const canvas = repaintHiRes(wallPainters[variant], 256);
+    t = new THREE.CanvasTexture(canvas);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = THREE.RepeatWrapping;
+    t.wrapT = THREE.RepeatWrapping;
+    wallTexCache.set(variant, t);
+  }
+  return t;
+}
+
+// ============ 窗景（§3 区段环境：窗外/远景面片） ============
+
+const winPainters: Record<TierWindow, (c: HTMLCanvasElement) => void> = {
+  /** 1–15 塔楼底部：雾层压暗远景 + 地面楼房楼顶剪影 */
+  rooftops(c) {
+    const ctx = c.getContext('2d')!;
+    const w = c.width;
+    const h = c.height;
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, '#3d4d61');
+    sky.addColorStop(0.65, '#26303e');
+    sky.addColorStop(1, '#1a222c');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
+    // 远层楼顶剪影
+    ctx.fillStyle = '#141b24';
+    for (let i = 0; i < 5; i++) {
+      const bw = 14 + ((i * 17) % 12);
+      const bh = 22 + ((i * 23) % 26);
+      ctx.fillRect(i * 20 - 4, h * 0.62 - bh, bw, bh);
+    }
+    // 近层楼顶 + 坡顶 + 零星亮窗
+    ctx.fillStyle = '#0e141c';
+    for (let i = 0; i < 4; i++) {
+      const bw = 22 + ((i * 13) % 10);
+      const bh = 34 + ((i * 19) % 20);
+      const x = i * 26 - 6;
+      const y = h - bh;
+      ctx.fillRect(x, y, bw, bh);
+      ctx.beginPath();
+      ctx.moveTo(x - 2, y);
+      ctx.lineTo(x + bw / 2, y - 8);
+      ctx.lineTo(x + bw + 2, y);
+      ctx.closePath();
+      ctx.fill();
+      if (i % 2 === 0) {
+        ctx.fillStyle = 'rgba(255,214,150,0.75)';
+        ctx.fillRect(x + 6, y + 9, 3, 3);
+        ctx.fillStyle = '#0e141c';
+      }
+    }
+    // 雾层（压暗远景）
+    const fog = ctx.createLinearGradient(0, h * 0.4, 0, h);
+    fog.addColorStop(0, 'rgba(160,178,196,0)');
+    fog.addColorStop(0.5, 'rgba(160,178,196,0.28)');
+    fog.addColorStop(1, 'rgba(160,178,196,0.5)');
+    ctx.fillStyle = fog;
+    ctx.fillRect(0, 0, w, h);
+  },
+  /** 16–40 底层：近景藤蔓剪影 + 远处炉火/炊烟微光 */
+  garden(c) {
+    const ctx = c.getContext('2d')!;
+    const w = c.width;
+    const h = c.height;
+    const bg = ctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, '#241a10');
+    bg.addColorStop(1, '#120c06');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+    // 远处炉火微光（模糊橙团）
+    for (const [gx, gy, r] of [[w * 0.28, h * 0.72, 16], [w * 0.66, h * 0.66, 12]] as const) {
+      const g = ctx.createRadialGradient(gx, gy, 1, gx, gy, r);
+      g.addColorStop(0, 'rgba(217,114,46,0.85)');
+      g.addColorStop(1, 'rgba(217,114,46,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(gx, gy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 断墙剪影
+    ctx.fillStyle = '#1c2018';
+    ctx.fillRect(0, h * 0.78, w, h * 0.22);
+    ctx.fillStyle = '#161a12';
+    for (let i = 0; i < 4; i++) ctx.fillRect(i * 26 - 3, h * 0.78 - 10 - ((i * 13) % 14), 16, 22);
+    // 近景藤蔓（自上垂下 + 自下攀上）
+    ctx.strokeStyle = 'rgba(64,106,52,0.9)';
+    ctx.lineWidth = 2.5;
+    for (let i = 0; i < 3; i++) {
+      const x0 = 14 + i * 30;
+      ctx.beginPath();
+      ctx.moveTo(x0, -2);
+      ctx.bezierCurveTo(x0 - 7, h * 0.3, x0 + 8, h * 0.55, x0 - 3, h * 0.82);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(96,138,74,0.95)';
+    for (let i = 0; i < 14; i++) {
+      ctx.beginPath();
+      ctx.ellipse((i * 27 + 9) % w, (i * 37 + 13) % h, 2.6, 4, 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 悬浮孢子
+    ctx.fillStyle = 'rgba(150,200,120,0.7)';
+    for (let i = 0; i < 8; i++) ctx.fillRect((i * 41 + 7) % w, (i * 29 + 11) % h, 1.4, 1.4);
+  },
+  /** 41–60 中层·图书馆：暖色柔光矩形 + 云雾漂动 */
+  clouds(c) {
+    const ctx = c.getContext('2d')!;
+    const w = c.width;
+    const h = c.height;
+    const bg = ctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, '#efe5cc');
+    bg.addColorStop(0.6, '#cdb994');
+    bg.addColorStop(1, '#9a8460');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+    // 中央暖光
+    const glow = ctx.createRadialGradient(w / 2, h * 0.42, 4, w / 2, h * 0.42, w * 0.55);
+    glow.addColorStop(0, 'rgba(255,246,220,0.95)');
+    glow.addColorStop(1, 'rgba(255,246,220,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+    // 低透明度云雾带（横向柔椭圆，静态无风）
+    ctx.fillStyle = 'rgba(120,90,58,0.16)';
+    for (let i = 0; i < 5; i++) {
+      const cy = h * (0.2 + i * 0.16);
+      ctx.beginPath();
+      ctx.ellipse((i * 31) % w, cy, w * 0.55, 7 + (i % 3) * 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+  /** 61–80 高层·观星台：星空开口（冷蓝→紫 + 星点 + 月牙） */
+  starry(c) {
+    const ctx = c.getContext('2d')!;
+    const w = c.width;
+    const h = c.height;
+    const bg = ctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, '#2e4a7a');
+    bg.addColorStop(1, '#5a3a7a');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+    // 天顶泛紫
+    const glow = ctx.createRadialGradient(w / 2, 0, 4, w / 2, 0, h * 0.8);
+    glow.addColorStop(0, 'rgba(150,110,210,0.4)');
+    glow.addColorStop(1, 'rgba(150,110,210,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+    // 星点（少量亮星 + 十字光）
+    for (let i = 0; i < 40; i++) {
+      const x = (i * 43 + 7) % w;
+      const y = (i * 67 + 17) % h;
+      const big = i % 9 === 0;
+      ctx.fillStyle = big ? '#ffffff' : 'rgba(230,238,255,0.85)';
+      ctx.fillRect(x, y, big ? 2 : 1.2, big ? 2 : 1.2);
+      if (big) {
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillRect(x - 2, y + 0.5, 6, 0.8);
+        ctx.fillRect(x + 0.5, y - 2, 0.8, 6);
+      }
+    }
+    // 月牙
+    ctx.fillStyle = '#e9edff';
+    ctx.beginPath();
+    ctx.arc(w * 0.74, h * 0.24, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#40558a';
+    ctx.beginPath();
+    ctx.arc(w * 0.74 + 4, h * 0.24 - 2, 8.4, 0, Math.PI * 2);
+    ctx.fill();
+  },
+  /** 81–100 钟楼：巨型齿轮剪影在云海缓转（云带可 UV 滚动） */
+  gears(c) {
+    const ctx = c.getContext('2d')!;
+    const w = c.width;
+    const h = c.height;
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, '#8d99a8');
+    sky.addColorStop(0.55, '#b8c4d0');
+    sky.addColorStop(1, '#dfe6ec');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
+    const drawGear = (cx: number, cy: number, r: number, teeth: number): void => {
+      ctx.fillStyle = '#37301f';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      for (let i = 0; i < teeth; i++) {
+        const a = (Math.PI * 2 * i) / teeth;
+        ctx.save();
+        ctx.translate(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        ctx.rotate(a);
+        ctx.fillRect(-r * 0.09, -r * 0.09, r * 0.2, r * 0.18);
+        ctx.restore();
+      }
+      ctx.fillStyle = '#8d99a8';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#2a2416';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    // 齿轮剪影远离左右缘，保证横向平铺无缝（云带为水平线天然可铺）
+    drawGear(w * 0.34, h * 0.34, 22, 10);
+    drawGear(w * 0.66, h * 0.52, 15, 8);
+    // 云海（下半，多条水平柔带）
+    ctx.fillStyle = 'rgba(238,243,248,0.85)';
+    ctx.fillRect(0, h * 0.72, w, h * 0.28);
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(200,212,224,${0.5 - i * 0.06})`;
+      ctx.beginPath();
+      ctx.ellipse((i * 37) % w, h * (0.74 + i * 0.05), w * 0.6, 5 + i * 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+  /** 101–110 塔顶：留白处理，纯光面 */
+  light(c) {
+    const ctx = c.getContext('2d')!;
+    const w = c.width;
+    const h = c.height;
+    const g = ctx.createRadialGradient(w / 2, h * 0.45, 2, w / 2, h * 0.45, h * 0.75);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.5, '#efe9d6');
+    g.addColorStop(1, '#c4bda6');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  },
+};
+
+const winTexCache = new Map<TierWindow, THREE.CanvasTexture>();
+
+/** 窗景纹理（96×128 竖幅；gears 横向 RepeatWrapping 供云海 UV 滚动） */
+export function windowTexture(view: TierWindow): THREE.CanvasTexture {
+  let t = winTexCache.get(view);
+  if (!t) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 96;
+    canvas.height = 128;
+    winPainters[view](canvas);
+    t = new THREE.CanvasTexture(canvas);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.magFilter = THREE.LinearFilter;
+    t.minFilter = THREE.LinearMipmapLinearFilter;
+    if (view === 'gears') {
+      t.wrapS = THREE.RepeatWrapping;
+      t.repeat.set(1.6, 1);
+    }
+    winTexCache.set(view, t);
+  }
+  return t;
+}
+
+/** 外部世界地面绘制（128 逻辑坐标）：暗色泥土斑驳 + 稀疏草点/碎石 */
+function paintGround(canvas: HTMLCanvasElement): void {
+  const size = 128;
+  const ctx = canvas.getContext('2d')!;
+  // 基底：暗褐绿土
+  ctx.fillStyle = '#242b20';
+  ctx.fillRect(0, 0, size, size);
+  // 大块斑驳（深浅泥土/草地色斑，有机分布）
+  const patches = ['#2a3323', '#1f261c', '#2e3122', '#262d1f', '#313425'];
+  for (let i = 0; i < 22; i++) {
+    const x = (i * 53 + 17) % size;
+    const y = (i * 91 + 29) % size;
+    const r = 9 + ((i * 37) % 16);
+    ctx.fillStyle = patches[i % patches.length];
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * (0.6 + ((i * 13) % 7) / 10), (i * 29) % 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // 草点：短线簇（自然草，非像素格）
+  for (let i = 0; i < 46; i++) {
+    const x = (i * 41 + 11) % size;
+    const y = (i * 67 + 23) % size;
+    ctx.strokeStyle = i % 3 === 0 ? 'rgba(96,116,70,0.8)' : 'rgba(76,94,58,0.75)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + ((i % 5) - 2), y - 3 - (i % 3));
+    ctx.stroke();
+  }
+  // 碎石：灰白小点
+  for (let i = 0; i < 14; i++) {
+    const x = (i * 83 + 31) % size;
+    const y = (i * 47 + 59) % size;
+    ctx.fillStyle = 'rgba(140,140,132,0.65)';
+    ctx.fillRect(x, y, 1.6, 1.2);
+    ctx.fillStyle = 'rgba(30,32,28,0.5)';
+    ctx.fillRect(x, y + 1.2, 1.6, 0.8);
+  }
+}
+
+let groundTex: THREE.CanvasTexture | null = null;
+/** 外部世界地面纹理：256×256 高分辨率重绘 */
+export function groundTexture(): THREE.CanvasTexture {
+  if (!groundTex) {
+    groundTex = new THREE.CanvasTexture(repaintHiRes(paintGround, 256));
+    groundTex.colorSpace = THREE.SRGBColorSpace;
+    groundTex.wrapS = THREE.RepeatWrapping;
+    groundTex.wrapT = THREE.RepeatWrapping;
+    // 线性采样（抗锯齿清单②）：自然地表放大不做硬边像素化
+    groundTex.magFilter = THREE.LinearFilter;
+    groundTex.minFilter = THREE.LinearMipmapLinearFilter;
+  }
+  return groundTex;
+}

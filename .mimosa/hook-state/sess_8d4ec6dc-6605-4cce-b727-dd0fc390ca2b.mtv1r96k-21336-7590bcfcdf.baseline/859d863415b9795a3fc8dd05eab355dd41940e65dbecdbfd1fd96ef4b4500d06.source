@@ -1,0 +1,297 @@
+/**
+ * 第4层：走廊生成器（文档二 第五节）
+ * 固定通道：按生成顺序 room_0 ↔ room_1 ↔ ... ↔ room_N-1。
+ * 额外通道：几何相邻（房间网格曼哈顿距离≤1）的未连接对，25%概率打通，最多2条；
+ * 其中优先尝试同路径捷径（a_i↔a_{i+1}、b_i↔b_{i+1}）与闭合边（起点↔b0、a末↔终点），
+ * 用于满足"≥2条起点到终点路径"的硬性验证（验证失败由上层重试整层）。
+ * 隐藏房间（P1-1）：额外通道 15% 概率在走廊侧墙外生成封闭侧室（不挖显性门），
+ * 由 MapGenerator 在拓扑验证通过后调用，不参与主路径连通性校验与 Tension 计算。
+ */
+import type { CorridorData, Direction, RoomConnection, RoomData, TileCode } from '../types';
+import { dataManager } from '../core/DataManager';
+import { rng, MathUtils } from '../utils/MathUtils';
+import { IdGenerator } from '../utils/IdGenerator';
+
+export interface CorridorResult {
+  corridors: CorridorData[];
+  connections: RoomConnection[];
+}
+
+export class CorridorGenerator {
+  private static instance: CorridorGenerator;
+  private constructor() {}
+  static getInstance(): CorridorGenerator {
+    if (!CorridorGenerator.instance) CorridorGenerator.instance = new CorridorGenerator();
+    return CorridorGenerator.instance;
+  }
+
+  connect(rooms: RoomData[], grid: TileCode[][]): CorridorResult {
+    const corridors: CorridorData[] = [];
+    const connections: RoomConnection[] = [];
+    const connected = new Set<string>(); // "idA|idB" 已连接（有序对双方）
+    const byId = new Map(rooms.map(r => [r.id, r]));
+
+    const markConnected = (a: string, b: string) => {
+      connected.add(this.pairKey(a, b));
+      connected.add(this.pairKey(b, a));
+    };
+    const isConnected = (a: string, b: string) => connected.has(this.pairKey(a, b));
+
+    // 1. 固定通道：链上相邻
+    for (let i = 0; i + 1 < rooms.length; i++) {
+      const a = rooms[i];
+      const b = rooms[i + 1];
+      const carved = this.carveCorridor(a, b, grid);
+      if (!carved) continue; // 链上相邻房间必然轴向对齐，不会失败
+      corridors.push({ id: IdGenerator.next('corr'), fromRoomId: a.id, toRoomId: b.id, tiles: carved.tiles, extra: false });
+      connections.push({ from: a.id, to: b.id });
+      markConnected(a.id, b.id);
+    }
+
+    // 2. 额外通道候选：几何相邻且未连接的房间对
+    const cfg = dataManager.mapGen.corridor;
+    const adjacentPairs: { a: RoomData; b: RoomData; priority: number }[] = [];
+    for (let i = 0; i < rooms.length; i++) {
+      for (let j = i + 1; j < rooms.length; j++) {
+        const a = rooms[i];
+        const b = rooms[j];
+        if (isConnected(a.id, b.id)) continue;
+        if (MathUtils.manhattan(a.gx, a.gy, b.gx, b.gy) > cfg.adjacentManhattan) continue;
+        adjacentPairs.push({ a, b, priority: this.shortcutPriority(a, b, rooms) });
+      }
+    }
+    // 捷径对优先（priority 小者优先），其余随机
+    adjacentPairs.sort((p, q) => p.priority - q.priority || rng.next() - 0.5);
+
+    let extraCount = 0;
+    let hasLoopShortcut = false;
+    for (const pair of adjacentPairs) {
+      if (extraCount >= cfg.extraMax) break;
+      const roll = rng.chance(cfg.extraChance);
+      if (!roll) continue;
+      const carved = this.carveCorridor(pair.a, pair.b, grid);
+      if (!carved) continue;
+      corridors.push({ id: IdGenerator.next('corr'), fromRoomId: pair.a.id, toRoomId: pair.b.id, tiles: carved.tiles, extra: true });
+      connections.push({ from: pair.a.id, to: pair.b.id });
+      markConnected(pair.a.id, pair.b.id);
+      extraCount++;
+      if (pair.priority <= 1) hasLoopShortcut = true;
+    }
+
+    // 3. 验证兜底：若一个环捷径都没有，强制打通优先级最高的捷径对
+    //    （保证"起点→终点≥2条路径"硬性规则；仍计入最多2条额外通道）
+    if (!hasLoopShortcut) {
+      const fallback = adjacentPairs.find(p => p.priority <= 1 && !isConnected(p.a.id, p.b.id) && extraCount < cfg.extraMax)
+        ?? adjacentPairs.find(p => p.priority <= 2 && !isConnected(p.a.id, p.b.id) && extraCount < cfg.extraMax);
+      if (fallback) {
+        const carved = this.carveCorridor(fallback.a, fallback.b, grid);
+        if (carved) {
+          corridors.push({ id: IdGenerator.next('corr'), fromRoomId: fallback.a.id, toRoomId: fallback.b.id, tiles: carved.tiles, extra: true });
+          connections.push({ from: fallback.a.id, to: fallback.b.id });
+          markConnected(fallback.a.id, fallback.b.id);
+        }
+      }
+    }
+
+    void byId;
+    return { corridors, connections };
+  }
+
+  /**
+   * 隐藏房间生成（P1-1）：每条额外通道 15% 概率在走廊侧墙外尝试生成一间封闭侧室。
+   *   - 固定 5×5（含墙 7×7），入口 = 走廊侧面墙的 1 格（保留墙形态，靠近才挖开）
+   *   - 内部区域必须完全处于虚空（-1），外墙圈不得切断既有走廊/房间地板（0）
+   *   - 深度 = 相邻走廊两端房间深度的较小值 + 1
+   *   - 不雕刻任何地形（发现前完全不可见）、不写 doors、不计入 Tension
+   * 返回生成的隐藏房间列表（可能为空）。
+   */
+  spawnHiddenRooms(rooms: RoomData[], corridors: CorridorData[], grid: TileCode[][], floorId: number): RoomData[] {
+    const byId = new Map(rooms.map(r => [r.id, r]));
+    const result: RoomData[] = [];
+    let index = 0;
+
+    for (const corridor of corridors.filter(c => c.extra)) {
+      if (!rng.chance(0.15) || corridor.tiles.length === 0) continue;
+      const room = this.trySpawnHidden(corridor, rooms, byId, grid, floorId, index);
+      if (room) {
+        result.push(room);
+        index++;
+      }
+    }
+    return result;
+  }
+
+  /** 单次尝试：随机走廊格 + 随机侧向，能放下 5×5 隐藏室则构建 RoomData（不雕刻地形） */
+  private trySpawnHidden(
+    corridor: CorridorData,
+    rooms: RoomData[],
+    byId: Map<string, RoomData>,
+    grid: TileCode[][],
+    floorId: number,
+    index: number,
+  ): RoomData | null {
+    const cfg = dataManager.mapGen;
+    const dirs: { dx: number; dy: number }[] = rng.shuffle([
+      { dx: 0, dy: 1 }, { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+    ]);
+    const tiles = rng.shuffle([...corridor.tiles]);
+
+    for (const tile of tiles) {
+      for (const d of dirs) {
+        const ex = tile.x + d.dx;   // 入口（走廊侧墙格）
+        const ey = tile.y + d.dy;
+        // 入口不能是地板（会切断走廊）；虚空或既有墙均可，落位成功后物化为墙
+        if (!this.insideGrid(grid, ex, ey) || grid[ey][ex] === 0) continue;
+
+        // 内部 5×5 起点：入口向内 1 格、垂直于入口方向居中
+        const ix = ex + d.dx + (d.dx === 0 ? -2 : 0);
+        const iy = ey + d.dy + (d.dy === 0 ? -2 : 0);
+        const x = ix - 1;             // 含外墙圈的左上角
+        const y = iy - 1;
+        const width = 7;
+        const height = 7;
+        if (!this.rectFitsHidden(grid, x, y, width, height, ex, ey)) continue;
+
+        // 入口物化为墙：渲染为走廊边界栅栏（与普通墙外观一致）且阻挡移动，发现时挖开
+        grid[ey][ex] = 1;
+
+        // 深度 = 相邻走廊两端房间深度的较小值 + 1
+        const dA = byId.get(corridor.fromRoomId)?.depth ?? 1;
+        const dB = byId.get(corridor.toRoomId)?.depth ?? 1;
+        const depth = Math.min(dA, dB) + 1;
+
+        return {
+          id: `hidden_${floorId}_${index}`,
+          floorId,
+          type: 'chest',
+          order: rooms.length + index,
+          gx: Math.round((x - 0) / cfg.cellSpacingX - cfg.gridRadius),
+          gy: Math.round((y - 0) / cfg.cellSpacingY - cfg.gridRadius),
+          width, height,
+          x, y,
+          centerX: x + Math.floor(width / 2),
+          centerY: y + Math.floor(height / 2),
+          fromDirection: null,
+          depth,
+          onPathA: false,
+          onPathB: false,
+          mountedOn: null,
+          hiddenEntrance: { x: ex, y: ey },
+          doors: [],
+          entities: [],
+          layout: 'hidden',
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 隐藏室落位校验：整个 7×7 范围在网格内；
+   * 内部 5×5 全为虚空（-1，绝不覆盖既有结构）；外墙圈除入口外只能是虚空或墙（-1/1），
+   * 任何地板格（0）都说明切进了走廊/房间，弃用。
+   */
+  private rectFitsHidden(grid: TileCode[][], x: number, y: number, width: number, height: number, ex: number, ey: number): boolean {
+    for (let gy = y; gy < y + height; gy++) {
+      for (let gx = x; gx < x + width; gx++) {
+        if (!this.insideGrid(grid, gx, gy)) return false;
+        const t = grid[gy][gx];
+        if (gx > x && gx < x + width - 1 && gy > y && gy < y + height - 1) {
+          if (t !== -1) return false; // 内部必须纯虚空
+        } else if (gx === ex && gy === ey) {
+          continue; // 入口格（虚空/墙均可，落位后物化为墙）
+        } else if (t === 0) {
+          return false; // 外墙圈不得切断地板
+        }
+      }
+    }
+    return true;
+  }
+
+  /** 捷径优先级：0=同路径相邻捷径 1=闭合边 2=其余 */
+  private shortcutPriority(a: RoomData, b: RoomData, rooms: RoomData[]): number {    const sameRailAdjacent =
+      (a.onPathA && b.onPathA) || (a.onPathB && b.onPathB);
+    const isStart = rooms[0];
+    const isEnd = rooms[rooms.length - 1];
+    const closingEdge =
+      (a === isStart && b.onPathB) || (b === isStart && a.onPathB) ||
+      (a === isEnd && b.onPathA) || (b === isEnd && a.onPathA);
+    if (sameRailAdjacent) {
+      // 同路径但序号差>1 的不算捷径捷径候选（避免跨越式连接）
+      return this.railGap(a, b) === 1 ? 0 : 2;
+    }
+    if (closingEdge) return 1;
+    return 2;
+  }
+
+  /** 同路径序号差（非同路径返回 -1） */
+  private railGap(a: RoomData, b: RoomData): number {
+    return Math.abs(a.order - b.order); // 链上同路径房间按序排列，用生成序差近似路径序差
+  }
+
+  /**
+   * 在两个几何相邻房间之间挖一条直线走廊（含两侧开门）。
+   * 返回走廊地面格；两房间非轴向相邻时返回 null。
+   */
+  private carveCorridor(a: RoomData, b: RoomData, grid: TileCode[][]): { tiles: { x: number; y: number }[] } | null {
+    if (a.gy === b.gy && a.gx !== b.gx) {
+      const west = a.gx < b.gx ? a : b;
+      const east = a.gx < b.gx ? b : a;
+      // 公共内侧行（同房间网格行 → y 相同，取内侧行交集的中线）
+      const rowTop = Math.max(west.y + 1, east.y + 1);
+      const rowBottom = Math.min(west.y + west.height - 2, east.y + east.height - 2);
+      if (rowTop > rowBottom) return null;
+      const row = Math.floor((rowTop + rowBottom) / 2);
+      const tiles: { x: number; y: number }[] = [];
+      for (let x = west.x + west.width; x < east.x; x++) {
+        if (this.insideGrid(grid, x, row)) { grid[row][x] = 0; tiles.push({ x, y: row }); }
+      }
+      this.carveDoor(west, east, row, 'east', grid);
+      this.carveDoor(east, west, row, 'west', grid);
+      return { tiles };
+    }
+    if (a.gx === b.gx && a.gy !== b.gy) {
+      const north = a.gy < b.gy ? a : b;
+      const south = a.gy < b.gy ? b : a;
+      const colLeft = Math.max(north.x + 1, south.x + 1);
+      const colRight = Math.min(north.x + north.width - 2, south.x + south.width - 2);
+      if (colLeft > colRight) return null;
+      const col = Math.floor((colLeft + colRight) / 2);
+      const tiles: { x: number; y: number }[] = [];
+      for (let y = north.y + north.height; y < south.y; y++) {
+        if (this.insideGrid(grid, col, y)) { grid[y][col] = 0; tiles.push({ x: col, y }); }
+      }
+      this.carveDoor(north, south, col, 'south', grid);
+      this.carveDoor(south, north, col, 'north', grid);
+      return { tiles };
+    }
+    return null; // 对角相邻无法直连
+  }
+
+  /** 在房间墙上开门并记录 */
+  private carveDoor(room: RoomData, other: RoomData, line: number, dir: Direction, grid: TileCode[][]): void {
+    let dx = 0;
+    let dy = 0;
+    if (dir === 'east') { dx = room.x + room.width - 1; dy = line; }
+    else if (dir === 'west') { dx = room.x; dy = line; }
+    else if (dir === 'south') { dx = line; dy = room.y + room.height - 1; }
+    else { dx = line; dy = room.y; }
+    if (!this.insideGrid(grid, dx, dy)) return;
+    // 门必须在房间边墙上（不在角落）
+    if (dir === 'east' || dir === 'west') {
+      if (dy <= room.y || dy >= room.y + room.height - 1) return;
+    } else {
+      if (dx <= room.x || dx >= room.x + room.width - 1) return;
+    }
+    grid[dy][dx] = 0;
+    room.doors.push({ x: dx, y: dy, direction: dir, toRoomId: other.id });
+  }
+
+  private insideGrid(grid: TileCode[][], x: number, y: number): boolean {
+    return y >= 0 && y < grid.length && x >= 0 && x < grid[0].length;
+  }
+
+  private pairKey(a: string, b: string): string {
+    return `${a}|${b}`;
+  }
+}

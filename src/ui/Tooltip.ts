@@ -70,9 +70,13 @@ export class Tooltip {
       }
       case 'chest': {
         const opened = WorldManager.getInstance().isChestOpened(e);
+        const relicChest = e.chestTier === 'relic';
+        const title = relicChest ? '🏺 遗物宝箱' : e.chestTier === 'grand' ? '大宝箱' : '宝箱';
+        const color = relicChest ? '#d9a6ff' : '#ffcc00';
+        const loot = relicChest ? '三选一：从三件遗物中挑选一件' : '金币 / 装备 / 药水';
         return `
-          <div class="tt-title" style="color:#ffcc00">${e.chestTier === 'grand' ? '大宝箱' : '宝箱'}${opened ? '（已开启）' : ''}</div>
-          ${opened ? '<div class="dim">空空如也</div>' : '<div class="dim">金币 / 装备 / 药水</div>'}
+          <div class="tt-title" style="color:${color}">${title}${opened ? '（已开启）' : ''}</div>
+          ${opened ? '<div class="dim">空空如也</div>' : `<div class="dim">${loot}</div>`}
           ${opened ? '' : `<div class="tt-hint">（${hints.open ?? '左键打开'}）</div>`}
         `;
       }

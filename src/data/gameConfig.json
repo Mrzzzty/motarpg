@@ -185,7 +185,8 @@
     "damageJitter": 0.1,
     "critMultiplier": 1.8,
     "maxTurns": 60,
-    "minDamage": 1
+    "minDamage": 1,
+    "potionUsesPerBattle": 1
   },
   "chestRewards": {
     "goldBands": [
@@ -260,7 +261,8 @@
     "vignetteMax": 0.3,
     "maxLights": 20,
     "maxParticles": 1000,
-    "gridLineWidth": 1
+    "gridLineWidth": 1,
+    "roomDecorDensity": 1
   },
   "postProcess": {
     "bloom": {

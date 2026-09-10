@@ -6,6 +6,7 @@ import { dataManager } from '../core/DataManager';
 import { MapGenerator } from '../map/MapGenerator';
 import { WorldManager } from '../core/WorldManager';
 import { PathGenerator } from '../map/PathGenerator';
+import { DIRS4, manhattan } from '../utils/Grid';
 import type { FloorAllocation } from '../map/FloorGenerator';
 import type { FloorMap, RoomData } from '../types';
 
@@ -66,7 +67,7 @@ for (const f of floors) {
       let reached = false;
       while (queue.length > 0 && !reached) {
         const cur = queue.shift()!;
-        for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]] as const) {
+        for (const [dx, dy] of DIRS4) {
           const nx = cur.x + dx, ny = cur.y + dy;
           if (nx < 0 || ny < 0 || nx >= floor.width || ny >= floor.height) continue;
           if (floor.grid[ny][nx] !== 0) continue;
@@ -116,7 +117,7 @@ for (const f of floors) {
         for (const chest of room.entities.filter(e => e.kind === 'chest')) {
           const guarded = room.entities.some(e =>
             (e.kind === 'monster' || e.kind === 'boss')
-            && Math.abs(e.x - chest.x) + Math.abs(e.y - chest.y) <= 2);
+            && manhattan(e, chest) <= 2);
           check('宝箱2格内有守卫', guarded, `f${f} ${room.id}`);
         }
       }
@@ -125,7 +126,7 @@ for (const f of floors) {
         if (stair) {
           const guarded = room.entities.some(e =>
             (e.kind === 'monster' || e.kind === 'boss')
-            && Math.abs(e.x - stair.x) + Math.abs(e.y - stair.y) <= 3);
+            && manhattan(e, stair) <= 3);
           check('楼梯3格内有守门怪', guarded, `f${f} ${room.id}`);
         }
       }

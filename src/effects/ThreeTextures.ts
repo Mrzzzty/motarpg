@@ -9,16 +9,39 @@ import type { TierWall, TierWindow } from '../data/tiers';
 
 const cache = new WeakMap<HTMLCanvasElement, THREE.CanvasTexture>();
 
-/** Canvas → CanvasTexture（同 canvas 复用同一纹理实例） */
+/** 纹理各向异性上限（ThreeRenderer.init 时设为 renderer 最大值） */
+let maxAnisotropy = 4;
+export function setMaxAnisotropy(v: number): void {
+  maxAnisotropy = Math.max(1, Math.floor(v));
+}
+
+/**
+ * 高分辨率重绘：painter 以 128 逻辑坐标绘制，经 ctx 缩放输出 size×size 画布。
+ * 纹理分辨率升级（抗锯齿清单④）：128 → 256，texel 密度翻倍，配合线性采样消除块状 texel 感。
+ */
+function repaintHiRes(painter: (canvas: HTMLCanvasElement) => void, size: number): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  // willReadFrequently：这类画布画一次、之后被反复 getImageData（颜色 + 法线 + 粗糙度三趟）
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+  ctx.scale(size / 128, size / 128);
+  const logical = { width: 128, height: 128, getContext: () => ctx } as unknown as HTMLCanvasElement;
+  painter(logical);
+  return canvas;
+}
+
+/** Canvas → CanvasTexture（同 canvas 复用同一纹理实例）。
+ * 采样：LinearFilter 放大 + 三线性 mipmap 缩小（抗锯齿清单②：
+ * Nearest 放大会在墙/地板/道具贴图上产生硬边像素台阶） */
 export function canvasTexture(canvas: HTMLCanvasElement): THREE.CanvasTexture {
   let t = cache.get(canvas);
   if (!t) {
     t = new THREE.CanvasTexture(canvas);
     t.colorSpace = THREE.SRGBColorSpace;
-    // 像素风：放大用 Nearest 保持锐利，缩小用 mipmap 避免闪烁
-    t.magFilter = THREE.NearestFilter;
+    t.magFilter = THREE.LinearFilter;
     t.minFilter = THREE.LinearMipmapLinearFilter;
-    t.anisotropy = 4;
+    t.anisotropy = maxAnisotropy;
     cache.set(canvas, t);
   }
   return t;
@@ -44,52 +67,78 @@ export function solidTexture(hex: number): THREE.CanvasTexture {
 }
 
 /** 地面/墙面砖块纹理（文档 5.3：Canvas → Texture，无外部图片）。青砖质感：青灰绿砖体 + 深色灰缝 */
-let brickTex: THREE.CanvasTexture | null = null;
-export function brickTexture(): THREE.CanvasTexture {
-  if (!brickTex) {
-    const size = 128;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
-    // 灰缝底色（深青灰）
-    ctx.fillStyle = '#39423c';
-    ctx.fillRect(0, 0, size, size);
-    const bw = 32;
-    const bh = 16;
-    for (let row = 0; row < size / bh; row++) {
-      for (let col = -1; col < size / bw + 1; col++) {
-        const x = col * bw + (row % 2) * (bw / 2);
-        const y = row * bh;
-        // 青砖体：每块微调青灰绿色相，模拟窑变
-        const v = 0.88 + ((row * 7 + col * 13) % 5) * 0.06;
-        const r = Math.round(84 * v);
-        const g = Math.round(100 * v);
-        const b = Math.round(88 * v);
-        ctx.fillStyle = `rgb(${r},${g},${b})`;
-        ctx.fillRect(x + 1, y + 1, bw - 2, bh - 2);
-        // 砖面高光边（上/左）+ 暗边（下/右），增加立体感
-        ctx.fillStyle = 'rgba(210,225,210,0.16)';
-        ctx.fillRect(x + 1, y + 1, bw - 2, 1);
-        ctx.fillRect(x + 1, y + 1, 1, bh - 2);
-        ctx.fillStyle = 'rgba(10,16,12,0.28)';
-        ctx.fillRect(x + 1, y + bh - 2, bw - 2, 1);
-        ctx.fillRect(x + bw - 2, y + 1, 1, bh - 2);
-        // 风化斑点
-        if ((row * 3 + col * 5) % 4 === 0) {
-          ctx.fillStyle = 'rgba(30,42,34,0.3)';
-          ctx.beginPath();
-          ctx.arc(x + 8 + ((row * 11 + col * 7) % 16), y + 4 + ((row * 5 + col * 3) % 8), 2.2, 0, Math.PI * 2);
-          ctx.fill();
-        }
+/** 青砖墙面绘制（128 逻辑坐标）；brickTexture 以 256 物理分辨率重绘 */
+function paintBrickWall(canvas: HTMLCanvasElement): void {
+  const size = 128;
+  const ctx = canvas.getContext('2d')!;
+  // 灰缝底色（深青灰）
+  ctx.fillStyle = '#39423c';
+  ctx.fillRect(0, 0, size, size);
+  const bw = 32;
+  const bh = 16;
+  for (let row = 0; row < size / bh; row++) {
+    for (let col = -1; col < size / bw + 1; col++) {
+      const x = col * bw + (row % 2) * (bw / 2);
+      const y = row * bh;
+      // 青砖体：每块微调青灰绿色相，模拟窑变
+      const v = 0.88 + ((row * 7 + col * 13) % 5) * 0.06;
+      const r = Math.round(84 * v);
+      const g = Math.round(100 * v);
+      const b = Math.round(88 * v);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(x + 1, y + 1, bw - 2, bh - 2);
+      // 砖面高光边（上/左）+ 暗边（下/右），增加立体感
+      ctx.fillStyle = 'rgba(210,225,210,0.16)';
+      ctx.fillRect(x + 1, y + 1, bw - 2, 1);
+      ctx.fillRect(x + 1, y + 1, 1, bh - 2);
+      ctx.fillStyle = 'rgba(10,16,12,0.28)';
+      ctx.fillRect(x + 1, y + bh - 2, bw - 2, 1);
+      ctx.fillRect(x + bw - 2, y + 1, 1, bh - 2);
+      // 风化斑点
+      if ((row * 3 + col * 5) % 4 === 0) {
+        ctx.fillStyle = 'rgba(30,42,34,0.3)';
+        ctx.beginPath();
+        ctx.arc(x + 8 + ((row * 11 + col * 7) % 16), y + 4 + ((row * 5 + col * 3) % 8), 2.2, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
+  }
+}
+
+let brickTex: THREE.CanvasTexture | null = null;
+/** 青砖纹理：256×256 高分辨率重绘（ 抗锯齿清单④） */
+export function brickTexture(): THREE.CanvasTexture {
+  if (!brickTex) {
+    const canvas = repaintHiRes(paintBrickWall, 256);
+    paintWallTrim(canvas);
     brickTex = new THREE.CanvasTexture(canvas);
     brickTex.colorSpace = THREE.SRGBColorSpace;
     brickTex.wrapS = THREE.RepeatWrapping;
     brickTex.wrapT = THREE.RepeatWrapping;
   }
   return brickTex;
+}
+
+/**
+ * 墙面建筑线脚：**烤进贴图**而非增加几何 —— 上缘压顶、下缘墙裙。
+ * 墙是一整格高的 Box、每面 UV 0..1，所以画在纹理上下缘的带子会精确落在
+ * 「墙顶下方」与「墙脚上方」，墙面由此读作「墙裙—墙身—压顶」三段式，
+ * 而不是一张从地板直铺到顶的平贴纸；同时零额外 draw call、不干扰遮挡虚化。
+ */
+function paintWallTrim(canvas: HTMLCanvasElement): void {
+  const ctx = canvas.getContext('2d')!;
+  const w = canvas.width;
+  const h = canvas.height;
+  const band = (y0: number, y1: number, fill: string): void => {
+    ctx.fillStyle = fill;
+    ctx.fillRect(0, y0, w, Math.max(1, y1 - y0));
+  };
+  // 压顶：顶部略亮 + 下缘一道投影线（形成厚度感）
+  band(0, h * 0.055, 'rgba(228,238,242,0.17)');
+  band(h * 0.055, h * 0.065, 'rgba(6,10,12,0.5)');
+  // 墙裙：下缘压暗 + 上沿一道高光线
+  band(h * 0.935, h * 0.943, 'rgba(222,234,238,0.15)');
+  band(h * 0.943, h, 'rgba(4,8,10,0.45)');
 }
 
 // ============ 区段主题墙面（游戏文案+美术规格 v1 §2/§3） ============
@@ -317,15 +366,13 @@ const wallPainters: Record<TierWall, (c: HTMLCanvasElement) => void> = {
 
 const wallTexCache = new Map<TierWall, THREE.CanvasTexture>();
 
-/** 区段主题墙面纹理（按变体缓存；brick 复用既有青砖） */
+/** 区段主题墙面纹理（按变体缓存；brick 复用既有青砖）。256×256 高分辨率重绘 */
 export function wallTexture(variant: TierWall): THREE.CanvasTexture {
   if (variant === 'brick') return brickTexture();
   let t = wallTexCache.get(variant);
   if (!t) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 128;
-    wallPainters[variant](canvas);
+    const canvas = repaintHiRes(wallPainters[variant], 256);
+    paintWallTrim(canvas); // 压顶 / 墙裙线脚（见 paintWallTrim）
     t = new THREE.CanvasTexture(canvas);
     t.colorSpace = THREE.SRGBColorSpace;
     t.wrapS = THREE.RepeatWrapping;
@@ -577,58 +624,300 @@ export function windowTexture(view: TierWindow): THREE.CanvasTexture {
   return t;
 }
 
-/** 外部世界地面：暗色泥土斑驳 + 稀疏草点/碎石（每格平铺一次，无网格线——自然地表） */
+/** 外部世界地面绘制（128 逻辑坐标）：暗色泥土斑驳 + 稀疏草点/碎石 */
+function paintGround(canvas: HTMLCanvasElement): void {
+  const size = 128;
+  const ctx = canvas.getContext('2d')!;
+  // 基底：暗褐绿土
+  ctx.fillStyle = '#242b20';
+  ctx.fillRect(0, 0, size, size);
+  // 大块斑驳（深浅泥土/草地色斑，有机分布）
+  const patches = ['#2a3323', '#1f261c', '#2e3122', '#262d1f', '#313425'];
+  for (let i = 0; i < 22; i++) {
+    const x = (i * 53 + 17) % size;
+    const y = (i * 91 + 29) % size;
+    const r = 9 + ((i * 37) % 16);
+    ctx.fillStyle = patches[i % patches.length];
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * (0.6 + ((i * 13) % 7) / 10), (i * 29) % 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // 草点：短线簇（自然草，非像素格）
+  for (let i = 0; i < 46; i++) {
+    const x = (i * 41 + 11) % size;
+    const y = (i * 67 + 23) % size;
+    ctx.strokeStyle = i % 3 === 0 ? 'rgba(96,116,70,0.8)' : 'rgba(76,94,58,0.75)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + ((i % 5) - 2), y - 3 - (i % 3));
+    ctx.stroke();
+  }
+  // 碎石：灰白小点
+  for (let i = 0; i < 14; i++) {
+    const x = (i * 83 + 31) % size;
+    const y = (i * 47 + 59) % size;
+    ctx.fillStyle = 'rgba(140,140,132,0.65)';
+    ctx.fillRect(x, y, 1.6, 1.2);
+    ctx.fillStyle = 'rgba(30,32,28,0.5)';
+    ctx.fillRect(x, y + 1.2, 1.6, 0.8);
+  }
+}
+
 let groundTex: THREE.CanvasTexture | null = null;
+/** 外部世界地面纹理：256×256 高分辨率重绘 */
 export function groundTexture(): THREE.CanvasTexture {
   if (!groundTex) {
-    const size = 128;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
-    // 基底：暗褐绿土
-    ctx.fillStyle = '#242b20';
-    ctx.fillRect(0, 0, size, size);
-    // 大块斑驳（深浅泥土/草地色斑，有机分布）
-    const patches = ['#2a3323', '#1f261c', '#2e3122', '#262d1f', '#313425'];
-    for (let i = 0; i < 22; i++) {
-      const x = (i * 53 + 17) % size;
-      const y = (i * 91 + 29) % size;
-      const r = 9 + ((i * 37) % 16);
-      ctx.fillStyle = patches[i % patches.length];
-      ctx.globalAlpha = 0.5;
-      ctx.beginPath();
-      ctx.ellipse(x, y, r, r * (0.6 + ((i * 13) % 7) / 10), (i * 29) % 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    // 草点：短线簇（自然草，非像素格）
-    for (let i = 0; i < 46; i++) {
-      const x = (i * 41 + 11) % size;
-      const y = (i * 67 + 23) % size;
-      ctx.strokeStyle = i % 3 === 0 ? 'rgba(96,116,70,0.8)' : 'rgba(76,94,58,0.75)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + ((i % 5) - 2), y - 3 - (i % 3));
-      ctx.stroke();
-    }
-    // 碎石：灰白小点
-    for (let i = 0; i < 14; i++) {
-      const x = (i * 83 + 31) % size;
-      const y = (i * 47 + 59) % size;
-      ctx.fillStyle = 'rgba(140,140,132,0.65)';
-      ctx.fillRect(x, y, 1.6, 1.2);
-      ctx.fillStyle = 'rgba(30,32,28,0.5)';
-      ctx.fillRect(x, y + 1.2, 1.6, 0.8);
-    }
-    groundTex = new THREE.CanvasTexture(canvas);
+    groundTex = new THREE.CanvasTexture(repaintHiRes(paintGround, 256));
     groundTex.colorSpace = THREE.SRGBColorSpace;
     groundTex.wrapS = THREE.RepeatWrapping;
     groundTex.wrapT = THREE.RepeatWrapping;
-    // 像素风与室内地板一致：放大锐利、缩小 mipmap
-    groundTex.magFilter = THREE.NearestFilter;
+    // 线性采样（抗锯齿清单②）：自然地表放大不做硬边像素化
+    groundTex.magFilter = THREE.LinearFilter;
     groundTex.minFilter = THREE.LinearMipmapLinearFilter;
   }
   return groundTex;
+}
+
+// ============ 程序化 PBR 派生贴图（法线 / 粗糙度） ============
+/**
+ * 「提高建模精细度」的关键一环：几何体本身无法表达砖缝、木纹、泥土的微观起伏，
+ * 这里由**同一张画布**（与 colorMap 完全对齐、天然共用 UV）程序化派生：
+ *   - 法线贴图：把亮度当高度场做 Sobel，砖面凸起 / 灰缝凹陷，受光后出现真实凹凸明暗，
+ *     墙面从"一张平贴纸"变成有厚度感的砌体；
+ *   - 粗糙度贴图：暗缝更哑光、亮面略光滑，高光沿纹理起伏，避免整面"糊成一片"。
+ * 全部本地计算、零外部资源；按「源画布 + 参数」缓存，同一纹理只算一次。
+ */
+const reliefCache = new WeakMap<HTMLCanvasElement, Map<string, THREE.CanvasTexture>>();
+
+function reliefOf(src: HTMLCanvasElement, key: string, make: () => THREE.CanvasTexture): THREE.CanvasTexture {
+  let m = reliefCache.get(src);
+  if (!m) { m = new Map(); reliefCache.set(src, m); }
+  let t = m.get(key);
+  if (!t) { t = make(); m.set(key, t); }
+  return t;
+}
+
+/** 采样设置：派生贴图与源贴图必须一致（否则凹凸与图案错位） */
+function applySampling(t: THREE.CanvasTexture): void {
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.anisotropy = maxAnisotropy;
+}
+
+/**
+ * 亮度高度场（0..1）：砖面亮=凸，灰缝暗=凹。
+ * - **按源画布缓存**：法线贴图与粗糙度贴图共用同一次 getImageData + 遍历（此前各算一遍，白做功）；
+ * - **降采样**（step>1）：纹理细节本就是低频，半分辨率 Sobel 视觉无差、计算量降到 1/4。
+ */
+const lumaCache = new WeakMap<HTMLCanvasElement, Map<number, { f: Float32Array; w: number; h: number }>>();
+
+function lumaField(src: HTMLCanvasElement, step = 2): { f: Float32Array; w: number; h: number } {
+  let per = lumaCache.get(src);
+  if (!per) {
+    per = new Map();
+    lumaCache.set(src, per);
+  }
+  const hit = per.get(step);
+  if (hit) return hit;
+  const ctx = src.getContext('2d')!;
+  const px = ctx.getImageData(0, 0, src.width, src.height).data;
+  const w = Math.max(2, Math.floor(src.width / step));
+  const h = Math.max(2, Math.floor(src.height / step));
+  const f = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = ((y * step) * src.width + x * step) * 4;
+      f[y * w + x] = (px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114) / 255;
+    }
+  }
+  const out = { f, w, h };
+  per.set(step, out);
+  return out;
+}
+
+/**
+ * 法线贴图：环绕采样保证四向平铺无缝（砖纹是 RepeatWrapping 的，接缝处不能出现硬棱）。
+ * `strength` 控制凹凸强度，建议 1.5（泥土）~ 2.6（砖石）。
+ */
+export function normalMap(src: HTMLCanvasElement, strength = 2.4): THREE.CanvasTexture {
+  return reliefOf(src, `n${strength}`, () => {
+    const { f, w, h } = lumaField(src);
+    const out = document.createElement('canvas');
+    out.width = w;
+    out.height = h;
+    const octx = out.getContext('2d')!;
+    const img = octx.createImageData(w, h);
+    const at = (x: number, y: number): number => f[((y + h) % h) * w + ((x + w) % w)];
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const dx = at(x + 1, y) - at(x - 1, y);
+        const dy = at(x, y + 1) - at(x, y - 1);
+        let nx = -dx * strength;
+        let ny = -dy * strength; // 画布 y 向下；three 由 flipY 转成 v 向上，符号随之翻转
+        const inv = 1 / Math.hypot(nx, ny, 1);
+        nx *= inv;
+        ny *= inv;
+        const i = (y * w + x) * 4;
+        img.data[i] = (nx * 0.5 + 0.5) * 255;
+        img.data[i + 1] = (ny * 0.5 + 0.5) * 255;
+        img.data[i + 2] = (inv * 0.5 + 0.5) * 255;
+        img.data[i + 3] = 255;
+      }
+    }
+    octx.putImageData(img, 0, 0);
+    const tex = new THREE.CanvasTexture(out);
+    tex.colorSpace = THREE.NoColorSpace; // 法线是数据不是颜色，禁止 sRGB 解码
+    applySampling(tex);
+    return tex;
+  });
+}
+
+/**
+ * 粗糙度贴图：亮度越低（灰缝 / 阴影 / 斑驳）越粗糙，越高（砖面 / 磨光面）越光滑。
+ * `base` 为基准粗糙度，`range` 为随亮度的浮动幅度。
+ */
+export function roughnessMap(src: HTMLCanvasElement, base = 0.86, range = 0.22): THREE.CanvasTexture {
+  return reliefOf(src, `r${base}_${range}`, () => {
+    const { f, w, h } = lumaField(src);
+    const out = document.createElement('canvas');
+    out.width = w;
+    out.height = h;
+    const octx = out.getContext('2d')!;
+    const img = octx.createImageData(w, h);
+    for (let i = 0; i < w * h; i++) {
+      const v = Math.min(1, Math.max(0, base + (0.5 - f[i]) * range));
+      const c = v * 255;
+      img.data[i * 4] = c;
+      img.data[i * 4 + 1] = c;
+      img.data[i * 4 + 2] = c;
+      img.data[i * 4 + 3] = 255;
+    }
+    octx.putImageData(img, 0, 0);
+    const tex = new THREE.CanvasTexture(out);
+    tex.colorSpace = THREE.NoColorSpace; // 数据贴图
+    applySampling(tex);
+    return tex;
+  });
+}
+
+const noiseCanvases = new Map<string, HTMLCanvasElement>();
+
+/** 可平铺的值噪声灰度画布（多倍频叠加，四向环绕 → 平铺无缝） */
+function noiseCanvas(seed: number, size: number): HTMLCanvasElement {
+  const key = `${seed}|${size}`;
+  const hit = noiseCanvases.get(key);
+  if (hit) return hit;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const img = ctx.createImageData(size, size);
+  const layers: [number, number][] = [[4, 1], [8, 0.55], [16, 0.3], [32, 0.16]];
+  const rnd = (x: number, y: number, s: number): number => {
+    let h = (x * 374761393 + y * 668265263 + s * 1442695041) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+  };
+  const smooth = (t: number): number => t * t * (3 - 2 * t);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      let v = 0;
+      let amp = 0;
+      for (const [f, a] of layers) {
+        const gx = (x / size) * f;
+        const gy = (y / size) * f;
+        const x0 = Math.floor(gx);
+        const y0 = Math.floor(gy);
+        const tx = smooth(gx - x0);
+        const ty = smooth(gy - y0);
+        const sx0 = x0 % f;
+        const sy0 = y0 % f;
+        const sx1 = (x0 + 1) % f;
+        const sy1 = (y0 + 1) % f;
+        const n00 = rnd(sx0, sy0, seed + f);
+        const n10 = rnd(sx1, sy0, seed + f);
+        const n01 = rnd(sx0, sy1, seed + f);
+        const n11 = rnd(sx1, sy1, seed + f);
+        v += (n00 * (1 - tx) * (1 - ty) + n10 * tx * (1 - ty) + n01 * (1 - tx) * ty + n11 * tx * ty) * a;
+        amp += a;
+      }
+      const c = (v / amp) * 255;
+      const i = (y * size + x) * 4;
+      img.data[i] = c;
+      img.data[i + 1] = c;
+      img.data[i + 2] = c;
+      img.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  noiseCanvases.set(key, canvas);
+  return canvas;
+}
+
+/**
+ * 道具表面微凹凸：给**纯色材质**（石 / 木 / 金属 / 铁件）加一层微观起伏。
+ * 纯色大面在光照下没有任何细节，是"塑料感"的主要来源；噪声法线成本极低，
+ * 却能立刻让石料有颗粒、木材有纤维、金属有磨痕。
+ * 返回的纹理带**独立 repeat**（clone 共享同一张 128² 图像，显存开销可忽略），
+ * 因为不同道具的面尺寸差异很大，平铺次数需各自设置。
+ */
+const propNormalCache = new Map<string, THREE.CanvasTexture>();
+
+export function propNormal(seed: number, repeat = 3, strength = 1.1): THREE.CanvasTexture {
+  const key = `${seed}|${repeat}|${strength}`;
+  let t = propNormalCache.get(key);
+  if (!t) {
+    t = normalMap(noiseCanvas(seed, 128), strength).clone();
+    t.repeat.set(repeat, repeat);
+    t.needsUpdate = true;
+    propNormalCache.set(key, t);
+  }
+  return t;
+}
+
+const propRoughCache = new Map<string, THREE.CanvasTexture>();
+
+/**
+ * 道具表面粗糙度变化：金属件不再整面一致反光，而是有磨亮 / 磨哑的斑驳感。
+ * 与 `propNormal` 同源同平铺次数，保证高光变化与凹凸细节对得上。
+ */
+export function propRoughness(seed: number, repeat = 3, base = 0.7, range = 0.18): THREE.CanvasTexture {
+  const key = `${seed}|${repeat}|${base}|${range}`;
+  let t = propRoughCache.get(key);
+  if (!t) {
+    t = roughnessMap(noiseCanvas(seed, 128), base, range).clone();
+    t.repeat.set(repeat, repeat);
+    t.needsUpdate = true;
+    propRoughCache.set(key, t);
+  }
+  return t;
+}
+
+/** 常用噪声种子（按材质分类，保证同类道具纹理一致、不同类有区别） */
+export const PROP_NOISE = { stone: 11, wood: 23, metal: 37, iron: 53, cloth: 71 } as const;
+
+/**
+ * 一次性给材质挂上「同源」法线 + 粗糙度细节。
+ * 传入的必须是该材质 colorMap 的**同一张画布**，这样凹凸与图案像素级对齐。
+ */
+export function applyRelief(
+  mat: THREE.MeshStandardMaterial,
+  srcCanvas: HTMLCanvasElement,
+  opts: { normal?: number; rough?: number; roughRange?: number } = {},
+): void {
+  const normal = opts.normal ?? 2.2;
+  if (normal > 0) {
+    mat.normalMap = normalMap(srcCanvas, normal);
+    mat.normalScale.set(1, 1);
+  }
+  if (opts.rough !== 0) {
+    mat.roughnessMap = roughnessMap(srcCanvas, opts.rough ?? 0.86, opts.roughRange ?? 0.22);
+    mat.roughness = 1; // 由贴图承载具体数值
+  }
+  mat.needsUpdate = true;
 }

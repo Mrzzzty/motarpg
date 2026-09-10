@@ -1,0 +1,345 @@
+/* 遗物系统 UI（docs/遗物系统设计.md） */
+
+/* 顶部区域：房间信息 + 遗物图标条（位于「起点大厅」右侧） */
+#top-bar {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px; /* 占满中间区宽度，作为遗物条换行的可用宽度 */
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  z-index: 6;
+  pointer-events: none;
+}
+#top-bar .room-info {
+  position: static;
+  pointer-events: auto;
+  flex: 0 0 auto;
+}
+/*
+ * 顶部遗物条：默认折叠为一行；鼠标移上去时按需展开，动画用 max-width / max-height 过渡。
+ * 展开顺序「点 → 线 → 面」：先在一行内向右延伸，一行放不下才换行、整体向下扩展；
+ * 右侧预留小地图宽度，故横向扩展不会遮挡其他部件。
+ */
+.top-relics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: flex-start;
+  gap: 3px;
+  padding: 4px 6px;
+  background: rgba(10, 14, 20, 0.6);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  pointer-events: auto;
+
+  /* 折叠态：只保留一行（多出的换行部分被裁掉） */
+  max-width: 210px;
+  max-height: 42px;
+  overflow: hidden;
+  transition:
+    max-width 0.24s var(--ease-out),
+    max-height 0.24s var(--ease-out),
+    background 0.18s var(--ease-out),
+    border-color 0.18s var(--ease-out);
+}
+.top-relics.empty {
+  display: none;
+}
+/* 悬停：向右扩展（不够则换行向下），高度上限足够容纳多行 */
+.top-relics:hover {
+  max-width: calc(100% - 190px);
+  max-height: 60vh;
+  background: rgba(10, 14, 20, 0.95);
+  border-color: var(--panel-border-strong);
+}
+/*
+ * 遗物栏展开时，让进层提示（「进入【…】」/「第 N 层」，z-index 155）暂时透明，
+ * 避免压住展开后的遗物图标；鼠标移开后自动恢复（#floor-tip 自带 opacity 过渡）。
+ */
+#top-bar:has(.top-relics:hover) ~ #floor-tip {
+  opacity: 0;
+  transition-duration: 0.18s; /* 与遗物栏展开同步快速让位；移开后仍按 0.4s 恢复 */
+}
+.top-relic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #666;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  flex: 0 0 auto;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.top-relic:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+}
+.top-relic-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* 顶部图标悬浮窗（效果详情） */
+#relic-tooltip {
+  position: fixed;
+  z-index: 210;
+  background: rgba(12, 16, 24, 0.97);
+  border: 1px solid var(--panel-border-strong);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  max-width: 280px;
+  pointer-events: none;
+  line-height: 1.6;
+  font-size: 13px;
+  box-shadow: var(--shadow-3);
+  backdrop-filter: blur(6px);
+  animation: tipIn 0.15s var(--ease-out);
+}
+#relic-tooltip.hidden {
+  display: none;
+}
+
+/* 左栏遗物卡片：长方形，直接显示效果，可折叠 */
+.relic-left {
+  margin-top: 4px;
+}
+.relic-left-body .relic-card {
+  cursor: pointer;
+}
+.relic-left-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+}
+.relic-left-head .sub-title {
+  margin: 0;
+}
+.relic-left-head:hover .relic-caret {
+  color: var(--accent);
+}
+.relic-caret {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.relic-left-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  /* 不再限制高度 / 不内层滚动：卡片全部展开，由左栏面板（.side-panel）统一滚动 */
+  max-height: none;
+  overflow: visible;
+}
+.relic-left-body.hidden {
+  display: none;
+}
+/* 卡片 / 行 / 抉择卡：共用同一套容器与头部排版（此前三处各写一遍） */
+.relic-card,
+.relic-row {
+  border: 1px solid #555;
+  border-left-width: 4px;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.relic-card-head,
+.relic-row-head,
+.rc-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.relic-card-head {
+  flex-wrap: wrap;
+}
+.relic-row-head {
+  margin-bottom: 2px;
+}
+.relic-card-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  font-size: 20px;
+  line-height: 24px;
+}
+.relic-card-name {
+  font-weight: 600;
+  font-size: 14px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.relic-card-desc {
+  color: var(--text-dim);
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin-top: 3px;
+}
+
+.relic-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  font-size: 15px;
+  line-height: 18px;
+  vertical-align: middle;
+}
+
+/* 遗物面板 */
+.relic-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.relic-tab {
+  padding: 3px 12px;
+  border: 1px solid #555;
+  border-radius: 5px;
+  background: #2a2a2a;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 13px;
+}
+.relic-tab.active {
+  background: #4a3a12;
+  border-color: #b08d57;
+  color: #ffd76a;
+}
+
+.relic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.relic-row {
+  border: 1px solid #555;
+  border-left-width: 4px;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.relic-row.locked {
+  border-left-color: #444;
+  opacity: 0.55;
+}
+.relic-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.relic-name {
+  font-weight: 600;
+}
+.relic-rarity {
+  font-size: 12px;
+}
+.relic-btn {
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #333;
+  color: #ddd;
+  border: 1px solid #666;
+}
+.relic-btn:hover {
+  background: #444;
+}
+.relic-drop {
+  border-color: #a33;
+  color: #e88;
+}
+.relic-combo-row {
+  padding: 3px 0;
+}
+.relic-combo-row b {
+  color: #ffd76a;
+}
+
+/* ===== 遗物抉择面板（发现遗物 / 遗物宝箱三选一） ===== */
+.relic-choice .rc-box {
+  width: min(92vw, 640px);
+}
+.rc-hint {
+  margin-bottom: 10px;
+}
+.rc-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid #555;
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.rc-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rc-icon {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  font-size: 22px;
+  line-height: 26px;
+}
+.rc-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+.rc-desc {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.rc-note {
+  font-size: 12px;
+  font-style: italic;
+}
+.rc-pick {
+  padding: 3px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  background: #3a2a12;
+  color: #ffd76a;
+  border: 1px solid #b08d57;
+  font-size: 13px;
+}
+.rc-pick:hover {
+  background: #4a3a12;
+}
+.rc-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+/* 三选一：宽屏时并排成三列 */
+@media (min-width: 720px) {
+  .rc-cards.rc-three {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .rc-cards.rc-three .rc-card {
+    flex: 1 1 0;
+  }
+}

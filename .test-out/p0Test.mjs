@@ -186,7 +186,8 @@ var gameConfig_default = {
     damageJitter: 0.1,
     critMultiplier: 1.8,
     maxTurns: 60,
-    minDamage: 1
+    minDamage: 1,
+    potionUsesPerBattle: 1
   },
   chestRewards: {
     goldBands: [
@@ -261,7 +262,8 @@ var gameConfig_default = {
     vignetteMax: 0.3,
     maxLights: 20,
     maxParticles: 1e3,
-    gridLineWidth: 1
+    gridLineWidth: 1,
+    roomDecorDensity: 1
   },
   postProcess: {
     bloom: {
@@ -285,7 +287,7 @@ var gameConfig_default = {
     }
   },
   shadow: {
-    staticAlpha: 0.2,
+    staticAlpha: 0.45,
     staticOffset: 3,
     baseOffset: 6,
     maxDynamic: 20,
@@ -495,9 +497,9 @@ var mapGeneration_default = {
     mediumAreaMax: 42,
     largeAreaMax: 56,
     density: {
-      small: 2,
-      medium: 3,
-      large: 4,
+      small: 3,
+      medium: 4,
+      large: 5,
       xlarge: 5
     },
     chestRoomMin: 2,
@@ -699,6 +701,26 @@ var mapGeneration_default = {
         3,
         3
       ]
+    },
+    furnish: {
+      torchPerArea: 12,
+      torchMax: 8,
+      colonnadeMinInnerW: 5,
+      colonnadeMinInnerH: 4,
+      colonnadeSpacing: 3,
+      colonnadeMax: 8,
+      guideCarpet: true
+    },
+    risk: {
+      sideBonus: 2,
+      eliteBonus: 1,
+      areaBonusAt: 70,
+      depthBonusAt: 3,
+      floorBonusEvery: 60,
+      max: 3,
+      rewardMul: [1, 1.35, 1.8],
+      vaultChance: [0, 0.25, 0.6],
+      relicMul: [1, 1.6, 2.4]
     }
   },
   decor: {
@@ -708,6 +730,13 @@ var mapGeneration_default = {
       "chest",
       "boss"
     ]
+  },
+  cliff: {
+    minFloor: 4,
+    chance: 0.3,
+    minInnerArea: 20,
+    patchMin: 1,
+    patchMax: 3
   },
   generation: {
     maxAttempts: 40
@@ -722,13 +751,30 @@ var mapGeneration_default = {
 var monsters_default = {
   monsters: [
     {
+      id: "ancient_dragon",
+      name: "\u8FDC\u53E4\u5DE8\u9F99",
+      shape: "big_square",
+      color: "#cc1122",
+      category: "boss",
+      floorMin: 101,
+      floorMax: 9999,
+      weight: 0,
+      hpMul: 5,
+      atkMul: 0.95,
+      defMul: 1.2,
+      goldMul: 5,
+      expMul: 8,
+      height: 70,
+      description: "\u6C89\u7720\u4E8E\u5854\u9876\u4E4B\u4E0B\u7684\u707E\u5384\uFF0C\u7FFC\u5F71\u853D\u65E5\u3002"
+    },
+    {
       id: "slime",
       name: "\u53F2\u83B1\u59C6",
       shape: "circle",
       color: "#44cc44",
       category: "normal",
       floorMin: 1,
-      floorMax: 5,
+      floorMax: 8,
       weight: 30,
       hpMul: 1,
       atkMul: 0.9,
@@ -736,7 +782,7 @@ var monsters_default = {
       goldMul: 1,
       expMul: 1,
       height: 32,
-      description: "\u6700\u5F31\u5C0F\u7684\u9B54\u7269\uFF0C\u67D4\u8F6F\u65E0\u9AA8\u3002"
+      description: "\u6700\u5F31\u5C0F\u7684\u9B54\u7269\uFF0C\u67D4\u8F6F\u65E0\u9AA8\u3002\u5854\u5E95\u7816\u7F1D\u91CC\u5230\u5904\u90FD\u662F\u3002"
     },
     {
       id: "bat",
@@ -745,15 +791,15 @@ var monsters_default = {
       color: "#9955cc",
       category: "normal",
       floorMin: 1,
-      floorMax: 10,
-      weight: 25,
+      floorMax: 12,
+      weight: 26,
       hpMul: 0.7,
       atkMul: 1.1,
       defMul: 0.5,
       goldMul: 1,
       expMul: 1,
       height: 30,
-      description: "\u76D8\u65CB\u7684\u6697\u5F71\uFF0C\u653B\u51FB\u5201\u94BB\u3002"
+      description: "\u7ED5\u7740\u9752\u7816\u62F1\u9876\u76D8\u65CB\u7684\u6697\u5F71\uFF0C\u653B\u51FB\u5201\u94BB\u3002"
     },
     {
       id: "skeleton",
@@ -763,14 +809,31 @@ var monsters_default = {
       category: "normal",
       floorMin: 3,
       floorMax: 15,
-      weight: 25,
+      weight: 24,
       hpMul: 1.2,
       atkMul: 1,
       defMul: 1.2,
       goldMul: 1.1,
       expMul: 1.1,
       height: 36,
-      description: "\u4E0D\u673D\u7684\u536B\u5175\uFF0C\u9AA8\u5934\u62FC\u6210\u7684\u6218\u8EAF\u3002"
+      description: "\u780C\u8FDB\u7816\u5899\u7684\u65E7\u65E5\u5B88\u536B\uFF0C\u9AA8\u5934\u62FC\u6210\u7684\u6218\u8EAF\u3002"
+    },
+    {
+      id: "brick_golem",
+      name: "\u9752\u7816\u5080\u5121",
+      shape: "square",
+      color: "#6f7f8f",
+      category: "normal",
+      floorMin: 6,
+      floorMax: 18,
+      weight: 20,
+      hpMul: 1.5,
+      atkMul: 0.85,
+      defMul: 1.35,
+      goldMul: 1.2,
+      expMul: 1.15,
+      height: 42,
+      description: "\u7531\u5854\u5E95\u9752\u7816\u81EA\u884C\u5806\u53E0\u800C\u6210\uFF0C\u6C89\u91CD\u800C\u8FDF\u949D\u3002"
     },
     {
       id: "gargoyle",
@@ -779,15 +842,49 @@ var monsters_default = {
       color: "#888899",
       category: "normal",
       floorMin: 8,
-      floorMax: 25,
-      weight: 22,
+      floorMax: 22,
+      weight: 20,
       hpMul: 1.5,
       atkMul: 0.9,
       defMul: 1.3,
       goldMul: 1.2,
       expMul: 1.2,
       height: 42,
-      description: "\u77F3\u5316\u7684\u5B88\u536B\uFF0C\u76AE\u7CD9\u8089\u539A\u3002"
+      description: "\u8E72\u5728\u6A90\u89D2\u7684\u77F3\u50CF\u7A81\u7136\u7741\u773C\uFF0C\u76AE\u7CD9\u8089\u539A\u3002"
+    },
+    {
+      id: "sporeling",
+      name: "\u5B62\u5B50\u5E7C\u82D7",
+      shape: "circle",
+      color: "#9ad97a",
+      category: "normal",
+      floorMin: 14,
+      floorMax: 30,
+      weight: 24,
+      hpMul: 0.9,
+      atkMul: 1,
+      defMul: 0.8,
+      goldMul: 1.1,
+      expMul: 1.1,
+      height: 34,
+      description: "\u82D4\u56ED\u91CC\u4F1A\u8D70\u8DEF\u7684\u5B62\u5B50\u56CA\uFF0C\u9760\u8FD1\u4FBF\u70B8\u5F00\u3002"
+    },
+    {
+      id: "vine_lasher",
+      name: "\u85E4\u8513\u97AD\u7B1E\u8005",
+      shape: "square",
+      color: "#4f8a3a",
+      category: "normal",
+      floorMin: 16,
+      floorMax: 34,
+      weight: 22,
+      hpMul: 1.25,
+      atkMul: 1.3,
+      defMul: 1,
+      goldMul: 1.2,
+      expMul: 1.2,
+      height: 40,
+      description: "\u7F20\u6EE1\u9508\u652F\u67B6\u7684\u85E4\u8513\uFF0C\u62BD\u6253\u8D77\u6765\u5E26\u7740\u98CE\u58F0\u3002"
     },
     {
       id: "shadow_wolf",
@@ -804,7 +901,7 @@ var monsters_default = {
       goldMul: 1.2,
       expMul: 1.2,
       height: 40,
-      description: "\u5F71\u4E2D\u75BE\u884C\u7684\u730E\u624B\uFF0C\u6495\u54AC\u81F4\u547D\u3002"
+      description: "\u5728\u82D4\u5F84\u95F4\u75BE\u884C\u7684\u730E\u624B\uFF0C\u6495\u54AC\u81F4\u547D\u3002"
     },
     {
       id: "hellhound",
@@ -813,7 +910,7 @@ var monsters_default = {
       color: "#ff6622",
       category: "normal",
       floorMin: 18,
-      floorMax: 45,
+      floorMax: 40,
       weight: 20,
       hpMul: 1.3,
       atkMul: 1.5,
@@ -821,7 +918,228 @@ var monsters_default = {
       goldMul: 1.3,
       expMul: 1.3,
       height: 44,
-      description: "\u71C3\u70E7\u7684\u6076\u72AC\uFF0C\u5410\u606F\u707C\u4EBA\u3002"
+      description: "\u4ECE\u953B\u7089\u91CC\u722C\u51FA\u6765\u7684\u6076\u72AC\uFF0C\u5410\u606F\u707C\u4EBA\u3002"
+    },
+    {
+      id: "anvil_husk",
+      name: "\u94C1\u7827\u6B8B\u8EAF",
+      shape: "square",
+      color: "#6b7280",
+      category: "normal",
+      floorMin: 28,
+      floorMax: 42,
+      weight: 18,
+      hpMul: 1.7,
+      atkMul: 1.05,
+      defMul: 1.5,
+      goldMul: 1.3,
+      expMul: 1.25,
+      height: 46,
+      description: "\u88AB\u953B\u9524\u7838\u788E\u53C8\u81EA\u5DF1\u62FC\u56DE\u7684\u9020\u7269\uFF0C\u51E0\u4E4E\u6253\u4E0D\u70C2\u3002"
+    },
+    {
+      id: "paper_wisp",
+      name: "\u7EB8\u9875\u5E7D\u5F71",
+      shape: "circle",
+      color: "#e8e2d0",
+      category: "normal",
+      floorMin: 38,
+      floorMax: 52,
+      weight: 24,
+      hpMul: 0.85,
+      atkMul: 1.2,
+      defMul: 0.7,
+      goldMul: 1.2,
+      expMul: 1.2,
+      height: 34,
+      description: "\u6495\u788E\u7684\u9875\u5F20\u805A\u6210\u5F71\uFF0C\u7EB8\u7F18\u950B\u5229\u5982\u5203\u3002"
+    },
+    {
+      id: "ink_blot",
+      name: "\u58A8\u6E0D\u602A",
+      shape: "circle",
+      color: "#3a3f6b",
+      category: "normal",
+      floorMin: 40,
+      floorMax: 56,
+      weight: 22,
+      hpMul: 1.2,
+      atkMul: 1.15,
+      defMul: 1.1,
+      goldMul: 1.25,
+      expMul: 1.25,
+      height: 36,
+      description: "\u6253\u7FFB\u7684\u58A8\u6C60\u751F\u4E86\u7075\uFF0C\u9ECF\u7A20\u96BE\u7F20\u3002"
+    },
+    {
+      id: "tome_guardian",
+      name: "\u5178\u7C4D\u5B88\u536B",
+      shape: "square",
+      color: "#8a6a3a",
+      category: "normal",
+      floorMin: 44,
+      floorMax: 60,
+      weight: 20,
+      hpMul: 1.6,
+      atkMul: 1.1,
+      defMul: 1.45,
+      goldMul: 1.3,
+      expMul: 1.3,
+      height: 44,
+      description: "\u5408\u62E2\u7684\u5DE8\u518C\u7ACB\u8D77\u6765\uFF0C\u4E66\u810A\u5C31\u662F\u5B83\u7684\u76FE\u3002"
+    },
+    {
+      id: "forbidden_script",
+      name: "\u7981\u4E66\u94ED\u6587",
+      shape: "square",
+      color: "#7a3fbf",
+      category: "normal",
+      floorMin: 52,
+      floorMax: 64,
+      weight: 18,
+      hpMul: 1.05,
+      atkMul: 1.5,
+      defMul: 0.95,
+      goldMul: 1.35,
+      expMul: 1.35,
+      height: 38,
+      description: "\u4E0D\u8BE5\u88AB\u8BFB\u51FA\u7684\u5B57\u53E5\u6D6E\u5728\u7A7A\u6C14\u91CC\uFF0C\u8D8A\u5FF5\u8D8A\u51F6\u3002"
+    },
+    {
+      id: "stardust_sprite",
+      name: "\u661F\u5C51\u7CBE\u7075",
+      shape: "circle",
+      color: "#bcd4ff",
+      category: "normal",
+      floorMin: 58,
+      floorMax: 72,
+      weight: 24,
+      hpMul: 0.8,
+      atkMul: 1.3,
+      defMul: 0.75,
+      goldMul: 1.3,
+      expMul: 1.3,
+      height: 34,
+      description: "\u4ECE\u89C2\u661F\u53F0\u7684\u7A79\u9876\u843D\u4E0B\u7684\u788E\u661F\uFF0C\u5FFD\u660E\u5FFD\u6697\u3002"
+    },
+    {
+      id: "comet_hound",
+      name: "\u5F57\u661F\u730E\u72AC",
+      shape: "circle",
+      color: "#6ea8ff",
+      category: "normal",
+      floorMin: 60,
+      floorMax: 76,
+      weight: 22,
+      hpMul: 1.15,
+      atkMul: 1.45,
+      defMul: 0.9,
+      goldMul: 1.3,
+      expMul: 1.3,
+      height: 40,
+      description: "\u62D6\u7740\u957F\u957F\u5149\u5C3E\u6251\u6765\uFF0C\u649E\u4E0A\u4FBF\u662F\u707C\u75D5\u3002"
+    },
+    {
+      id: "orrery_sentinel",
+      name: "\u6D51\u5929\u4EEA\u54E8\u536B",
+      shape: "square",
+      color: "#4a5b8a",
+      category: "normal",
+      floorMin: 66,
+      floorMax: 80,
+      weight: 20,
+      hpMul: 1.6,
+      atkMul: 1.15,
+      defMul: 1.5,
+      goldMul: 1.35,
+      expMul: 1.35,
+      height: 46,
+      description: "\u73AF\u73AF\u76F8\u5957\u7684\u94DC\u4EEA\u81EA\u884C\u8F6C\u52A8\uFF0C\u628A\u95EF\u5165\u8005\u5708\u8FDB\u661F\u8F68\u3002"
+    },
+    {
+      id: "void_gazer",
+      name: "\u865A\u7A7A\u51DD\u89C6\u8005",
+      shape: "square",
+      color: "#2a2550",
+      category: "normal",
+      floorMin: 72,
+      floorMax: 84,
+      weight: 18,
+      hpMul: 1.3,
+      atkMul: 1.35,
+      defMul: 1.1,
+      goldMul: 1.4,
+      expMul: 1.4,
+      height: 44,
+      description: "\u661F\u4E0E\u661F\u4E4B\u95F4\u7684\u7A7A\u767D\u7741\u5F00\u4E86\u773C\u3002"
+    },
+    {
+      id: "gear_hound",
+      name: "\u9F7F\u8F6E\u730E\u72AC",
+      shape: "square",
+      color: "#9aa6b4",
+      category: "normal",
+      floorMin: 78,
+      floorMax: 92,
+      weight: 24,
+      hpMul: 1.05,
+      atkMul: 1.35,
+      defMul: 1,
+      goldMul: 1.35,
+      expMul: 1.35,
+      height: 40,
+      description: "\u54AC\u5408\u7740\u4E0B\u4E00\u679A\u9F7F\u8F6E\u5954\u8DD1\uFF0C\u9F7F\u7259\u5C31\u662F\u5B83\u7684\u5634\u3002"
+    },
+    {
+      id: "pendulum_husk",
+      name: "\u949F\u6446\u884C\u5211\u8005",
+      shape: "square",
+      color: "#6f5a3a",
+      category: "normal",
+      floorMin: 80,
+      floorMax: 96,
+      weight: 22,
+      hpMul: 1.5,
+      atkMul: 1.4,
+      defMul: 1.15,
+      goldMul: 1.4,
+      expMul: 1.4,
+      height: 46,
+      description: "\u60AC\u5728\u949F\u5BA4\u7684\u5DE8\u6446\u6709\u4E86\u610F\u5FD7\uFF0C\u8D77\u843D\u5373\u5224\u51B3\u3002"
+    },
+    {
+      id: "chime_wraith",
+      name: "\u949F\u9E23\u6028\u7075",
+      shape: "circle",
+      color: "#a0b0c8",
+      category: "normal",
+      floorMin: 84,
+      floorMax: 100,
+      weight: 20,
+      hpMul: 1.15,
+      atkMul: 1.5,
+      defMul: 0.95,
+      goldMul: 1.4,
+      expMul: 1.4,
+      height: 38,
+      description: "\u6BCF\u4E00\u58F0\u949F\u9E23\u90FD\u4F1A\u5E26\u8D70\u4E00\u4E2A\u540D\u5B57\u3002"
+    },
+    {
+      id: "clockwork_sentinel",
+      name: "\u53D1\u6761\u54E8\u5175",
+      shape: "square",
+      color: "#8d99a8",
+      category: "normal",
+      floorMin: 90,
+      floorMax: 100,
+      weight: 18,
+      hpMul: 1.9,
+      atkMul: 1.1,
+      defMul: 1.6,
+      goldMul: 1.5,
+      expMul: 1.5,
+      height: 48,
+      description: "\u4E0A\u4E86\u53D1\u6761\u7684\u5B88\u536B\uFF0C\u8D70\u5B8C\u6700\u540E\u4E00\u6B65\u4E5F\u4E0D\u4F1A\u505C\u3002"
     },
     {
       id: "dark_knight",
@@ -829,33 +1147,169 @@ var monsters_default = {
       shape: "square",
       color: "#aa1133",
       category: "normal",
-      floorMin: 25,
+      floorMin: 81,
       floorMax: 9999,
-      weight: 20,
+      weight: 18,
       hpMul: 1.8,
       atkMul: 1.2,
       defMul: 1.4,
       goldMul: 1.4,
       expMul: 1.4,
       height: 48,
-      description: "\u5815\u843D\u7684\u9A91\u58EB\uFF0C\u653B\u9632\u517C\u5907\u3002"
+      description: "\u5815\u843D\u7684\u9A91\u58EB\u5728\u949F\u58F0\u91CC\u5F98\u5F8A\uFF0C\u653B\u9632\u517C\u5907\u3002"
     },
     {
-      id: "ancient_dragon",
-      name: "\u8FDC\u53E4\u5DE8\u9F99",
+      id: "light_simulacrum",
+      name: "\u5149\u4E4B\u62DF\u50CF",
+      shape: "circle",
+      color: "#f0e9d8",
+      category: "normal",
+      floorMin: 96,
+      floorMax: 9999,
+      weight: 24,
+      hpMul: 1.2,
+      atkMul: 1.45,
+      defMul: 1.05,
+      goldMul: 1.5,
+      expMul: 1.5,
+      height: 38,
+      description: "\u4E0E\u4F60\u4E00\u6A21\u4E00\u6837\u7684\u5149\u5F71\uFF0C\u8FDE\u547C\u5438\u90FD\u5B66\u5F97\u4F1A\u3002"
+    },
+    {
+      id: "tower_spirit",
+      name: "\u5854\u7075",
+      shape: "circle",
+      color: "#cfd8ff",
+      category: "normal",
+      floorMin: 101,
+      floorMax: 9999,
+      weight: 22,
+      hpMul: 1.5,
+      atkMul: 1.3,
+      defMul: 1.35,
+      goldMul: 1.5,
+      expMul: 1.5,
+      height: 42,
+      description: "\u6574\u5EA7\u5854\u7684\u610F\u5FD7\u51DD\u6210\u4EBA\u5F62\uFF0C\u8BA4\u5F97\u6BCF\u4E00\u4E2A\u6500\u767B\u8005\u3002"
+    },
+    {
+      id: "fate_weaver",
+      name: "\u547D\u8FD0\u7EC7\u8005",
+      shape: "square",
+      color: "#b47ad6",
+      category: "normal",
+      floorMin: 101,
+      floorMax: 9999,
+      weight: 20,
+      hpMul: 1.3,
+      atkMul: 1.55,
+      defMul: 1.1,
+      goldMul: 1.55,
+      expMul: 1.55,
+      height: 44,
+      description: "\u5728\u5854\u9876\u62BD\u4E1D\u5F15\u7EBF\uFF0C\u628A\u4F60\u7684\u6BCF\u4E00\u6B65\u90FD\u7B97\u8FDB\u53BB\u3002"
+    },
+    {
+      id: "final_shade",
+      name: "\u7EC8\u7109\u4E4B\u5F71",
+      shape: "square",
+      color: "#1c1f2e",
+      category: "normal",
+      floorMin: 101,
+      floorMax: 9999,
+      weight: 16,
+      hpMul: 2,
+      atkMul: 1.35,
+      defMul: 1.7,
+      goldMul: 1.6,
+      expMul: 1.6,
+      height: 50,
+      description: "\u5854\u9876\u4E4B\u5916\u7684\u4E1C\u897F\u6295\u4E0B\u7684\u5F71\u5B50\uFF0C\u770B\u4E0D\u771F\u5207\u3002"
+    },
+    {
+      id: "brick_colossus",
+      name: "\u9752\u7816\u5DE8\u50CF",
       shape: "big_square",
-      color: "#cc1122",
+      color: "#5d6b7a",
       category: "boss",
       floorMin: 5,
-      floorMax: 9999,
+      floorMax: 15,
+      weight: 0,
+      hpMul: 4.2,
+      atkMul: 0.95,
+      defMul: 1.15,
+      goldMul: 4.2,
+      expMul: 7,
+      height: 64,
+      description: "\u5854\u5E95\u7816\u77F3\u7684\u96C6\u5408\u610F\u5FD7\uFF0C\u6491\u8D77\u4E86\u6574\u5EA7\u5854\u7684\u7B2C\u4E00\u5C42\u3002"
+    },
+    {
+      id: "furnace_titan",
+      name: "\u7194\u7089\u5DE8\u50CF",
+      shape: "big_square",
+      color: "#d0662a",
+      category: "boss",
+      floorMin: 20,
+      floorMax: 40,
+      weight: 0,
+      hpMul: 4.6,
+      atkMul: 1,
+      defMul: 1.2,
+      goldMul: 4.4,
+      expMul: 7.2,
+      height: 66,
+      description: "\u953B\u7A9F\u7684\u5FC3\u810F\uFF0C\u80F8\u8154\u91CC\u70E7\u7740\u6C38\u4E0D\u7184\u706D\u7684\u7089\u706B\u3002"
+    },
+    {
+      id: "index_warden",
+      name: "\u7D22\u5F15\u5178\u5B88",
+      shape: "big_square",
+      color: "#8a6a3a",
+      category: "boss",
+      floorMin: 45,
+      floorMax: 60,
+      weight: 0,
+      hpMul: 4.5,
+      atkMul: 1,
+      defMul: 1.15,
+      goldMul: 4.4,
+      expMul: 7.4,
+      height: 66,
+      description: "\u56FE\u4E66\u9986\u6240\u6709\u4E66\u9875\u7684\u7D22\u5F15\uFF0C\u8BB0\u5F55\u7740\u4F60\u4E0D\u8BE5\u77E5\u9053\u7684\u540D\u5B57\u3002"
+    },
+    {
+      id: "star_forger",
+      name: "\u94F8\u661F\u8005",
+      shape: "big_square",
+      color: "#6ea8ff",
+      category: "boss",
+      floorMin: 65,
+      floorMax: 80,
+      weight: 0,
+      hpMul: 4.8,
+      atkMul: 1,
+      defMul: 1.2,
+      goldMul: 4.6,
+      expMul: 7.6,
+      height: 68,
+      description: "\u5728\u89C2\u661F\u53F0\u4E0A\u6572\u6253\u771F\u6B63\u7684\u661F\u661F\uFF0C\u706B\u82B1\u843D\u6210\u6D41\u661F\u3002"
+    },
+    {
+      id: "gear_overlord",
+      name: "\u9F7F\u8F6E\u9738\u4E3B",
+      shape: "big_square",
+      color: "#9aa6b4",
+      category: "boss",
+      floorMin: 85,
+      floorMax: 100,
       weight: 0,
       hpMul: 5,
-      atkMul: 0.95,
-      defMul: 1.2,
-      goldMul: 5,
-      expMul: 8,
+      atkMul: 1,
+      defMul: 1.25,
+      goldMul: 4.8,
+      expMul: 7.8,
       height: 70,
-      description: "\u6C89\u7720\u4E8E\u5854\u5E95\u7684\u707E\u5384\uFF0C\u7FFC\u5F71\u853D\u65E5\u3002"
+      description: "\u949F\u697C\u5168\u90E8\u9F7F\u8F6E\u7684\u7EDF\u5FA1\u8005\uFF0C\u5B83\u7684\u5FC3\u8DF3\u5C31\u662F\u5854\u7684\u8282\u62CD\u3002"
     }
   ],
   eliteStatMultiplier: 1.25,
@@ -926,6 +1380,16 @@ var equipmentTables_default = {
     { minEquipLevel: 41, maxEquipLevel: 50, values: { poor: null, common: null, fine: [35, 45], rare: [45, 65], epic: [65, 95], legendary: [95, 140] } }
   ],
   mythicFromLegendary: 1.43,
+  accessoryTable: [
+    { minEquipLevel: 1, maxEquipLevel: 5, values: { poor: [0.5, 1], common: [1, 1.5], fine: [1.5, 2.5], rare: [2.5, 4], epic: null, legendary: null } },
+    { minEquipLevel: 6, maxEquipLevel: 10, values: { poor: [0.8, 1.5], common: [1.5, 2.5], fine: [2.5, 4], rare: [4, 6], epic: [6, 8], legendary: null } },
+    { minEquipLevel: 11, maxEquipLevel: 20, values: { poor: null, common: [2, 3.5], fine: [3.5, 5.5], rare: [5.5, 8], epic: [8, 11], legendary: [11, 14] } },
+    { minEquipLevel: 21, maxEquipLevel: 30, values: { poor: null, common: [2.5, 4.5], fine: [4.5, 7], rare: [7, 10], epic: [10, 14], legendary: [14, 18] } },
+    { minEquipLevel: 31, maxEquipLevel: 40, values: { poor: null, common: null, fine: [5.5, 8.5], rare: [8.5, 12], epic: [12, 16], legendary: [16, 21] } },
+    { minEquipLevel: 41, maxEquipLevel: 50, values: { poor: null, common: null, fine: [6.5, 10], rare: [10, 14], epic: [14, 19], legendary: [19, 24] } }
+  ],
+  slotWeights: { weapon: 40, armor: 40, accessory: 20 },
+  accessoryStatWeights: { crit: 50, dodge: 50 },
   baseNames: {
     weapon: [
       { minEquipLevel: 1, maxEquipLevel: 10, names: ["\u94C1\u5251"] },
@@ -940,6 +1404,13 @@ var equipmentTables_default = {
       { minEquipLevel: 21, maxEquipLevel: 30, names: ["\u677F\u7532"] },
       { minEquipLevel: 31, maxEquipLevel: 40, names: ["\u7B26\u6587\u7532"] },
       { minEquipLevel: 41, maxEquipLevel: 50, names: ["\u9F99\u9CDE\u7532"] }
+    ],
+    accessory: [
+      { minEquipLevel: 1, maxEquipLevel: 10, names: ["\u62A4\u7B26"] },
+      { minEquipLevel: 11, maxEquipLevel: 20, names: ["\u6307\u73AF"] },
+      { minEquipLevel: 21, maxEquipLevel: 30, names: ["\u5FBD\u8BB0"] },
+      { minEquipLevel: 31, maxEquipLevel: 40, names: ["\u7B26\u77F3"] },
+      { minEquipLevel: 41, maxEquipLevel: 50, names: ["\u661F\u73AF"] }
     ]
   },
   equipLevelFormula: { playerLevelFactor: 0.5, floorFactor: 1, randomMin: -2, randomMax: 3, min: 1, max: 50 },
@@ -1049,6 +1520,30 @@ var quests_default = {
       ],
       prerequisites: ["quest_first_blood"],
       guidance: "\u627E\u5230\u623F\u95F4\u89D2\u843D\u7684\u53D1\u5149\u697C\u68AF\u3002"
+    },
+    {
+      id: "quest_use_potion",
+      name: "\u836F\u5230\u75C5\u9664",
+      description: "\u4F7F\u7528\u4E00\u6B21\u836F\u6C34\uFF0C\u5B66\u4F1A\u5FEB\u901F\u56DE\u590D\u3002",
+      objectives: [{ type: "use_potion", quantity: 1 }],
+      rewards: [{ type: "gold", value: 20 }],
+      prerequisites: ["quest_talk_guide"],
+      guidance: "\u6309 B \u6253\u5F00\u80CC\u5305 \u2192 \u836F\u6C34\u9875\u70B9\u51FB\u300C\u4F7F\u7528\u300D\uFF1B\u6216\u628A\u836F\u6C34\u62D6\u5230\u5E95\u90E8\u5FEB\u6377\u680F\u540E\u6309\u6570\u5B57\u952E 1-5\u3002"
+    },
+    {
+      id: "quest_deeper",
+      name: "\u6DF1\u5165\u5854\u4E2D",
+      description: "\u51FB\u8D25 2 \u540D\u654C\u4EBA\u5E76\u5230\u8FBE\u7B2C 3 \u5C42\u3002",
+      objectives: [
+        { type: "defeat_monster", quantity: 2 },
+        { type: "reach_floor", value: 3, quantity: 1 }
+      ],
+      rewards: [
+        { type: "gold", value: 80 },
+        { type: "potion", tier: "normal", value: 1 }
+      ],
+      prerequisites: ["quest_descend"],
+      guidance: "\u7EE7\u7EED\u6E05\u527F\u602A\u7269\uFF0C\u5E76\u6CBF\u697C\u68AF\u62B5\u8FBE\u7B2C 3 \u5C42\u3002"
     }
   ]
 };
@@ -1065,6 +1560,7 @@ var events_default = {
       id: "ev_gold_fairy",
       name: "\u91D1\u5E01\u5996\u7CBE",
       icon: "\u{1F9DA}",
+      trigger: "on_enter",
       minFloor: 2,
       chance: 0.07,
       roomTypes: ["combat", "chest"],
@@ -1078,8 +1574,9 @@ var events_default = {
       id: "ev_trap",
       name: "\u53EF\u7591\u7684\u8E0F\u677F",
       icon: "\u26A0\uFE0F",
+      trigger: "on_step",
       minFloor: 3,
-      chance: 0.06,
+      chance: 0.02,
       roomTypes: ["combat", "elite"],
       description: "\u811A\u4E0B\u7684\u77F3\u677F\u5FFD\u7136\u4E0B\u9677\u2014\u2014\u662F\u9677\u9631\uFF01",
       options: [
@@ -1091,6 +1588,7 @@ var events_default = {
       id: "ev_spring",
       name: "\u795E\u79D8\u6CC9\u6C34",
       icon: "\u26F2",
+      trigger: "on_enter",
       minFloor: 2,
       chance: 0.06,
       roomTypes: ["chest", "merchant", "end"],
@@ -1104,6 +1602,7 @@ var events_default = {
       id: "ev_scroll",
       name: "\u53E4\u8001\u7684\u5377\u8F74",
       icon: "\u{1F4DC}",
+      trigger: "on_enter",
       minFloor: 4,
       chance: 0.05,
       roomTypes: ["combat", "chest", "elite"],
@@ -1111,6 +1610,34 @@ var events_default = {
       options: [
         { text: "\u7814\u8BFB\u5377\u8F74", effects: [{ type: "exp", value: 25, perFloor: 5 }] },
         { text: "\u6CA1\u6709\u5174\u8DA3", effects: [] }
+      ]
+    },
+    {
+      id: "ev_loose_brick",
+      name: "\u677E\u52A8\u7684\u7816",
+      icon: "\u{1F9F1}",
+      trigger: "on_interact",
+      minFloor: 4,
+      chance: 0.1,
+      roomTypes: ["combat", "chest", "merchant", "elite"],
+      description: "\u4F60\u89E6\u53CA\u7684\u5899\u9762\u6709\u4E00\u5757\u7816\u5FAE\u5FAE\u677E\u52A8\uFF0C\u7F1D\u9699\u91CC\u900F\u51FA\u4E00\u70B9\u5FAE\u5149\u3002",
+      options: [
+        { text: "\u7528\u529B\u64AC\u5F00", effects: [{ type: "gold", value: 25, perFloor: 4 }, { type: "damagePct", value: 3 }] },
+        { text: "\u4E0D\u53BB\u7BA1\u5B83", effects: [] }
+      ]
+    },
+    {
+      id: "ev_hollow_echo",
+      name: "\u7A7A\u8361\u7684\u56DE\u54CD",
+      icon: "\u{1F56F}\uFE0F",
+      trigger: "on_defeat_all",
+      minFloor: 5,
+      chance: 0.1,
+      roomTypes: ["combat", "elite"],
+      description: "\u6700\u540E\u4E00\u53EA\u602A\u7269\u5012\u4E0B\uFF0C\u623F\u95F4\u91CC\u53EA\u5269\u4F60\u4E0E\u70DB\u706B\u7684\u547C\u5438\u58F0\u3002",
+      options: [
+        { text: "\u9759\u7ACB\u7247\u523B\uFF0C\u6E05\u70B9\u6240\u5F97", effects: [{ type: "exp", value: 20, perFloor: 6 }] },
+        { text: "\u7ACB\u523B\u8D76\u5F80\u4E0B\u4E00\u5904", effects: [] }
       ]
     }
   ]
@@ -1172,8 +1699,246 @@ var texts_default = {
 var settings_default = {
   defaults: {
     autoSave: true,
-    fpsCap: 0
+    fpsCap: 0,
+    battleMode: "auto"
   }
+};
+
+// src/data/relics.json
+var relics_default = {
+  rarityNames: { "-1": "\u707E\u5384\u9020\u7269", "0": "\u5C18\u82A5", "1": "\u5C18\u4E16\u9057\u7269", "2": "\u5723\u9057\u7269", "3": "\u795E\u7947\u9057\u7269", "4": "\u5929\u5802" },
+  rarityColors: { "-1": "#8b1a1a", "0": "#9a8f7a", "1": "#4a90d9", "2": "#a04ad9", "3": "#e03030", "4": "#ffffff" },
+  dropChances: { "0": 0.05, "1": 0.03, "2": 0.01, "3": 5e-3, "4": 0 },
+  bossDropChances: { "0": 0.5, "1": 0.3, "2": 0.18, "3": 0.02 },
+  eliteDropChances: { "0": 0.02, "1": 0.01, "2": 3e-3, "3": 1e-3 },
+  _icons\u8BF4\u660E: "\u9057\u7269\u56FE\u6807\u5360\u4F4D\uFF1Aemoji \u6216\u56FE\u7247\u8DEF\u5F84\uFF08\u5982 img/relic/r001.png\uFF09\u3002\u5C06\u6765\u66FF\u6362\u4E3A\u6B63\u5F0F\u56FE\u7247\u65F6\uFF0C\u628A\u503C\u6539\u6210\u8DEF\u5F84\u5373\u53EF\uFF0CUI \u81EA\u52A8\u6E32\u67D3 <img>\u3002\u4E5F\u53EF\u5728\u5355\u4EF6\u9057\u7269\u5BF9\u8C61\u91CC\u52A0 icon \u5B57\u6BB5\u8986\u76D6\u3002",
+  icons: {
+    R001: "\u{1F5E1}\uFE0F",
+    R002: "\u{1FAA8}",
+    R003: "\u{1F6E1}\uFE0F",
+    R004: "\u{1F4FF}",
+    R005: "\u{1F50D}",
+    R006: "\u{1F94A}",
+    R007: "\u{1F462}",
+    R008: "\u{1FA78}",
+    R009: "\u{1F4DC}",
+    R010: "\u2692\uFE0F",
+    R011: "\u{1F396}\uFE0F",
+    R012: "\u26A1",
+    R013: "\u{1F335}",
+    R014: "\u{1F9B7}",
+    R015: "\u{1F528}",
+    R016: "\u{1F9FF}",
+    R017: "\u{1F48E}",
+    R018: "\u{1F33F}",
+    R019: "\u{1F9EA}",
+    R020: "\u{1FAA8}",
+    R021: "\u{1F6E1}\uFE0F",
+    R022: "\u{1F497}",
+    R023: "\u{1F47B}",
+    R024: "\u{1F525}",
+    R025: "\u{1F331}",
+    R026: "\u{1FA99}",
+    R027: "\u{1F590}\uFE0F",
+    R028: "\u{1F5DD}\uFE0F",
+    R029: "\u{1F9D0}",
+    R030: "\u{1F91D}",
+    R031: "\u{1F4DA}",
+    R032: "\u{1F9FA}",
+    R033: "\u2728",
+    R034: "\u{1F9ED}",
+    R035: "\u{1F5FA}\uFE0F",
+    R036: "\u{1F4E1}",
+    R037: "\u{1F5DD}\uFE0F",
+    R038: "\u{1F3EE}",
+    R039: "\u{1FAA8}",
+    R040: "\u{1F300}",
+    R041: "\u{1FA9E}",
+    R042: "\u{1F4E6}",
+    R043: "\u{1F3B2}",
+    R044: "\u{1F48D}",
+    R045: "\u26D3\uFE0F",
+    R046: "\u23F3",
+    R047: "\u{1F9E6}",
+    R048: "\u{1F511}",
+    R049: "\u{1FAA8}",
+    R050: "\u{1F5BC}\uFE0F",
+    R051: "\u{1F37E}",
+    R052: "\u{1F6AC}",
+    D101: "\u{1FA99}",
+    D102: "\u{1F56F}\uFE0F",
+    D103: "\u{1F34E}",
+    D104: "\u{1F9F5}",
+    D105: "\u{1F517}",
+    D106: "\u{1F380}",
+    D107: "\u{1F3FA}",
+    D108: "\u{1F33F}",
+    R053: "\u{1F5E1}\uFE0F",
+    R054: "\u2694\uFE0F",
+    R055: "\u{1F6E1}\uFE0F",
+    R056: "\u{1F3F0}",
+    R057: "\u{1F4FF}",
+    R058: "\u{1F4A0}",
+    R059: "\u{1F3B2}",
+    R060: "\u{1F3A1}",
+    R061: "\u{1F441}\uFE0F",
+    R062: "\u{1F9FF}",
+    R063: "\u26F2",
+    R064: "\u{1F3C6}",
+    X001: "\u{1FA78}",
+    X002: "\u{1F529}",
+    X003: "\u{1F6E1}\uFE0F",
+    X004: "\u{1F494}",
+    X005: "\u{1F4B8}",
+    X006: "\u{1F6AB}",
+    X007: "\u{1F463}",
+    X008: "\u{1F40C}",
+    X011: "\u{1F5E1}\uFE0F",
+    X012: "\u{1F4A2}",
+    X013: "\u{1F537}",
+    X014: "\u{1F4DC}",
+    X015: "\u{1F300}",
+    X016: "\u{1F451}",
+    X017: "\u{1F525}",
+    X018: "\u{1F45D}",
+    X021: "\u271D\uFE0F",
+    X021P: "\u271D\uFE0F",
+    X022: "\u{1FA9E}",
+    X022P: "\u{1FA9E}",
+    X023: "\u{1F512}",
+    X023P: "\u{1F513}",
+    X024: "\u{1F525}",
+    X024P: "\u{1F33E}",
+    X025: "\u{1F52A}",
+    X025P: "\u2694\uFE0F",
+    X026: "\u{1F56F}\uFE0F",
+    X026P: "\u{1F526}",
+    X027: "\u{1F462}",
+    X027P: "\u{1F45F}",
+    H001: "\u{1F6A9}",
+    H002: "\u{1F40D}",
+    R065: "\u{1F37C}",
+    R066: "\u{1F30B}",
+    X009: "\u{1F480}"
+  },
+  relics: [
+    { id: "R001", name: "\u9508\u5251\u300C\u65E0\u540D\u300D", rarity: 1, category: "combat", combos: [], desc: "\u653B\u51FB +3", effects: [{ type: "stat", stat: "attack", value: 3, mode: "flat" }], note: "\u5251\u94FE\xB7\u4E0B\u4F4D\uFF08\u8FDB\u9636\u6682\u4E0D\u5B9E\u73B0\uFF09" },
+    { id: "R002", name: "\u78E8\u5200\u77F3", rarity: 1, category: "combat", desc: "\u653B\u51FB +6\uFF0C\u751F\u547D\u4E0A\u9650 -8", effects: [{ type: "stat", stat: "attack", value: 6, mode: "flat" }, { type: "stat", stat: "maxHp", value: -8, mode: "flat" }] },
+    { id: "R003", name: "\u94C1\u536B\u5FBD\u8BB0", rarity: 1, category: "combat", desc: "\u9632\u5FA1 +4", effects: [{ type: "stat", stat: "defense", value: 4, mode: "flat" }], note: "\u536B\u94FE\xB7\u4E0B\u4F4D" },
+    { id: "R004", name: "\u517D\u9AA8\u9879\u94FE", rarity: 1, category: "combat", desc: "\u751F\u547D\u4E0A\u9650 +200", effects: [{ type: "stat", stat: "maxHp", value: 200, mode: "flat" }], note: "\u547D\u94FE\xB7\u4E0B\u4F4D\uFF08\u4E0E\u751F\u5B58\u7C7B\u91CD\u590D\uFF0C\u62DF\u5220\u9664\uFF09" },
+    { id: "R005", name: "\u7CBE\u51C6\u900F\u955C", rarity: 1, category: "combat", combos: ["assassin"], desc: "\u66B4\u51FB\u7387 +8%", effects: [{ type: "stat", stat: "critRate", value: 8, mode: "flat" }], note: "\u773C\u94FE\xB7\u4E0B\u4F4D\uFF1B\u523A\u5BA2\u7EC4\u5408\u4EF6" },
+    { id: "R006", name: "\u81F4\u547D\u624B\u8155", rarity: 2, category: "combat", combos: ["assassin"], desc: "\u66B4\u51FB\u4F24\u5BB3 +40%", effects: [{ type: "stat", stat: "critDamage", value: 40, mode: "flat" }], note: "\u523A\u5BA2\u7EC4\u5408\u4EF6" },
+    { id: "R007", name: "\u75BE\u98CE\u4E4B\u9774", rarity: 1, category: "combat", combos: ["assassin"], desc: "\u95EA\u907F +7%", effects: [{ type: "stat", stat: "dodgeRate", value: 7, mode: "flat" }], note: "\u523A\u5BA2\u7EC4\u5408\u4EF6" },
+    { id: "R008", name: "\u72C2\u6218\u58EB\u4E4B\u8840", rarity: 2, category: "combat", combos: ["bloodrage"], desc: "\u751F\u547D\u4F4E\u4E8E 35% \u65F6\u653B\u51FB +45%\uFF1B\u53D7\u5230\u4F24\u5BB3 +15%", effects: [{ type: "onLowHp", stat: "attack", value: 45, mode: "percent", threshold: 0.35 }, { type: "stat", stat: "damageTaken", value: 15, mode: "percent" }], note: "\u8840\u6012\u7EC4\u5408\u4EF6" },
+    { id: "R009", name: "\u6B7B\u6597\u5951\u7EA6", rarity: 2, category: "combat", combos: ["bloodrage", "sacrifice"], desc: "\u653B\u51FB +40%\uFF0C\u751F\u547D\u4E0A\u9650 -25%", effects: [{ type: "stat", stat: "attack", value: 40, mode: "percent" }, { type: "stat", stat: "maxHp", value: -25, mode: "percent" }], note: "\u8840\u6012\u7EC4\u5408\u4EF6\uFF1B\u91CD\u4EE3\u4EF7" },
+    { id: "R010", name: "\u7834\u7532\u9525", rarity: 2, category: "combat", desc: "\u65E0\u89C6\u76EE\u6807 30% \u9632\u5FA1", effects: [{ type: "passive", stat: "armorPen", value: 30 }] },
+    { id: "R011", name: "\u8FDE\u51FB\u5FBD\u7AE0", rarity: 3, category: "combat", desc: "\u653B\u51FB\u6709 20% \u6982\u7387\u8FFD\u52A0\u4E00\u6B21 50% \u4F24\u5BB3\u7684\u8FFD\u51FB", effects: [{ type: "passive", stat: "followUp", value: 20, note: "\u8FFD\u4F24 50%" }] },
+    { id: "R012", name: "\u5148\u653B\u4E4B\u5203", rarity: 2, category: "combat", desc: "\u6BCF\u5C42\u9996\u6B21\u653B\u51FB\u4F24\u5BB3 \xD71.5", effects: [{ type: "passive", stat: "firstStrikeBoost", value: 1.5 }] },
+    { id: "R013", name: "\u8346\u68D8\u7532", rarity: 2, category: "combat", combos: ["fortress"], desc: "\u53CD\u5F39\u6240\u53D7\u4F24\u5BB3\u7684 12%", effects: [{ type: "stat", stat: "thorns", value: 12, mode: "flat" }], note: "\u5821\u5792\u7EC4\u5408\u4EF6" },
+    { id: "R014", name: "\u5438\u8840\u7360\u7259", rarity: 1, category: "combat", combos: ["bloodrage"], desc: "\u6BCF\u6B21\u51FB\u6740\u56DE\u590D 8% \u751F\u547D", effects: [{ type: "onKill", action: "healPct", value: 8 }], note: "\u8840\u6012\u7EC4\u5408\u4EF6" },
+    { id: "R015", name: "\u91CD\u9524", rarity: 2, category: "combat", desc: "\u653B\u51FB +10%\uFF0C\u95EA\u907F -5%", effects: [{ type: "stat", stat: "attack", value: 10, mode: "percent" }, { type: "stat", stat: "dodgeRate", value: -5, mode: "flat" }] },
+    { id: "R016", name: "\u730E\u738B\u5FBD\u8BB0", rarity: 3, category: "combat", desc: "\u5BF9\u7CBE\u82F1\u4E0E Boss \u7684\u4F24\u5BB3 +25%", effects: [{ type: "passive", stat: "eliteBossDamage", value: 25 }] },
+    { id: "R017", name: "\u751F\u547D\u7ED3\u6676", rarity: 1, category: "survival", combos: ["immortal"], desc: "\u751F\u547D\u4E0A\u9650 +60", effects: [{ type: "stat", stat: "maxHp", value: 60, mode: "flat" }], note: "\u4E0D\u673D\u7EC4\u5408\u4EF6" },
+    { id: "R018", name: "\u518D\u751F\u7B26\u6587", rarity: 1, category: "survival", combos: ["immortal"], desc: "\u6BCF\u5C42\u5F00\u59CB\u56DE\u590D 4% \u6700\u5927\u751F\u547D", effects: [{ type: "onFloorEnter", action: "healPct", value: 4 }], note: "\u4E0D\u673D\u7EC4\u5408\u4EF6" },
+    { id: "R019", name: "\u5723\u6CC9\u4E4B\u74F6", rarity: 2, category: "survival", combos: ["immortal"], desc: "\u836F\u6C34\u56DE\u590D\u91CF +10%", effects: [{ type: "stat", stat: "potionBonus", value: 10, mode: "flat" }], note: "\u6CC9\u94FE\xB7\u4E0B\u4F4D\uFF1B\u4E0D\u673D\u7EC4\u5408\u4EF6" },
+    { id: "R020", name: "\u77F3\u80A4", rarity: 1, category: "survival", combos: ["fortress"], desc: "\u53D7\u5230\u4F24\u5BB3 -6%", effects: [{ type: "stat", stat: "damageReduction", value: 6, mode: "flat" }], note: "\u5821\u5792\u7EC4\u5408\u4EF6" },
+    { id: "R021", name: "\u575A\u5B88\u8005", rarity: 2, category: "survival", combos: ["fortress"], desc: "\u751F\u547D\u9AD8\u4E8E 75% \u65F6\u9632\u5FA1 +30%", effects: [{ type: "onHighHp", stat: "defense", value: 30, mode: "percent", threshold: 0.75 }], note: "\u5821\u5792\u7EC4\u5408\u4EF6" },
+    { id: "R022", name: "\u6FD2\u6B7B\u672C\u80FD", rarity: 2, category: "survival", desc: "\u751F\u547D\u4F4E\u4E8E 25% \u65F6\u95EA\u907F +30%", effects: [{ type: "onLowHp", stat: "dodgeRate", value: 30, mode: "flat", threshold: 0.25 }] },
+    { id: "R023", name: "\u91CD\u751F\u4E4B\u9B42", rarity: 3, category: "survival", desc: "\u6B7B\u4EA1\u65F6\u539F\u5730\u590D\u6D3B\u5E76\u6062\u590D 45% \u751F\u547D\uFF08\u6BCF\u8F6E\u722C\u5854\u9650\u4E00\u6B21\uFF09", effects: [{ type: "passive", stat: "revive", value: 45 }], lore: "\u4E00\u76CF\u660E\u706F\u5F15\u5BFC\u4F60\u7684\u7075\u9B42\u56DE\u5F52", note: "\u5F3A\u529B" },
+    { id: "R024", name: "\u6696\u7089", rarity: 1, category: "survival", desc: "\u6BCF\u5C42\u56DE\u590D 3 \u70B9\u751F\u547D", effects: [{ type: "onFloorEnter", action: "heal", value: 3 }] },
+    { id: "R025", name: "\u62A4\u4F51", rarity: 3, category: "survival", desc: "\u6BCF 5 \u5C42\u53E0\u52A0\u4E00\u5C42\u62A4\u76FE\uFF0C\u4E00\u5C42\u53EF\u5438\u6536 20 \u70B9\u4F24\u5BB3\uFF0C\u62A4\u76FE\u5728\u6BCF\u6B21\u6218\u6597\u524D\u90FD\u4F1A\u91CD\u7F6E", effects: [{ type: "passive", stat: "shieldEvery5", value: 20 }] },
+    { id: "R026", name: "\u5E78\u8FD0\u786C\u5E01", rarity: 1, category: "economy", combos: ["rich"], desc: "\u91D1\u5E01\u83B7\u53D6 +15%", effects: [{ type: "stat", stat: "goldBonus", value: 15, mode: "flat" }], note: "\u91D1\u94FE\xB7\u4E0B\u4F4D\uFF1B\u5BCC\u5546\u7EC4\u5408\u4EF6" },
+    { id: "R027", name: "\u8D2A\u5A6A\u4E4B\u624B", rarity: 2, category: "economy", desc: "\u91D1\u5E01\u83B7\u53D6 +30%\uFF0C\u6536\u5230\u7684\u4F24\u5BB3 +10%", effects: [{ type: "stat", stat: "goldBonus", value: 30, mode: "flat" }, { type: "stat", stat: "damageTaken", value: 10, mode: "percent" }] },
+    { id: "R028", name: "\u94A5\u5319\u4E32", rarity: 2, category: "economy", desc: "\u6BCF\u5C42\u5F00\u59CB\u65F6\u83B7\u5F97 1 \u628A\u94A5\u5319", effects: [{ type: "onFloorEnter", action: "key", value: 1 }] },
+    { id: "R029", name: "\u9274\u8D4F\u5BB6\u4E4B\u773C", rarity: 3, category: "economy", combos: ["rich"], desc: "\u5B9D\u7BB1\u5F00\u51FA\u7684\u88C5\u5907\u54C1\u8D28 +1 \u6863", effects: [{ type: "passive", stat: "chestQualityUp", value: 1 }], note: "\u5BCC\u5546\u7EC4\u5408\u4EF6" },
+    { id: "R030", name: "\u5546\u4EBA\u53CB\u8C0A\u8BA4\u8BC1\u4FE1", rarity: 2, category: "economy", combos: ["rich"], desc: "\u5546\u5E97\u4EF7\u683C -20%", effects: [{ type: "stat", stat: "merchantDiscount", value: 20, mode: "flat" }], note: "\u5BCC\u5546\u7EC4\u5408\u4EF6" },
+    { id: "R031", name: "\u5B66\u8BC6\u6C34\u6676", rarity: 2, category: "economy", desc: "\u7ECF\u9A8C\u83B7\u53D6 +20%", effects: [{ type: "stat", stat: "expBonus", value: 20, mode: "flat" }] },
+    { id: "R032", name: "\u62FE\u8352\u8005", rarity: 3, category: "economy", desc: "\u51FB\u6740\u602A\u7269\u989D\u5916\u6389\u843D\u91D1\u5E01\uFF08\u968F\u5C42\u6570\u9012\u589E\uFF09", effects: [{ type: "onKill", action: "killGold" }] },
+    { id: "R033", name: "\u70B9\u91D1\u6307", rarity: 3, category: "economy", desc: "\u91D1\u5E01\u83B7\u53D6 +30%\uFF0C\u4F46\u6BCF\u5C42\u635F\u5931 2% \u6700\u5927\u751F\u547D\uFF08\u540C\u6B65\u6263\u9664\u8840\u91CF\uFF09", effects: [{ type: "stat", stat: "goldBonus", value: 30, mode: "flat" }, { type: "onFloorEnter", action: "hpLossPct", value: 2 }] },
+    { id: "R034", name: "\u63A2\u8DEF\u8005\u7F57\u76D8", rarity: 2, category: "explore", combos: ["omniscient"], desc: "\u663E\u793A\u672C\u5C42\u697C\u68AF\u4F4D\u7F6E", effects: [{ type: "passive", stat: "revealStairs", value: 1 }], note: "\u5168\u77E5\u7EC4\u5408\u4EF6\uFF1B\u7A00\u6709\u5EA6\u63A8\u65AD" },
+    { id: "R035", name: "\u5730\u56FE\u6B8B\u5377", rarity: 2, category: "explore", combos: ["omniscient"], desc: "\u663E\u793A\u672C\u5C42\u5B8C\u6574\u5730\u56FE", effects: [{ type: "passive", stat: "revealMap", value: 1 }], note: "\u5168\u77E5\u7EC4\u5408\u4EF6\uFF1B\u7A00\u6709\u5EA6\u63A8\u65AD" },
+    { id: "R036", name: "\u56DE\u54CD\u77F3", rarity: 2, category: "explore", combos: ["omniscient"], desc: "\u663E\u793A\u672C\u5C42\u7CBE\u82F1\u4E0E Boss \u4F4D\u7F6E", effects: [{ type: "passive", stat: "revealElite", value: 1 }], note: "\u5168\u77E5\u7EC4\u5408\u4EF6\uFF1B\u7A00\u6709\u5EA6\u63A8\u65AD" },
+    { id: "R037", name: "\u79D8\u95E8\u94A5\u5319", rarity: 2, category: "explore", desc: "\u53EF\u5F00\u542F\u9690\u85CF\u95E8", effects: [{ type: "passive", stat: "revealHidden", value: 1 }], note: "\u4F9D\u8D56\u9690\u85CF\u95E8\u73A9\u6CD5" },
+    { id: "R038", name: "\u5FAE\u5149\u63D0\u706F", rarity: 1, category: "explore", desc: "\u8FDB\u5165\u65B0\u5C42\u65F6\u81EA\u52A8\u63ED\u793A\u5468\u56F4 2 \u683C\u623F\u95F4", effects: [{ type: "passive", stat: "revealAround", value: 2 }], note: "\u7A00\u6709\u5EA6\u63A8\u65AD" },
+    { id: "R039", name: "\u5854\u57FA\u4E4B\u77F3", rarity: 1, category: "explore", combos: ["omniscient"], desc: "\u663E\u793A\u672C\u5C42\u5B9D\u7BB1\u4F4D\u7F6E", effects: [{ type: "passive", stat: "revealChest", value: 1 }], note: "\u5168\u77E5\u7EC4\u5408\u4EF6" },
+    { id: "R040", name: "\u4F20\u9001\u7B26", rarity: 1, category: "explore", desc: "\u53EF\u4F20\u9001\u81F3\u672C\u5C42\u5DF2\u63A2\u7D22\u7684\u4EFB\u610F\u623F\u95F4\uFF08\u6BCF\u5C42 1 \u6B21\uFF09", effects: [{ type: "passive", stat: "teleport", value: 1 }] },
+    { id: "R041", name: "\u8BC5\u5492\u4E4B\u955C", rarity: 2, category: "risk", desc: "\u653B\u51FB +20%\uFF0C\u4F46\u6BCF\u5C42\u5F00\u59CB\u635F\u5931 2% \u6700\u5927\u751F\u547D", effects: [{ type: "stat", stat: "attack", value: 20, mode: "percent" }, { type: "onFloorEnter", action: "hpLossPct", value: 2 }] },
+    { id: "R042", name: "\u8D2A\u5A6A\u4E4B\u5323", rarity: 3, category: "risk", combos: ["sacrifice"], desc: "\u91D1\u5E01\u83B7\u53D6 +100%\uFF0C\u4F46\u65E0\u6CD5\u4F7F\u7528\u836F\u6C34", effects: [{ type: "stat", stat: "goldBonus", value: 100, mode: "flat" }, { type: "passive", stat: "noPotion", value: 1 }] },
+    { id: "R043", name: "\u6DF7\u6C8C\u9AB0\u5B50", rarity: 3, category: "risk", desc: "\u6BCF\u6B21\u6218\u6597\u968F\u673A\u4F7F\u4E00\u9879\u5C5E\u6027 +20% \u6216 -20%", effects: [{ type: "passive", stat: "chaos", value: 1 }] },
+    { id: "R044", name: "\u865A\u65E0\u4E4B\u6212", rarity: 3, category: "risk", combos: ["sacrifice"], desc: "\u751F\u547D\u4E0A\u9650 -50%\uFF0C\u653B\u51FB\u4E0E\u9632\u5FA1\u5404 +30%", effects: [{ type: "stat", stat: "maxHp", value: -50, mode: "percent" }, { type: "stat", stat: "attack", value: 30, mode: "percent" }, { type: "stat", stat: "defense", value: 30, mode: "percent" }] },
+    { id: "R045", name: "\u6C89\u6CA6\u77F3", rarity: 3, category: "risk", desc: "\u9632\u5FA1 +40%\uFF0C\u95EA\u907F -30%", effects: [{ type: "stat", stat: "defense", value: 40, mode: "percent" }, { type: "stat", stat: "dodgeRate", value: -30, mode: "flat" }] },
+    { id: "R046", name: "\u5012\u7F6E\u7684\u6C99\u6F0F", rarity: 3, category: "risk", desc: "\u6BCF\u5C42\u5F00\u59CB\u65F6\uFF0C\u968F\u673A\u91CD\u7F6E\u4E00\u9879\u5DF2\u6709\u7684\u4E34\u65F6\u589E\u76CA", effects: [{ type: "passive", stat: "resetBuffOnFloor", value: 1 }] },
+    { id: "R047", name: "\u7834\u65E7\u7684\u889C\u5B50", rarity: 0, category: "fun", desc: "\u65E0\u4EFB\u4F55\u6548\u679C", effects: [{ type: "none" }], note: "\u7EAF\u6536\u85CF" },
+    { id: "R048", name: "\u751F\u9508\u7684\u94A5\u5319", rarity: 0, category: "fun", desc: "\u65E0\u4EFB\u4F55\u6548\u679C", effects: [{ type: "none" }], note: "\u7EAF\u6536\u85CF" },
+    { id: "R049", name: "\u5947\u602A\u7684\u77F3\u5934", rarity: 0, category: "fun", desc: "\u65E0\u4EFB\u4F55\u6548\u679C", effects: [{ type: "none" }], note: "\u7EAF\u6536\u85CF" },
+    { id: "R050", name: "\u892A\u8272\u7684\u5408\u5F71", rarity: 0, category: "fun", desc: "\u65E0\u4EFB\u4F55\u6548\u679C", effects: [{ type: "none" }], note: "\u7EAF\u6536\u85CF" },
+    { id: "R051", name: "\u7A7A\u836F\u74F6", rarity: 0, category: "fun", desc: "\u65E0\u4EFB\u4F55\u6548\u679C", effects: [{ type: "none" }], note: "\u7EAF\u6536\u85CF" },
+    { id: "R052", name: "\u827E\u767B\u7684\u70DF\u6597", rarity: 0, category: "fun", desc: "\u65E0\u4EFB\u4F55\u6548\u679C\uFF08\u5F15\u5BFC\u8005\u5F69\u86CB\uFF09", effects: [{ type: "none" }], lore: "\u5438\u70DF\u6709\u5BB3\u5065\u5EB7", note: "\u5F69\u86CB\uFF1B\u4E0E NPC \u827E\u767B\u547C\u5E94" },
+    { id: "D101", name: "\u78E8\u635F\u7684\u94DC\u5E01", rarity: 0, category: "fun", desc: "\u91D1\u5E01\u83B7\u53D6 +1%", effects: [{ type: "stat", stat: "goldBonus", value: 1, mode: "flat" }] },
+    { id: "D102", name: "\u534A\u622A\u8721\u70DB", rarity: 0, category: "fun", desc: "\u653B\u51FB +1", effects: [{ type: "stat", stat: "attack", value: 1, mode: "flat" }] },
+    { id: "D103", name: "\u5E72\u762A\u7684\u679C\u5B50", rarity: 0, category: "fun", desc: "\u751F\u547D\u4E0A\u9650 +5", effects: [{ type: "stat", stat: "maxHp", value: 5, mode: "flat" }] },
+    { id: "D104", name: "\u7834\u5E03\u6761", rarity: 0, category: "fun", desc: "\u9632\u5FA1 +1", effects: [{ type: "stat", stat: "defense", value: 1, mode: "flat" }] },
+    { id: "D105", name: "\u751F\u9508\u7684\u9876\u9488", rarity: 0, category: "fun", desc: "\u53D7\u5230\u4F24\u5BB3 -1%", effects: [{ type: "stat", stat: "damageReduction", value: 1, mode: "flat" }] },
+    { id: "D106", name: "\u892A\u8272\u7684\u4E1D\u5E26", rarity: 0, category: "fun", desc: "\u95EA\u907F +1%", effects: [{ type: "stat", stat: "dodgeRate", value: 1, mode: "flat" }] },
+    { id: "D107", name: "\u7F3A\u89D2\u9676\u7247", rarity: 0, category: "fun", desc: "\u66B4\u51FB\u7387 +1%", effects: [{ type: "stat", stat: "critRate", value: 1, mode: "flat" }] },
+    { id: "D108", name: "\u5E72\u71E5\u7684\u82D4\u85D3", rarity: 0, category: "fun", desc: "\u6BCF\u5C42\u56DE\u590D 1 \u70B9\u751F\u547D", effects: [{ type: "onFloorEnter", action: "heal", value: 1 }] },
+    { id: "R053", name: "\u950B\u9510\u957F\u5251", rarity: 2, category: "combat", desc: "\u653B\u51FB +10", effects: [{ type: "stat", stat: "attack", value: 10, mode: "flat" }], note: "\u5251\u94FE\xB7\u4E2D\u4F4D\uFF08\u8FDB\u9636\u6682\u4E0D\u5B9E\u73B0\uFF09" },
+    { id: "R054", name: "\u795E\u88C1\u4E4B\u5203", rarity: 3, category: "combat", desc: "\u653B\u51FB +25\uFF0C\u4E14\u653B\u51FB\u6709 15% \u6982\u7387\u65E0\u89C6\u76EE\u6807\u5168\u90E8\u9632\u5FA1", effects: [{ type: "stat", stat: "attack", value: 25, mode: "flat" }, { type: "passive", stat: "armorPen", value: 15, note: "\u65E0\u89C6\u5168\u90E8\u9632\u5FA1" }], note: "\u5251\u94FE\xB7\u4E0A\u4F4D" },
+    { id: "R055", name: "\u5723\u6BBF\u536B\u5FBD", rarity: 2, category: "combat", desc: "\u9632\u5FA1 +12\uFF0C\u53D7\u5230\u4F24\u5BB3 -5%", effects: [{ type: "stat", stat: "defense", value: 12, mode: "flat" }, { type: "stat", stat: "damageReduction", value: 5, mode: "flat" }], note: "\u536B\u94FE\xB7\u4E2D\u4F4D" },
+    { id: "R056", name: "\u4E0D\u673D\u58C1\u5792", rarity: 3, category: "combat", desc: "\u9632\u5FA1 +30\uFF0C\u53D7\u5230\u4F24\u5BB3 -12%\uFF0C\u4E14\u514D\u75AB\u4E00\u6B21\u81F4\u547D\u4F24\uFF08\u6BCF\u8F6E\u4E00\u6B21\uFF09", effects: [{ type: "stat", stat: "defense", value: 30, mode: "flat" }, { type: "stat", stat: "damageReduction", value: 12, mode: "flat" }, { type: "passive", stat: "reviveOnce", value: 1 }], note: "\u536B\u94FE\xB7\u4E0A\u4F4D" },
+    { id: "R057", name: "\u751F\u547D\u62A4\u7B26", rarity: 2, category: "survival", desc: "\u751F\u547D\u4E0A\u9650 +70", effects: [{ type: "stat", stat: "maxHp", value: 70, mode: "flat" }], note: "\u547D\u94FE\xB7\u4E2D\u4F4D" },
+    { id: "R058", name: "\u6C38\u6052\u5FC3\u6838", rarity: 3, category: "survival", desc: "\u751F\u547D\u4E0A\u9650 +150\uFF0C\u6BCF\u5C42\u56DE\u590D 2% \u6700\u5927\u751F\u547D", effects: [{ type: "stat", stat: "maxHp", value: 150, mode: "flat" }, { type: "onFloorEnter", action: "healPct", value: 2 }], note: "\u547D\u94FE\xB7\u4E0A\u4F4D" },
+    { id: "R059", name: "\u9EC4\u91D1\u9AB0\u5B50", rarity: 2, category: "economy", desc: "\u91D1\u5E01\u83B7\u53D6 +40%", effects: [{ type: "stat", stat: "goldBonus", value: 40, mode: "flat" }], note: "\u91D1\u94FE\xB7\u4E2D\u4F4D" },
+    { id: "R060", name: "\u547D\u8FD0\u4E4B\u8F6E", rarity: 3, category: "economy", desc: "\u91D1\u5E01\u83B7\u53D6 +80%\uFF0C\u4E14\u5546\u5E97\u4EF7\u683C -15%", effects: [{ type: "stat", stat: "goldBonus", value: 80, mode: "flat" }, { type: "stat", stat: "merchantDiscount", value: 15, mode: "flat" }], note: "\u91D1\u94FE\xB7\u4E0A\u4F4D" },
+    { id: "R061", name: "\u6D1E\u6089\u4E4B\u77B3", rarity: 2, category: "combat", desc: "\u66B4\u51FB\u7387 +15%\uFF0C\u66B4\u51FB\u4F24\u5BB3 +20%", effects: [{ type: "stat", stat: "critRate", value: 15, mode: "flat" }, { type: "stat", stat: "critDamage", value: 20, mode: "flat" }], note: "\u773C\u94FE\xB7\u4E2D\u4F4D" },
+    { id: "R062", name: "\u5168\u89C6\u4E4B\u773C", rarity: 3, category: "combat", desc: "\u66B4\u51FB\u7387 +25%\uFF0C\u66B4\u51FB\u4F24\u5BB3 +50%\uFF0C\u4E14\u663E\u793A\u602A\u7269\u8840\u91CF\u6570\u503C", effects: [{ type: "stat", stat: "critRate", value: 25, mode: "flat" }, { type: "stat", stat: "critDamage", value: 50, mode: "flat" }, { type: "passive", stat: "showMonsterHp", value: 1 }], note: "\u773C\u94FE\xB7\u4E0A\u4F4D" },
+    { id: "R063", name: "\u751F\u547D\u4E4B\u6CC9", rarity: 2, category: "survival", desc: "\u836F\u6C34\u56DE\u590D\u91CF +50%", effects: [{ type: "stat", stat: "potionBonus", value: 50, mode: "flat" }], note: "\u6CC9\u94FE\xB7\u4E2D\u4F4D" },
+    { id: "R064", name: "\u4E0D\u706D\u5723\u676F", rarity: 3, category: "survival", desc: "\u836F\u6C34\u56DE\u590D\u91CF +100%\uFF0C\u4E14\u836F\u6C34\u4F7F\u7528\u65F6\u989D\u5916\u56DE\u590D 5% \u6700\u5927\u751F\u547D", effects: [{ type: "stat", stat: "potionBonus", value: 100, mode: "flat" }, { type: "stat", stat: "potionExtraPct", value: 5, mode: "flat" }], note: "\u6CC9\u94FE\xB7\u4E0A\u4F4D" },
+    { id: "X001", name: "\u6E83\u70C2\u4E4B\u8840", rarity: -1, subtype: "start", category: "risk", desc: "\u751F\u547D\u4E0A\u9650 -20%", effects: [{ type: "stat", stat: "maxHp", value: -20, mode: "percent" }], note: "A \u7C7B\xB7\u5F00\u5C40\u707E\u5384" },
+    { id: "X002", name: "\u9508\u8680\u4E4B\u8EAF", rarity: -1, subtype: "start", category: "risk", desc: "\u653B\u51FB -15%", effects: [{ type: "stat", stat: "attack", value: -15, mode: "percent" }], note: "A \u7C7B\xB7\u5F00\u5C40\u707E\u5384" },
+    { id: "X003", name: "\u7834\u788E\u4E4B\u7532", rarity: -1, subtype: "start", category: "risk", desc: "\u9632\u5FA1 -15%", effects: [{ type: "stat", stat: "defense", value: -15, mode: "percent" }], note: "A \u7C7B\xB7\u5F00\u5C40\u707E\u5384" },
+    { id: "X004", name: "\u8106\u5F31\u4E4B\u9B42", rarity: -1, subtype: "start", category: "risk", desc: "\u53D7\u5230\u4F24\u5BB3 +15%", effects: [{ type: "stat", stat: "damageTaken", value: 15, mode: "percent" }], note: "A \u7C7B\xB7\u5F00\u5C40\u707E\u5384" },
+    { id: "X005", name: "\u8D2A\u5A6A\u4E4B\u5492", rarity: -1, subtype: "start", category: "risk", desc: "\u91D1\u5E01\u83B7\u53D6 -30%", effects: [{ type: "stat", stat: "goldBonus", value: -30, mode: "flat" }], note: "A \u7C7B\xB7\u5F00\u5C40\u707E\u5384" },
+    { id: "X006", name: "\u836F\u77F3\u65E0\u7075", rarity: -1, subtype: "start", category: "risk", desc: "\u836F\u6C34\u56DE\u590D\u91CF -40%", effects: [{ type: "stat", stat: "potionBonus", value: -40, mode: "flat" }], note: "A \u7C7B\xB7\u5F00\u5C40\u707E\u5384" },
+    { id: "X007", name: "\u8FF7\u9014\u4E4B\u8DB3", rarity: -1, subtype: "start", category: "risk", desc: "\u672C\u5C42\u697C\u68AF\u4F4D\u7F6E\u4E0D\u518D\u81EA\u52A8\u663E\u793A", effects: [{ type: "passive", stat: "revealStairs", value: 0 }], note: "A \u7C7B\xB7\u5F00\u5C40\u707E\u5384" },
+    { id: "X008", name: "\u611A\u949D\u4E4B\u5FC3", rarity: -1, subtype: "start", category: "risk", desc: "\u7ECF\u9A8C\u83B7\u53D6 -25%", effects: [{ type: "stat", stat: "expBonus", value: -25, mode: "flat" }], note: "A \u7C7B\xB7\u5F00\u5C40\u707E\u5384" },
+    { id: "X011", name: "\u8840\u503A\u4E4B\u5203", rarity: -1, subtype: "risk", category: "risk", desc: "\u653B\u51FB +35%\uFF0C\u4F46\u6BCF\u5C42\u5F00\u59CB\u635F\u5931 3% \u6700\u5927\u751F\u547D", effects: [{ type: "stat", stat: "attack", value: 35, mode: "percent" }, { type: "onFloorEnter", action: "hpLossPct", value: 3 }], note: "B \u7C7B\xB7\u9AD8\u98CE\u9669\u4E2D\u6536\u76CA" },
+    { id: "X012", name: "\u72C2\u4E71\u4E4B\u5FC3", rarity: -1, subtype: "risk", category: "risk", desc: "\u653B\u51FB +25%\uFF0C\u9632\u5FA1 -20%", effects: [{ type: "stat", stat: "attack", value: 25, mode: "percent" }, { type: "stat", stat: "defense", value: -20, mode: "percent" }], note: "B \u7C7B" },
+    { id: "X013", name: "\u7409\u7483\u4E4B\u8EAF", rarity: -1, subtype: "risk", category: "risk", desc: "\u9632\u5FA1 +40%\uFF0C\u751F\u547D\u4E0A\u9650 -20%", effects: [{ type: "stat", stat: "defense", value: 40, mode: "percent" }, { type: "stat", stat: "maxHp", value: -20, mode: "percent" }], note: "B \u7C7B" },
+    { id: "X014", name: "\u7A83\u547D\u4E4B\u5951", rarity: -1, subtype: "risk", category: "risk", desc: "\u653B\u51FB +20%\uFF0C\u6BCF\u6B21\u51FB\u6740\u635F\u5931 2 \u70B9\u751F\u547D", effects: [{ type: "stat", stat: "attack", value: 20, mode: "percent" }, { type: "onKill", action: "loseHp", value: 2 }], note: "B \u7C7B" },
+    { id: "X015", name: "\u6DF7\u6C8C\u4E4B\u77B3", rarity: -1, subtype: "risk", category: "risk", desc: "\u66B4\u51FB\u7387 +20%\uFF0C\u95EA\u907F -15%", effects: [{ type: "stat", stat: "critRate", value: 20, mode: "flat" }, { type: "stat", stat: "dodgeRate", value: -15, mode: "flat" }], note: "B \u7C7B" },
+    { id: "X016", name: "\u6C89\u91CD\u4E4B\u51A0", rarity: -1, subtype: "risk", category: "risk", desc: "\u9632\u5FA1 +30%\uFF0C\u95EA\u907F -25%", effects: [{ type: "stat", stat: "defense", value: 30, mode: "percent" }, { type: "stat", stat: "dodgeRate", value: -25, mode: "flat" }], note: "B \u7C7B" },
+    { id: "X017", name: "\u71C3\u8840\u4E4B\u7EB9", rarity: -1, subtype: "risk", category: "risk", desc: "\u653B\u51FB +30%\uFF0C\u53D7\u5230\u4F24\u5BB3 +20%", effects: [{ type: "stat", stat: "attack", value: 30, mode: "percent" }, { type: "stat", stat: "damageTaken", value: 20, mode: "percent" }], note: "B \u7C7B" },
+    { id: "X018", name: "\u4E5E\u8005\u4E4B\u56CA", rarity: -1, subtype: "risk", category: "risk", desc: "\u91D1\u5E01\u83B7\u53D6 +60%\uFF0C\u4F46\u5B9D\u7BB1\u5F00\u51FA\u7684\u88C5\u5907\u54C1\u8D28 -1 \u6863", effects: [{ type: "stat", stat: "goldBonus", value: 60, mode: "flat" }, { type: "passive", stat: "chestQualityUp", value: -1 }], note: "B \u7C7B" },
+    { id: "X021", name: "\u65AD\u88C2\u7684\u5723\u5FBD", rarity: -1, subtype: "event", category: "risk", purifyTo: "X021P", desc: "\u9632\u5FA1 -10%", effects: [{ type: "stat", stat: "defense", value: -10, mode: "percent" }], note: "C \u7C7B\xB7\u4E8B\u4EF6\u578B\u707E\u5384\uFF08\u53EF\u51C0\u5316\uFF09" },
+    { id: "X021P", name: "\u91CD\u94F8\u5723\u5FBD", rarity: 2, category: "survival", tbd: true, desc: "\u9632\u5FA1 +15%\uFF0C\u53D7\u5230\u4F24\u5BB3 -5%", effects: [{ type: "stat", stat: "defense", value: 15, mode: "percent" }, { type: "stat", stat: "damageReduction", value: 5, mode: "flat" }], note: "X021 \u51C0\u5316\u5F62\u6001\uFF08\u7A00\u6709\u5EA6\u5F85\u5B9A\uFF09" },
+    { id: "X022", name: "\u8499\u5C18\u4E4B\u955C", rarity: -1, subtype: "event", category: "risk", purifyTo: "X022P", desc: "\u95EA\u907F -10%", effects: [{ type: "stat", stat: "dodgeRate", value: -10, mode: "flat" }], note: "C \u7C7B\xB7\u4E8B\u4EF6\u578B\u707E\u5384\uFF08\u53EF\u51C0\u5316\uFF09" },
+    { id: "X022P", name: "\u660E\u6F88\u4E4B\u955C", rarity: 2, category: "combat", tbd: true, desc: "\u95EA\u907F +12%\uFF0C\u66B4\u51FB\u7387 +5%", effects: [{ type: "stat", stat: "dodgeRate", value: 12, mode: "flat" }, { type: "stat", stat: "critRate", value: 5, mode: "flat" }], note: "X022 \u51C0\u5316\u5F62\u6001\uFF08\u7A00\u6709\u5EA6\u5F85\u5B9A\uFF09" },
+    { id: "X023", name: "\u5C01\u5370\u4E4B\u9501", rarity: -1, subtype: "event", category: "risk", purifyTo: "X023P", desc: "\u751F\u547D\u4E0A\u9650 -15%", effects: [{ type: "stat", stat: "maxHp", value: -15, mode: "percent" }], note: "C \u7C7B\xB7\u4E8B\u4EF6\u578B\u707E\u5384\uFF08\u53EF\u51C0\u5316\uFF09" },
+    { id: "X023P", name: "\u89E3\u5C01\u4E4B\u94A5", rarity: 2, category: "survival", tbd: true, desc: "\u751F\u547D\u4E0A\u9650 +80\uFF0C\u6BCF\u5C42\u56DE\u590D 2%", effects: [{ type: "stat", stat: "maxHp", value: 80, mode: "flat" }, { type: "onFloorEnter", action: "healPct", value: 2 }], note: "X023 \u51C0\u5316\u5F62\u6001\uFF08\u7A00\u6709\u5EA6\u5F85\u5B9A\uFF09" },
+    { id: "X024", name: "\u8D2A\u5A6A\u70D9\u5370", rarity: -1, subtype: "event", category: "risk", purifyTo: "X024P", desc: "\u91D1\u5E01\u83B7\u53D6 -25%", effects: [{ type: "stat", stat: "goldBonus", value: -25, mode: "flat" }], note: "C \u7C7B\xB7\u4E8B\u4EF6\u578B\u707E\u5384\uFF08\u53EF\u51C0\u5316\uFF09" },
+    { id: "X024P", name: "\u4E30\u9976\u5370\u8BB0", rarity: 2, category: "economy", tbd: true, desc: "\u91D1\u5E01\u83B7\u53D6 +40%", effects: [{ type: "stat", stat: "goldBonus", value: 40, mode: "flat" }], note: "X024 \u51C0\u5316\u5F62\u6001\uFF08\u7A00\u6709\u5EA6\u5F85\u5B9A\uFF09" },
+    { id: "X025", name: "\u6B8B\u7834\u4E4B\u5203", rarity: -1, subtype: "event", category: "risk", purifyTo: "X025P", desc: "\u653B\u51FB -10%", effects: [{ type: "stat", stat: "attack", value: -10, mode: "percent" }], note: "C \u7C7B\xB7\u4E8B\u4EF6\u578B\u707E\u5384\uFF08\u53EF\u51C0\u5316\uFF09" },
+    { id: "X025P", name: "\u6DEC\u706B\u4E4B\u5203", rarity: 2, category: "combat", tbd: true, desc: "\u653B\u51FB +18%\uFF0C\u65E0\u89C6 20% \u9632\u5FA1", effects: [{ type: "stat", stat: "attack", value: 18, mode: "percent" }, { type: "passive", stat: "armorPen", value: 20 }], note: "X025 \u51C0\u5316\u5F62\u6001\uFF08\u7A00\u6709\u5EA6\u5F85\u5B9A\uFF09" },
+    { id: "X026", name: "\u54D1\u706B\u4E4B\u706F", rarity: -1, subtype: "event", category: "risk", purifyTo: "X026P", desc: "\u7ECF\u9A8C\u83B7\u53D6 -20%", effects: [{ type: "stat", stat: "expBonus", value: -20, mode: "flat" }], note: "C \u7C7B\xB7\u4E8B\u4EF6\u578B\u707E\u5384\uFF08\u53EF\u51C0\u5316\uFF09" },
+    { id: "X026P", name: "\u542F\u660E\u4E4B\u706F", rarity: 2, category: "explore", tbd: true, desc: "\u7ECF\u9A8C +30%\uFF0C\u4E14\u663E\u793A\u672C\u5C42\u697C\u68AF\u4E0E\u5B9D\u7BB1\u4F4D\u7F6E", effects: [{ type: "stat", stat: "expBonus", value: 30, mode: "flat" }, { type: "passive", stat: "revealStairs", value: 1 }, { type: "passive", stat: "revealChest", value: 1 }], note: "X026 \u51C0\u5316\u5F62\u6001\uFF08\u7A00\u6709\u5EA6\u5F85\u5B9A\uFF09" },
+    { id: "X027", name: "\u6EDE\u91CD\u4E4B\u9774", rarity: -1, subtype: "event", category: "risk", purifyTo: "X027P", desc: "\u95EA\u907F -12%\uFF0C\u4E14\u6BCF\u5C42\u9996\u6B21\u9047\u654C\u5FC5\u88AB\u5148\u653B", effects: [{ type: "stat", stat: "dodgeRate", value: -12, mode: "flat" }, { type: "passive", stat: "ambush", value: 1 }], note: "C \u7C7B\xB7\u4E8B\u4EF6\u578B\u707E\u5384\uFF08\u53EF\u51C0\u5316\uFF09" },
+    { id: "X027P", name: "\u75BE\u5F71\u4E4B\u9774", rarity: 2, category: "combat", tbd: true, desc: "\u95EA\u907F +15%\uFF0C\u6BCF\u5C42\u9996\u6B21\u653B\u51FB\u4F24\u5BB3 \xD71.5", effects: [{ type: "stat", stat: "dodgeRate", value: 15, mode: "flat" }, { type: "passive", stat: "firstStrikeBoost", value: 1.5 }], note: "X027 \u51C0\u5316\u5F62\u6001\uFF08\u7A00\u6709\u5EA6\u5F85\u5B9A\uFF09" },
+    { id: "H001", name: "\u8361\u9B54\u4E49\u65D7", rarity: 4, category: "combat", desc: "\u6BCF\u51FB\u6740\u4E00\u540D\u654C\u4EBA\uFF0C\u653B\u51FB\u529B +2%\uFF08\u672C\u8F6E\u6301\u7EED\u7D2F\u79EF\uFF09", effects: [{ type: "onKill", action: "killAttackPct", value: 2 }], lore: "\u4F20\u95FB\u53E4\u4EE3\u66FE\u53D1\u8D77 60 \u5E74\u8361\u9B54\u6240\u7559\u4E0B\u7684\u65D7\u5E1C", note: "\u5929\u5802\u9057\u7269\xB7\u5360\u4F4D/\u6D4B\u8BD5\u7528" },
+    { id: "H002", name: "\u8D6B\u5C14\u58A8\u65AF\u53CC\u86C7\u6756", rarity: 4, category: "survival", desc: "\u6BCF\u6B21\u6218\u6597\u53EF\u4F7F\u7528 2 \u6B21\u836F\u5242", effects: [{ type: "passive", stat: "potionPerBattle", value: 2 }], note: "\u5929\u5802\u9057\u7269\xB7\u5360\u4F4D/\u6D4B\u8BD5\u7528\uFF1B\u6BCF\u6218\u7528\u836F\u8D44\u683C\u63D0\u5347\u81F3 2 \u6B21" },
+    { id: "R065", name: "\u6447\u7BEE", rarity: 3, category: "survival", exclusive: true, desc: "\u751F\u547D\u4E0A\u9650 +100%\uFF0C\u653B\u51FB +20%\uFF0C\u9632\u5FA1 +20%\uFF0C\u7ECF\u9A8C\u83B7\u53D6 +20%\uFF0C\u91D1\u5E01\u83B7\u53D6 +50%", effects: [{ type: "stat", stat: "maxHp", value: 100, mode: "percent" }, { type: "stat", stat: "attack", value: 20, mode: "percent" }, { type: "stat", stat: "defense", value: 20, mode: "percent" }, { type: "stat", stat: "expBonus", value: 20, mode: "flat" }, { type: "stat", stat: "goldBonus", value: 50, mode: "flat" }], lore: "\u68A6\u4E2D\u7684\u6447\u7BEE", note: "\u300C\u6447\u7BEE\u66F2\u300D\u96BE\u5EA6\u5F00\u5C40\u4E13\u5C5E\uFF08\u4E0D\u968F\u673A\u6389\u843D\uFF09" },
+    { id: "R066", name: "\u71C3\u70E7\u7684\u4E16\u754C", rarity: 3, category: "risk", desc: "\u653B\u51FB\u529B +120%\uFF0C\u53D7\u5230\u7684\u4F24\u5BB3 +100%", effects: [{ type: "stat", stat: "attack", value: 120, mode: "percent" }, { type: "stat", stat: "damageTaken", value: 100, mode: "percent" }], note: "\u6781\u7AEF\u795E\u7947\u9057\u7269\uFF1B\u9AD8\u98CE\u9669\u9AD8\u6536\u76CA" },
+    { id: "X009", name: "\u547D\u5B9A\u4E4B\u6B7B", rarity: -1, subtype: "start", category: "risk", exclusive: true, desc: "\u7B49\u5F85\u4F60\u7684\u6B7B\u4EA1\u7684\u5230\u6765", effects: [{ type: "none" }], lore: "\u547D\u8FD0\u4E3B\u5BB0\u6240\u6709\u4EBA\uFF01", note: "\u5267\u60C5\u9057\u7269\xB7\u65E0\u5B9E\u9645\u6548\u679C\uFF1B\u300C\u5929\u5802\u300D\u96BE\u5EA6\u5F00\u5C40\u6301\u6709" }
+  ],
+  combos: [
+    { id: "bloodrage", name: "\u8840\u6012", requires: ["R014", "R008", "R009"], desc: "\u751F\u547D\u4F4E\u4E8E 35% \u65F6\u653B\u51FB \xD72\uFF08\u4E0D\u518D\u662F +45%\uFF09\uFF0C\u4E14\u6BCF\u6B21\u51FB\u6740\u56DE\u590D 15% \u6700\u5927\u751F\u547D" },
+    { id: "assassin", name: "\u523A\u5BA2", requires: ["R005", "R006", "R007"], desc: "\u66B4\u51FB\u540E\u5FC5\u5B9A\u95EA\u907F\u4E0B\u4E00\u6B21\u653B\u51FB\uFF1B\u66B4\u51FB\u7387\u989D\u5916 +10%" },
+    { id: "immortal", name: "\u4E0D\u673D\u4E4B\u6CC9", requires: ["R019", "R018", "R017"], desc: "\u6BCF\u5C42\u5F00\u59CB\u56DE\u590D 15% \u6700\u5927\u751F\u547D\uFF0C\u751F\u547D\u4E0A\u9650\u989D\u5916 +80" },
+    { id: "rich", name: "\u5BCC\u53EF\u654C\u56FD", requires: ["R026", "R029", "R030"], desc: "\u91D1\u5E01\u83B7\u53D6 +50%\uFF0C\u88C5\u5907\u54C1\u8D28 +1 \u6863\uFF0C\u5546\u5E97\u4EF7\u683C -50%" },
+    { id: "fortress", name: "\u94C1\u58C1\u5821\u5792", requires: ["R013", "R020", "R021"], desc: "\u53CD\u5F39\u6240\u53D7\u4F24\u5BB3 30%\uFF0C\u53D7\u5230\u4F24\u5BB3 -15%\uFF0C\u751F\u547D\u9AD8\u4E8E 75% \u65F6\u9632\u5FA1 +50%" },
+    { id: "omniscient", name: "\u5168\u77E5", requires: ["R034", "R035", "R036", "R039"], desc: "\u663E\u793A\u672C\u5C42\u5B8C\u6574\u4FE1\u606F\uFF1A\u5730\u56FE\u3001\u697C\u68AF\u3001\u5B9D\u7BB1\u3001\u7CBE\u82F1\u4E0E Boss \u4F4D\u7F6E\u5168\u90E8\u6807\u8BB0" },
+    { id: "sacrifice", name: "\u732E\u796D", requires: ["R044", "R009", "R042"], desc: "\u653B\u51FB +100%\uFF0C\u9632\u5FA1 +60%\uFF0C\u91D1\u5E01 +150%\uFF1B\u4F46\u751F\u547D\u4E0A\u9650\u9501\u5B9A\u4E3A 1" }
+  ]
 };
 
 // src/core/DataManager.ts
@@ -1230,6 +1995,9 @@ var DataManager = class _DataManager {
   get settings() {
     return settings_default;
   }
+  get relics() {
+    return relics_default;
+  }
   getMonster(id) {
     return this.monsters.monsters.find((m) => m.id === id);
   }
@@ -1241,6 +2009,9 @@ var DataManager = class _DataManager {
   }
   getQuest(id) {
     return this.quests.quests.find((q) => q.id === id);
+  }
+  getRelic(id) {
+    return this.relics.relics.find((r) => r.id === id);
   }
   get isLoaded() {
     return this.loaded;
@@ -1302,6 +2073,30 @@ var rng = {
   }
 };
 
+// src/utils/Grid.ts
+var DIRS4 = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+function manhattan(a, b) {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+}
+function cellKey(x, y) {
+  return `${x},${y}`;
+}
+function ptKey(p) {
+  return cellKey(p.x, p.y);
+}
+function doorInner(d) {
+  switch (d.direction) {
+    case "east":
+      return { x: d.x - 1, y: d.y };
+    case "west":
+      return { x: d.x + 1, y: d.y };
+    case "north":
+      return { x: d.x, y: d.y + 1 };
+    default:
+      return { x: d.x, y: d.y - 1 };
+  }
+}
+
 // src/utils/Logger.ts
 var Logger = class _Logger {
   static level = "info";
@@ -1326,6 +2121,241 @@ var Logger = class _Logger {
   }
 };
 
+// src/data/tiers.ts
+var MAX_FLOOR = 110;
+var TIERS = [
+  {
+    id: "base",
+    name: "\u5854\u697C\u5E95\u90E8",
+    fullName: "\u5854\u697C\u5E95\u90E8 \xB7 \u9752\u7816\u4E16\u754C",
+    fromFloor: 1,
+    toFloor: 15,
+    titleCard: {
+      big: "\u9752\u7816\u4E4B\u57FA",
+      vibe: "\u51B0\u51B7\u7684\u7816\u77F3\u56F4\u6210\u4E00\u4E2A\u4E16\u754C\uFF0C\u4F60\u4ECE\u8FD9\u91CC\u9192\u6765\u3002\u5411\u4E0A\uFF0C\u662F\u552F\u4E00\u7684\u51FA\u8DEF\u3002",
+      main: "#6b7b8c",
+      sub: "#2b3a4a",
+      glow: "#dfe9f4",
+      fontClass: "tt-stone",
+      bg: "brick"
+    },
+    light: { hemiSky: 5069426, hemiGround: 2366226, hemiIntensity: 0.45, dirColor: 14674431, dirIntensity: 0.38 },
+    grade: { tint: [0.88, 0.96, 1.12], tintStrength: 0.22, vignette: 0.1 },
+    bgColor: 329741,
+    sky: false,
+    wall: "brick",
+    windowView: "rooftops",
+    particle: "none",
+    floorTint: 16777215,
+    windowGlow: 9414848,
+    uiAccent: "#8fb3d9",
+    uiAccentCool: "#5a7ba0",
+    corridor: {
+      variant: "balustrade",
+      postColor: 4608607,
+      railColor: 7043980,
+      metalness: 0.2,
+      roughness: 0.72,
+      balusters: 3,
+      finial: true
+    }
+  },
+  {
+    id: "garden",
+    name: "\u5E95\u5C42",
+    fullName: "\u5E95\u5C42 \xB7 \u82D4\u56ED\u4E0E\u953B\u7A9F",
+    fromFloor: 16,
+    toFloor: 40,
+    titleCard: {
+      big: "\u82D4\u56ED\u953B\u706B",
+      vibe: "\u85E4\u8513\u6500\u4E0A\u7194\u7089\uFF0C\u8349\u6728\u4E0E\u94C1\u7827\u5171\u751F\u3002\u6B64\u5904\u4E07\u7269\u90FD\u5728\u88AB\u953B\u9020\u2014\u2014\u5305\u62EC\u4F60\u3002",
+      main: "#7db56a",
+      sub: "#d9722e",
+      glow: "#ffd9a0",
+      fontClass: "tt-vine",
+      bg: "moss"
+    },
+    light: { hemiSky: 5929560, hemiGround: 3153935, hemiIntensity: 0.5, dirColor: 16771529, dirIntensity: 0.42 },
+    grade: { tint: [1.06, 1, 0.88], tintStrength: 0.18, vignette: 0.2 },
+    bgColor: 462601,
+    sky: false,
+    wall: "moss",
+    windowView: "garden",
+    particle: "spore",
+    floorTint: 15398367,
+    windowGlow: 14250542,
+    uiAccent: "#8fc77a",
+    uiAccentCool: "#d9722e",
+    corridor: {
+      variant: "timber",
+      postColor: 5126696,
+      railColor: 7296566,
+      metalness: 0.06,
+      roughness: 0.85,
+      balusters: 0,
+      finial: false
+    },
+    whisper: "\u8FD8\u5728\u5411\u4E0A\u4E48\uFF1F\u2026\u2026\u4E5F\u597D\u3002"
+  },
+  {
+    id: "library",
+    name: "\u4E2D\u5C42",
+    fullName: "\u4E2D\u5C42 \xB7 \u56FE\u4E66\u9986",
+    fromFloor: 41,
+    toFloor: 60,
+    titleCard: {
+      big: "\u9759\u9ED8\u4E66\u6D77",
+      vibe: "\u4E66\u9875\u7684\u6C14\u606F\u6F2B\u8FC7\u77F3\u9636\uFF0C\u5343\u4E07\u5377\u6C89\u9ED8\u7684\u77E5\u8BC6\u5728\u7B49\u4F60\u7FFB\u9605\u3002",
+      main: "#e8dcc0",
+      sub: "#7a5a3a",
+      glow: "#ffe9bd",
+      fontClass: "tt-serif",
+      bg: "book"
+    },
+    light: { hemiSky: 6969928, hemiGround: 2759696, hemiIntensity: 0.48, dirColor: 16767392, dirIntensity: 0.4 },
+    grade: { tint: [1.1, 1, 0.82], tintStrength: 0.2, vignette: 0.22 },
+    bgColor: 854534,
+    sky: false,
+    wall: "shelf",
+    windowView: "clouds",
+    particle: "dust",
+    floorTint: 16115922,
+    windowGlow: 15260864,
+    uiAccent: "#e0c294",
+    uiAccentCool: "#a0785a",
+    corridor: {
+      variant: "panel",
+      postColor: 4601127,
+      railColor: 8018490,
+      metalness: 0.14,
+      roughness: 0.8,
+      balusters: 0,
+      finial: true
+    },
+    whisper: "\u4E66\u9875\u7FFB\u52A8\u7684\u65F6\u5019\uFF0C\u5854\u4E5F\u5728\u8BFB\u4F60\u3002"
+  },
+  {
+    id: "observatory",
+    name: "\u9AD8\u5C42",
+    fullName: "\u9AD8\u5C42 \xB7 \u89C2\u661F\u53F0",
+    fromFloor: 61,
+    toFloor: 80,
+    titleCard: {
+      big: "\u661F\u5782\u65F7\u91CE",
+      vibe: "\u5934\u9876\u662F\u65CB\u8F6C\u7684\u661F\u6CB3\uFF0C\u811A\u4E0B\u662F\u6E3A\u5C0F\u7684\u5854\u8EAB\u3002\u79BB\u5929\uFF0C\u4F3C\u4E4E\u8FD1\u4E86\u4E00\u6B65\u3002",
+      main: "#8fb0e8",
+      sub: "#5a3a7a",
+      glow: "#b8c8ff",
+      fontClass: "tt-star",
+      bg: "stars",
+      letterSpacing: 0.5
+    },
+    light: { hemiSky: 3820146, hemiGround: 1577512, hemiIntensity: 0.44, dirColor: 12110079, dirIntensity: 0.38 },
+    grade: { tint: [0.86, 0.92, 1.16], tintStrength: 0.25, vignette: 0.26 },
+    bgColor: 461074,
+    sky: true,
+    wall: "starstone",
+    windowView: "starry",
+    particle: "stardust",
+    floorTint: 14673141,
+    windowGlow: 9416936,
+    uiAccent: "#9ab8ea",
+    uiAccentCool: "#8d7ad0",
+    corridor: {
+      variant: "balustrade",
+      postColor: 2503249,
+      railColor: 9416936,
+      metalness: 0.55,
+      roughness: 0.34,
+      balusters: 4,
+      finial: true,
+      glow: 9416936,
+      accents: "rune"
+    },
+    whisper: "\u661F\u661F\u4E0D\u8BF4\u8BDD\u3002\u5B83\u4EEC\u53EA\u662F\u5728\u770B\u3002"
+  },
+  {
+    id: "clock",
+    name: "\u949F\u697C",
+    fullName: "\u9876\u90E8\u524D\u8FC7\u6E21 \xB7 \u949F\u697C",
+    fromFloor: 81,
+    toFloor: 100,
+    titleCard: {
+      big: "\u65F6\u8F6E\u4E4B\u5DC5",
+      vibe: "\u5DE8\u5927\u7684\u9F7F\u8F6E\u5728\u5934\u9876\u54AC\u5408\uFF0C\u65F6\u95F4\u88AB\u62E7\u6210\u53D1\u6761\u3002\u518D\u5F80\u4E0A\uFF0C\u4FBF\u662F\u7EC8\u70B9\u3002",
+      main: "#d9b878",
+      sub: "#b08d57",
+      glow: "#ffe2a8",
+      fontClass: "tt-brass",
+      bg: "gears"
+    },
+    light: { hemiSky: 6050368, hemiGround: 2366480, hemiIntensity: 0.46, dirColor: 15258272, dirIntensity: 0.4 },
+    grade: { tint: [1.1, 0.98, 0.8], tintStrength: 0.2, vignette: 0.28 },
+    bgColor: 723206,
+    sky: false,
+    wall: "brass",
+    windowView: "gears",
+    particle: "ember",
+    floorTint: 15786696,
+    windowGlow: 14268536,
+    uiAccent: "#d9b878",
+    uiAccentCool: "#7a9ec4",
+    corridor: {
+      variant: "balustrade",
+      postColor: 5981472,
+      railColor: 14268536,
+      metalness: 0.78,
+      roughness: 0.3,
+      balusters: 2,
+      finial: true,
+      glow: 14268536,
+      accents: "rivet"
+    },
+    whisper: "\u53D1\u6761\u62E7\u7D27\u4E86\u3002\u4F60\u542C\u89C1\u4E86\u5417\u3002"
+  },
+  {
+    id: "summit",
+    name: "\u5854\u9876",
+    fullName: "\u5854\u9876",
+    fromFloor: 101,
+    toFloor: MAX_FLOOR,
+    titleCard: {
+      big: "\u767B\u3000\u9876",
+      vibe: "\u4F60\u4EE5\u4E3A\u62B5\u8FBE\u4E86\u7EC8\u70B9\u3002\u95E8\u540E\u5374\u7A7A\u65E0\u4E00\u7269\u2014\u2014\u6216\u8005\u8BF4\uFF0C\u662F\u53E6\u4E00\u6BB5\u65C5\u7A0B\u7684\u8D77\u70B9\u3002",
+      main: "#f0e9d8",
+      sub: "#d4af6a",
+      glow: "#fff7e0",
+      fontClass: "tt-minimal",
+      bg: "halo",
+      letterSpacing: 0.9
+    },
+    light: { hemiSky: 9078904, hemiGround: 3815470, hemiIntensity: 0.58, dirColor: 16774880, dirIntensity: 0.5 },
+    grade: { tint: [1.06, 1.04, 0.97], tintStrength: 0.12, vignette: 0.3 },
+    bgColor: 1184282,
+    sky: true,
+    wall: "marble",
+    windowView: "light",
+    particle: "none",
+    floorTint: 16775402,
+    windowGlow: 16773839,
+    uiAccent: "#e6ddc4",
+    uiAccentCool: "#d4af6a",
+    corridor: {
+      variant: "balustrade",
+      postColor: 14471864,
+      railColor: 15788504,
+      metalness: 0.12,
+      roughness: 0.52,
+      balusters: 3,
+      finial: true,
+      glow: 16775136
+    }
+  }
+];
+function isTierStartFloor(floorId) {
+  return TIERS.some((t) => t.fromFloor === floorId);
+}
+
 // src/map/FloorGenerator.ts
 var RAIL_TENSION_FACTOR = {
   A: { combat: 0.8, elite: 0.7 },
@@ -1340,16 +2370,17 @@ var FloorGenerator = class _FloorGenerator {
     if (!_FloorGenerator.instance) _FloorGenerator.instance = new _FloorGenerator();
     return _FloorGenerator.instance;
   }
-  /** 判定楼层类型：第1层固定初始层；楼层号%5===0 为Boss层 */
+  /** 判定楼层类型：第1层固定初始层；第110层固定塔顶（假终点）；楼层号%5===0 为Boss层 */
   getFloorKind(floorId) {
     const cfg = dataManager.mapGen;
     if (floorId === cfg.initialFloor) return "initial";
+    if (floorId === MAX_FLOOR) return "summit";
     if (floorId % cfg.bossFloorInterval === 0) return "boss";
     return "normal";
   }
   /**
    * 分配楼层房间类型。
-   * 初始层与Boss层不参与随机分配，直接返回固定结构。
+   * 初始层/Boss层/塔顶层不参与随机分配，直接返回固定结构。
    */
   allocate(floorId) {
     const kind = this.getFloorKind(floorId);
@@ -1358,6 +2389,9 @@ var FloorGenerator = class _FloorGenerator {
     }
     if (kind === "boss") {
       return { floorId, kind, roomTypes: ["rest", "boss", "end"] };
+    }
+    if (kind === "summit") {
+      return { floorId, kind, roomTypes: ["start", "end"] };
     }
     const count = this.rollRoomCount(floorId);
     const allocatable = count - 2;
@@ -1788,7 +2822,7 @@ var RoomGenerator = class _RoomGenerator {
       const key = `${gx},${gy}`;
       if (occupied.has(key)) return null;
       occupied.set(key, i);
-      const size = this.rollSize(planned.type);
+      const size = this.rollSize(planned.type, floorId);
       const x = (gx + R) * cfg.cellSpacingX;
       const y = (gy + R) * cfg.cellSpacingY;
       const room = {
@@ -1913,7 +2947,10 @@ var RoomGenerator = class _RoomGenerator {
    * 房间规格（文档二 4.1）：表中数值 = 内部可活动空间（不含外圈墙壁），
    * 实际占地 = 规格 + 2（四面各一圈墙）。
    */
-  rollSize(type) {
+  rollSize(type, floorId = 0) {
+    if (floorId === MAX_FLOOR && type === "end") {
+      return { width: 11 + 2, height: 9 + 2 };
+    }
     const spec = dataManager.mapGen.roomSpecs[type];
     const roll = (v) => Array.isArray(v) ? rng.randInt(v[0], v[1]) : v;
     const innerW = Math.max(dataManager.mapGen.minRoomWidth, roll(spec.width));
@@ -2023,7 +3060,6 @@ var CorridorGenerator = class _CorridorGenerator {
    */
   spawnHiddenRooms(rooms, corridors, grid, floorId) {
     const byId = new Map(rooms.map((r) => [r.id, r]));
-    const cfg = dataManager.mapGen;
     const result = [];
     let index = 0;
     for (const corridor of corridors.filter((c) => c.extra)) {
@@ -2203,6 +3239,154 @@ var CorridorGenerator = class _CorridorGenerator {
   }
 };
 
+// src/core/EventBus.ts
+var EventBus = class _EventBus {
+  static instance;
+  handlers = /* @__PURE__ */ new Map();
+  constructor() {
+  }
+  static getInstance() {
+    if (!_EventBus.instance) {
+      _EventBus.instance = new _EventBus();
+    }
+    return _EventBus.instance;
+  }
+  on(event, handler) {
+    let set = this.handlers.get(event);
+    if (!set) {
+      set = /* @__PURE__ */ new Set();
+      this.handlers.set(event, set);
+    }
+    set.add(handler);
+  }
+  once(event, handler) {
+    const wrapped = (payload) => {
+      this.off(event, wrapped);
+      handler(payload);
+    };
+    this.on(event, wrapped);
+  }
+  off(event, handler) {
+    const set = this.handlers.get(event);
+    if (set) {
+      set.delete(handler);
+    }
+  }
+  emit(event, payload) {
+    const set = this.handlers.get(event);
+    if (!set) return;
+    for (const handler of [...set]) {
+      try {
+        handler(payload);
+      } catch (err) {
+        console.error(`[EventBus] handler error on "${String(event)}"`, err);
+      }
+    }
+  }
+  clear() {
+    this.handlers.clear();
+  }
+};
+var eventBus = EventBus.getInstance();
+
+// src/core/GameState.ts
+var GameState = class _GameState {
+  static instance;
+  started = false;
+  paused = false;
+  /** 打开中的模态面板数（>0 时屏蔽移动/交互输入） */
+  modalCount = 0;
+  settings;
+  /** 新开局难度 1摇篮曲~7天堂（难度系统实装前的配置预留，随本地存储持久化） */
+  difficulty = 2;
+  /**
+   * 调试：点亮全部图鉴（会话级，不入存档）。
+   * 开启后怪物图鉴全部解锁、遗物图鉴全部可见且可点击直接获取。
+   */
+  debugUnlockAll = false;
+  /**
+   * 房间编辑器预览中（会话级）：
+   * 预览会把 3D 视口切到「正在设计的房间」，此时**绝不能写存档**——
+   * `SaveManager` 的自动存档监听 `floorChanged`，必须屏蔽，否则会把预览房当成玩家所在层存下来。
+   */
+  editorPreview = false;
+  constructor() {
+    this.settings = { ...dataManager.settings.defaults };
+    if (typeof localStorage !== "undefined") {
+      const saved = Number(localStorage.getItem("motarpg_difficulty"));
+      if (saved >= 1 && saved <= 7) this.difficulty = saved;
+    }
+  }
+  static getInstance() {
+    if (!_GameState.instance) _GameState.instance = new _GameState();
+    return _GameState.instance;
+  }
+  get modalOpen() {
+    return this.modalCount > 0;
+  }
+  pushModal() {
+    this.modalCount++;
+  }
+  popModal() {
+    this.modalCount = Math.max(0, this.modalCount - 1);
+  }
+  setSetting(key, value) {
+    this.settings[key] = value;
+    eventBus.emit("settingsChanged", { key, value });
+  }
+  setDifficulty(n) {
+    this.difficulty = Math.max(1, Math.min(7, n));
+    if (typeof localStorage !== "undefined") localStorage.setItem("motarpg_difficulty", String(this.difficulty));
+  }
+};
+var gameState = GameState.getInstance();
+
+// src/systems/DifficultySystem.ts
+var TABLE = [
+  { id: "lullaby", name: "\u6447\u7BEE\u66F2", monster: 0.4, exp: 1.5, gold: 1.5, boss: 0.7, startCurses: 0, startRelics: ["R065"] },
+  { id: "normal", name: "\u666E\u901A", monster: 1, exp: 1, gold: 1, boss: 1, startCurses: 0 },
+  { id: "hard", name: "\u56F0\u96BE", monster: 1.3, exp: 1.3, gold: 1.4, boss: 1.15, startCurses: 0 },
+  { id: "nightmare", name: "\u5669\u68A6", monster: 1.7, exp: 1.6, gold: 1.8, boss: 1.3, startCurses: 0 },
+  { id: "hell", name: "\u5730\u72F1", monster: 2.2, exp: 2, gold: 2.2, boss: 1.5, startCurses: 1 },
+  { id: "purgatory", name: "\u70BC\u72F1", monster: 3, exp: 2.5, gold: 3, boss: 1.8, startCurses: 1 },
+  { id: "haven", name: "\u5929\u5802", monster: 5, exp: 3.5, gold: 3.5, boss: 2.5, startCurses: 2, startRelics: ["X009"] }
+];
+var DifficultySystem = class _DifficultySystem {
+  static instance;
+  constructor() {
+  }
+  static getInstance() {
+    if (!_DifficultySystem.instance) _DifficultySystem.instance = new _DifficultySystem();
+    return _DifficultySystem.instance;
+  }
+  /** 当前难度等级 1–7 */
+  get level() {
+    return Math.max(1, Math.min(7, gameState.difficulty));
+  }
+  config() {
+    return TABLE[this.level - 1];
+  }
+  monsterMul() {
+    return this.config().monster;
+  }
+  expMul() {
+    return this.config().exp;
+  }
+  goldMul() {
+    return this.config().gold;
+  }
+  bossMul() {
+    return this.config().boss;
+  }
+  startCurseCount() {
+    return this.config().startCurses;
+  }
+  /** 开局必定授予的专属遗物（摇篮曲→摇篮 / 天堂→命定之死） */
+  startRelics() {
+    return this.config().startRelics ?? [];
+  }
+};
+
 // src/utils/StatCalculator.ts
 var StatCalculator = class _StatCalculator {
   static instance;
@@ -2257,15 +3441,18 @@ var StatCalculator = class _StatCalculator {
     const round = (v) => Math.max(1, Math.round(v));
     const isBoss = def.category === "boss";
     const depthMul = this.depthMultiplier(floorId, depth);
-    let hp = this.anchorValue(a.hp, floorId, a.overflowPerFloor.hp) * def.hpMul * depthMul;
-    let atk = this.anchorValue(a.atk, floorId, a.overflowPerFloor.atk) * def.atkMul * depthMul;
-    let defv = this.anchorValue(a.def, floorId, a.overflowPerFloor.def) * def.defMul * depthMul;
-    let exp = this.anchorValue(a.exp, floorId, a.overflowPerFloor.exp) * def.expMul * depthMul;
-    let gold = this.anchorValue(a.gold, floorId, a.overflowPerFloor.gold) * def.goldMul * depthMul;
+    const diff = DifficultySystem.getInstance();
+    const dmul = diff.monsterMul();
+    let hp = this.anchorValue(a.hp, floorId, a.overflowPerFloor.hp) * def.hpMul * depthMul * dmul;
+    let atk = this.anchorValue(a.atk, floorId, a.overflowPerFloor.atk) * def.atkMul * depthMul * dmul;
+    let defv = this.anchorValue(a.def, floorId, a.overflowPerFloor.def) * def.defMul * depthMul * dmul;
+    let exp = this.anchorValue(a.exp, floorId, a.overflowPerFloor.exp) * def.expMul * depthMul * diff.expMul();
+    let gold = this.anchorValue(a.gold, floorId, a.overflowPerFloor.gold) * def.goldMul * depthMul * diff.goldMul();
     if (isBoss) {
-      hp *= 1 + cfg.bossStatBonus.hp;
-      atk *= 1 + cfg.bossStatBonus.atk;
-      defv *= 1 + cfg.bossStatBonus.def;
+      const bmul = diff.bossMul();
+      hp *= (1 + cfg.bossStatBonus.hp) * bmul;
+      atk *= (1 + cfg.bossStatBonus.atk) * bmul;
+      defv *= (1 + cfg.bossStatBonus.def) * bmul;
     } else if (isElite) {
       hp *= dataManager.monsters.eliteStatMultiplier;
       atk *= dataManager.monsters.eliteStatMultiplier;
@@ -2307,7 +3494,7 @@ var StatCalculator = class _StatCalculator {
 };
 
 // src/map/ContentFiller.ts
-var DIRS4 = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+var RISK_ROOM_TYPES = /* @__PURE__ */ new Set(["combat", "elite", "chest", "boss"]);
 var RoomFill = class {
   room;
   grid;
@@ -2334,7 +3521,7 @@ var RoomFill = class {
   /** 该格是否可放主实体（空地 + 未被占 + 无既有实体） */
   freeAt(x, y) {
     if (this.grid[y]?.[x] !== 0) return false;
-    if (this.taken.has(`${x},${y}`)) return false;
+    if (this.taken.has(cellKey(x, y))) return false;
     return !this.room.entities.some((en) => en.x === x && en.y === y);
   }
   inRoom(x, y) {
@@ -2347,8 +3534,8 @@ var RoomFill = class {
   placeStairAgainstWall(targetFloor) {
     const ay = this.room.y + 1;
     const doorInners = new Set(this.room.doors.map((d) => {
-      const p = this.innerOfDoor(d);
-      return `${p.x},${p.y}`;
+      const p = doorInner(d);
+      return ptKey(p);
     }));
     for (let step = 0; step <= this.room.width; step++) {
       const off = step === 0 ? 0 : step % 2 === 1 ? (step + 1) / 2 : -(step / 2);
@@ -2356,7 +3543,7 @@ var RoomFill = class {
       if (ax < this.room.x + 1 || ax + 1 > this.room.x + this.room.width - 2) continue;
       const cells = [0, 1].flatMap((dz) => [0, 1].map((dx) => ({ x: ax + dx, y: ay + dz })));
       if (!cells.every((p) => this.freeAt(p.x, p.y))) continue;
-      if (cells.some((p) => doorInners.has(`${p.x},${p.y}`))) continue;
+      if (cells.some((p) => doorInners.has(ptKey(p)))) continue;
       this.put({ kind: "stair", x: ax, y: ay, targetFloor, stairSpan: 2 });
       this.put({ kind: "stair", x: ax + 1, y: ay, targetFloor, stairSpan: 1 });
       this.put({ kind: "stair", x: ax, y: ay + 1, targetFloor, stairSpan: 1 });
@@ -2377,7 +3564,7 @@ var RoomFill = class {
   }
   /** (x,y) 曼哈顿 radius 格内是否有怪物/Boss */
   monsterNear(x, y, radius) {
-    return this.room.entities.some((e) => (e.kind === "monster" || e.kind === "boss") && Math.abs(e.x - x) + Math.abs(e.y - y) <= radius);
+    return this.room.entities.some((e) => (e.kind === "monster" || e.kind === "boss") && manhattan(e, { x, y }) <= radius);
   }
   /**
    * 覆盖式守卫放置（P1-4）：在能同时守护最多目标点（曼哈顿≤radius）的空格放 1 只怪。
@@ -2392,7 +3579,7 @@ var RoomFill = class {
       if (!this.freeAt(s.x, s.y)) continue;
       let cover = 0;
       for (const t of targets) {
-        if (Math.abs(t.x - s.x) + Math.abs(t.y - s.y) <= radius) cover++;
+        if (manhattan(t, s) <= radius) cover++;
       }
       if (cover > bestCover) {
         bestCover = cover;
@@ -2440,68 +3627,70 @@ var RoomFill = class {
     for (let y = this.room.y + 1; y <= this.room.y + this.room.height - 2; y++) {
       for (let x = this.room.x + 1; x <= this.room.x + this.room.width - 2; x++) {
         if (this.grid[y][x] !== 0) continue;
-        spots.push({ x, y, dist: dist.get(`${x},${y}`) ?? 99 });
+        spots.push({ x, y, dist: dist.get(cellKey(x, y)) ?? 99 });
       }
     }
     return spots;
   }
-  /** 门朝向房间内侧的格 */
-  innerOfDoor(d) {
-    switch (d.direction) {
-      case "east":
-        return { x: d.x - 1, y: d.y };
-      case "west":
-        return { x: d.x + 1, y: d.y };
-      case "north":
-        return { x: d.x, y: d.y + 1 };
-      default:
-        return { x: d.x, y: d.y - 1 };
-    }
+  /** 房间各门的内侧格（须为可通行地板） */
+  doorInners() {
+    return this.room.doors.map((d) => doorInner(d)).filter((p) => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 0);
   }
   /**
-   * 入口→出口主路径（房间内格序列）。
-   * 入口/出口 = 房间门内侧格中相距最远的一对；单门时取「门 → 距门最远格」。
+   * 门内侧格中曼哈顿距离最远的一对（= 主路径入口 / 出口）。
+   * 不足两个门时返回 null —— 主路径与绕过检测共用，此前两处各写了一遍。
    */
-  mainPath() {
-    const inners = this.room.doors.map((d) => this.innerOfDoor(d)).filter((p) => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 0);
-    if (inners.length === 0) return [{ x: this.room.centerX, y: this.room.centerY }];
-    if (inners.length === 1) return this.bfsPath(inners[0], this.farthestFrom(inners[0]));
+  farthestDoorPair() {
+    const inners = this.doorInners();
+    if (inners.length < 2) return null;
     let best = [inners[0], inners[1]];
     let bestD = -1;
     for (let i = 0; i < inners.length; i++) {
       for (let j = i + 1; j < inners.length; j++) {
-        const d = Math.abs(inners[i].x - inners[j].x) + Math.abs(inners[i].y - inners[j].y);
+        const d = manhattan(inners[i], inners[j]);
         if (d > bestD) {
           bestD = d;
           best = [inners[i], inners[j]];
         }
       }
     }
-    const path = this.bfsPath(best[0], best[1]);
-    return path.length > 0 ? path : [best[0]];
+    return best;
   }
-  /** 房间内 BFS 路径（只看地形，忽略实体） */
-  bfsPath(from, to) {
-    const key = (x, y) => `${x},${y}`;
-    const prev = /* @__PURE__ */ new Map();
+  /**
+   * 入口→出口主路径（房间内格序列）。
+   * 入口/出口 = 房间门内侧格中相距最远的一对；单门时取「门 → 距门最远格」。
+   */
+  mainPath() {
+    const inners = this.doorInners();
+    if (inners.length === 0) return [{ x: this.room.centerX, y: this.room.centerY }];
+    const pair = this.farthestDoorPair();
+    if (!pair) return this.bfsPath(inners[0], this.farthestFrom(inners[0])) ?? [inners[0]];
+    return this.bfsPath(pair[0], pair[1]) ?? [pair[0]];
+  }
+  /**
+   * 房间内 BFS 路线（只看地形，忽略实体）。
+   * `blocked` 为额外视为障碍的格（怪物 / 柱子）；不可达返回 null。
+   * 原先 bfsPath / bfsRoute 两份实现只差一个 blocked 参数，已合并。
+   */
+  bfsPath(from, to, blocked) {
+    const prev = /* @__PURE__ */ new Map([[ptKey(from), null]]);
     const queue = [from];
-    prev.set(key(from.x, from.y), null);
     while (queue.length > 0) {
       const cur2 = queue.shift();
-      if (cur2.x === to.x && cur2.y === to.y) break;
       for (const [dx, dy] of DIRS4) {
         const nx = cur2.x + dx;
         const ny = cur2.y + dy;
         if (!this.inRoom(nx, ny)) continue;
         if (this.grid[ny]?.[nx] !== 0) continue;
-        const k = key(nx, ny);
+        const k = cellKey(nx, ny);
         if (prev.has(k)) continue;
-        prev.set(k, key(cur2.x, cur2.y));
+        if (blocked?.has(k)) continue;
+        prev.set(k, ptKey(cur2));
         queue.push({ x: nx, y: ny });
       }
     }
-    const end = key(to.x, to.y);
-    if (!prev.has(end)) return [];
+    const end = ptKey(to);
+    if (!prev.has(end)) return null;
     const out = [];
     let cur = end;
     while (cur) {
@@ -2560,7 +3749,7 @@ var RoomFill = class {
     }
     if (cells.length === 0) return 0;
     const entry = path[0];
-    const usable = cells.filter((c) => Math.abs(c.x - entry.x) + Math.abs(c.y - entry.y) >= 2);
+    const usable = cells.filter((c) => manhattan(c, entry) >= 2);
     const line = usable.length > 0 ? usable : cells;
     const chosen = rng.shuffle(line).slice(0, Math.min(count, line.length));
     let placed = 0;
@@ -2583,8 +3772,8 @@ var RoomFill = class {
   /** 所有门的内侧格（立柱禁区：柱子改地形会封门） */
   doorInnerCells() {
     return new Set(this.room.doors.map((d) => {
-      const p = this.innerOfDoor(d);
-      return `${p.x},${p.y}`;
+      const p = doorInner(d);
+      return ptKey(p);
     }));
   }
   /** 围宝型 / 守卫型：在目标周围 radius 格内的空位放怪，返回实际数量 */
@@ -2596,7 +3785,7 @@ var RoomFill = class {
         if (x === cx && y === cy) continue;
         if (!this.inRoom(x, y)) continue;
         if (this.grid[y]?.[x] !== 0) continue;
-        if (this.taken.has(`${x},${y}`)) continue;
+        if (this.taken.has(cellKey(x, y))) continue;
         cells.push({ x, y });
       }
     }
@@ -2637,7 +3826,7 @@ var RoomFill = class {
   placeMonsterUnchecked(id, isElite, p) {
     if (p.x <= this.room.x || p.x >= this.room.x + this.room.width - 1) return false;
     if (p.y <= this.room.y || p.y >= this.room.y + this.room.height - 1) return false;
-    if (this.taken.has(`${p.x},${p.y}`)) return false;
+    if (this.taken.has(ptKey(p))) return false;
     if (this.room.entities.some((en) => en.x === p.x && en.y === p.y)) return false;
     this.monsterAt(id, isElite, p);
     return true;
@@ -2665,11 +3854,11 @@ var RoomFill = class {
     ];
     const protectedCells = /* @__PURE__ */ new Set();
     for (const d of this.room.doors) {
-      const p = this.innerOfDoor(d);
-      protectedCells.add(`${p.x},${p.y}`);
+      const p = doorInner(d);
+      protectedCells.add(ptKey(p));
     }
-    for (const p of this.mainPath()) protectedCells.add(`${p.x},${p.y}`);
-    const placeable = ring.filter((p) => this.inRoom(p.x, p.y) && this.freeAt(p.x, p.y) && !protectedCells.has(`${p.x},${p.y}`));
+    for (const p of this.mainPath()) protectedCells.add(ptKey(p));
+    const placeable = ring.filter((p) => this.inRoom(p.x, p.y) && this.freeAt(p.x, p.y) && !protectedCells.has(ptKey(p)));
     if (placeable.length < 4) return false;
     for (const p of placeable) this.putBlocking("pillar", p.x, p.y);
     return true;
@@ -2693,10 +3882,35 @@ var RoomFill = class {
     const picked = rng.shuffle(corners).slice(0, Math.min(count, corners.length));
     picked.forEach((c, i) => {
       if (carpet && i === 0) this.put({ kind: "carpet", x: c.x, y: c.y });
-      this.put({ kind: "chest", chestTier: "normal", x: c.x, y: c.y });
+      this.put({
+        kind: "chest",
+        chestTier: "normal",
+        x: c.x,
+        y: c.y,
+        riskTier: this.risk(),
+        rewardMul: this.room.rewardMul ?? 1
+      });
       out.push(c);
     });
     return out;
+  }
+  /** 房间风险级（1~3；未分级 = 1 = 旧行为） */
+  risk() {
+    return this.room.risk ?? 1;
+  }
+  /**
+   * 风险兑现（另一半）：按风险级掷骰，把首个宝箱升级为「大宝箱」
+   * （必出装备、金币 ×2.5）→ 让高风险房值得绕路。
+   */
+  rollVault(chests) {
+    if (chests.length === 0) return false;
+    const chance = dataManager.mapGen.content.risk.vaultChance[this.risk() - 1] ?? 0;
+    if (chance <= 0 || !rng.chance(chance)) return false;
+    const first = chests[0];
+    const ent = this.room.entities.find((e) => e.kind === "chest" && e.x === first.x && e.y === first.y);
+    if (!ent) return false;
+    ent.chestTier = "grand";
+    return true;
   }
   /** 药水：优先放入口附近（1-4 格），不足时用任意空位 */
   placePotions(count) {
@@ -2748,7 +3962,7 @@ var RoomFill = class {
       { x: r.x, y: r.y + r.height - 1 },
       { x: r.x + r.width - 1, y: r.y + r.height - 1 }
     ];
-    const cd = (p) => Math.min(...corners.map((c) => Math.abs(p.x - c.x) + Math.abs(p.y - c.y)));
+    const cd = (p) => Math.min(...corners.map((c) => manhattan(p, c)));
     return pts.sort((a, b) => cd(a) - cd(b));
   }
   /** 装饰：宽≥7 的房间四角立柱子（阻挡通行；门内侧格豁免避免封门） */
@@ -2762,6 +3976,97 @@ var RoomFill = class {
       this.grid[c.y][c.x] = 2;
     }
   }
+  // ============ 陈设填充（反「大而空」） ============
+  /**
+   * 陈设填充：内容落定后、`validate()` 之前执行——让每个房间都有「陈设密度」，而非大而空。
+   *   ① 配光保底：按内面积补足火把（沿周长均匀，绝不上门格 / 已占格）；
+   *   ② 列柱：内宽/内高均达标的房间，沿两条长墙等距列柱（对称，避开主路径与门内侧）；
+   *   ③ 引导地毯：入口 → 房间中心铺 2~3 格地毯，给出动线暗示（非阻挡）。
+   * 列柱是阻挡地形，其连通/不可绕过后果由随后 `validate()` 的校验统一兜底修复。
+   */
+  furnish() {
+    const f = dataManager.mapGen.content.furnish;
+    const innerW = this.room.width - 2;
+    const innerH = this.room.height - 2;
+    this.furnishTorches(Math.min(f.torchMax, Math.max(1, Math.round(innerW * innerH / f.torchPerArea))));
+    this.furnishColonnade(f, innerW, innerH);
+    if (f.guideCarpet) this.furnishGuideCarpet();
+  }
+  /** 房间边界墙格（按周长顺序排列 → 等分取点即「沿墙均匀分布」） */
+  wallPerimeter() {
+    const r = this.room;
+    const pts = [];
+    for (let x = r.x; x < r.x + r.width; x++) pts.push({ x, y: r.y });
+    for (let y = r.y + 1; y < r.y + r.height - 1; y++) pts.push({ x: r.x + r.width - 1, y });
+    for (let x = r.x + r.width - 1; x >= r.x; x--) pts.push({ x, y: r.y + r.height - 1 });
+    for (let y = r.y + r.height - 2; y > r.y; y--) pts.push({ x: r.x, y });
+    return pts;
+  }
+  /** ① 配光保底：沿墙周长等分补火把到目标数量（门格地形为 0，天然排除） */
+  furnishTorches(want) {
+    let need = want - this.room.entities.filter((e) => e.kind === "torch").length;
+    if (need <= 0) return;
+    const ring = this.wallPerimeter().filter((p) => this.grid[p.y]?.[p.x] === 1 && !this.room.entities.some((e) => e.x === p.x && e.y === p.y));
+    if (ring.length === 0) return;
+    for (let i = 0; i < need; i++) {
+      const idx = Math.floor((i + 1) * ring.length / (need + 1));
+      const p = ring[Math.min(idx, ring.length - 1)];
+      if (!p || this.room.entities.some((e) => e.x === p.x && e.y === p.y)) continue;
+      this.put({ kind: "torch", x: p.x, y: p.y });
+    }
+  }
+  /** ② 列柱：长边两侧等距立柱（对称、避主路径/门内侧/角落宝箱位） */
+  furnishColonnade(f, innerW, innerH) {
+    if (innerW < f.colonnadeMinInnerW || innerH < f.colonnadeMinInnerH) return;
+    const r = this.room;
+    const horizontal = innerW >= innerH;
+    const span = horizontal ? innerW : innerH;
+    const step = Math.max(2, f.colonnadeSpacing);
+    const offsets = [];
+    for (let i = step; i <= span - 1; i += step) offsets.push(i);
+    if (offsets.length === 0) offsets.push(Math.ceil(span / 2));
+    const protectedCells = new Set(this.doorInnerCells());
+    for (const p of this.mainPath()) protectedCells.add(ptKey(p));
+    let placed = 0;
+    const lanes = horizontal ? [r.y + 1, r.y + r.height - 2] : [r.x + 1, r.x + r.width - 2];
+    for (const off of offsets) {
+      if (placed >= f.colonnadeMax) break;
+      for (const lane of lanes) {
+        if (placed >= f.colonnadeMax) break;
+        const x = horizontal ? r.x + off : lane;
+        const y = horizontal ? lane : r.y + off;
+        if (!this.inRoom(x, y) || !this.freeAt(x, y)) continue;
+        if (protectedCells.has(ptKey({ x, y }))) continue;
+        this.putBlocking("pillar", x, y);
+        placed++;
+      }
+    }
+  }
+  /** ③ 引导地毯：入口 → 中心（先 x 后 y 的 L 形），每 2 格 1 块，最多 3 块 */
+  furnishGuideCarpet() {
+    const entry = this.mainPath()[0];
+    if (!entry) return;
+    const cx = this.room.centerX;
+    const cy = this.room.centerY;
+    const steps = [{ x: entry.x, y: entry.y }];
+    let x = entry.x;
+    let y = entry.y;
+    while (x !== cx) {
+      x += Math.sign(cx - x);
+      steps.push({ x, y });
+    }
+    while (y !== cy) {
+      y += Math.sign(cy - y);
+      steps.push({ x, y });
+    }
+    let placed = 0;
+    for (let i = 1; i < steps.length && placed < 3; i += 2) {
+      const p = steps[i];
+      if (!this.freeAt(p.x, p.y)) continue;
+      this.put({ kind: "carpet", x: p.x, y: p.y });
+      placed++;
+    }
+  }
   /**
    * 女巫酿药间（安全房）：中央女巫 + 朝门一侧的熬药大锅 + 两侧药架 + 角落治疗泉。
    * 女巫提供特殊药水交易，治疗泉提供治疗服务（交互在世界层处理）。
@@ -2772,7 +4077,7 @@ var RoomFill = class {
     const cy = this.room.centerY;
     const entry = this.mainPath()[0] ?? { x: cx, y: cy + 1 };
     const doorInners = this.doorInnerCells();
-    const blockable = (x, y) => this.freeAt(x, y) && !doorInners.has(`${x},${y}`);
+    const blockable = (x, y) => this.freeAt(x, y) && !doorInners.has(cellKey(x, y));
     if (this.freeAt(cx, cy)) {
       this.put({ kind: "npc", npcId: "npc_witch", x: cx, y: cy });
     } else {
@@ -2803,7 +4108,7 @@ var RoomFill = class {
         }
       }
     }
-    const corners = rng.shuffle(this.innerCorners()).sort((a, b) => Math.abs(b.x - entry.x) + Math.abs(b.y - entry.y) - (Math.abs(a.x - entry.x) + Math.abs(a.y - entry.y)));
+    const corners = rng.shuffle(this.innerCorners()).sort((a, b) => manhattan(b, entry) - manhattan(a, entry));
     for (const c of corners) {
       if (this.freeAt(c.x, c.y)) {
         this.put({ kind: "fountain", x: c.x, y: c.y });
@@ -2820,11 +4125,12 @@ var RoomFill = class {
   /**
    * 验证并就地修复：
    *   地形连通       —— 柱子/装饰封死地板口袋 → 撤柱开通（P0-5 配套修复）
+   *   楼梯被守护     —— 楼梯 guard.stairRadius 格内无怪 → 楼梯前补怪（受密度上限约束）
+   *   宝箱被守护     —— 宝箱 guard.chestRadius 格内无怪 → 邻格补怪（受密度上限约束）
    *   战斗不可绕过   —— 怪物/柱子为障碍时任意两门内侧仍连通 = 可绕过 → 沿开路线中点循环补怪封堵
    *                     （P0-5：战斗/精英/Boss 房均执行；补怪不超过密度上限）
    *   精英房主路径   —— 主路径上至少 1 只精英怪，不足则补/升级（P0-5）
-   *   宝箱被守护     —— 宝箱 guard.chestRadius 格内无怪 → 邻格补怪（受密度上限约束）
-   *   楼梯被守护     —— 楼梯 guard.stairRadius 格内无怪 → 楼梯前补怪（受密度上限约束）
+   * 执行顺序：守卫（楼梯→宝箱）先占用密度余量，「不可绕过」最后执行——余量不足时退化为柱线封堵。
    *   无重叠/可到达 —— 放置阶段已由 freeAt 保证（装饰地毯除外）
    * 返回未修复的失败项（调用方记日志），不中断生成流程。
    */
@@ -2833,6 +4139,25 @@ var RoomFill = class {
     const g = dataManager.mapGen.content.guard;
     const monsterCount = () => this.room.entities.filter((e) => e.kind === "monster" || e.kind === "boss").length;
     this.ensureReachable();
+    for (const stair of this.room.entities.filter((e) => e.kind === "stair")) {
+      const guarded = this.monsterNear(stair.x, stair.y, g.stairRadius);
+      if (!guarded && pool.length > 0 && monsterCount() < densityCap) {
+        if (this.guardStair(1, pool) === 0 && !this.placeGuardCovering([{ x: stair.x, y: stair.y }], pool, g.stairRadius)) {
+          issues.push("\u697C\u68AF\u65E0\u5B88\u62A4\uFF08\u65E0\u53EF\u653E\u7F6E\u683C\uFF09");
+        }
+      }
+    }
+    if (roomType !== "boss") {
+      const chests = this.room.entities.filter((e) => e.kind === "chest");
+      let unguarded = chests.filter((c) => !this.monsterNear(c.x, c.y, g.chestRadius));
+      while (unguarded.length > 0 && pool.length > 0 && monsterCount() < densityCap) {
+        if (!this.placeGuardCovering(unguarded, pool, g.chestRadius)) break;
+        unguarded = chests.filter((c) => !this.monsterNear(c.x, c.y, g.chestRadius));
+      }
+      if (unguarded.length > 0) {
+        issues.push(monsterCount() >= densityCap ? `\u5B9D\u7BB1\u65E0\u5B88\u62A4\uFF08\u5BC6\u5EA6\u4E0A\u9650\u5DF2\u6EE1 ${monsterCount()}/${densityCap}\uFF0C\u672A\u5B88\u62A4 ${unguarded.length} \u5EA7\uFF09` : "\u5B9D\u7BB1\u65E0\u5B88\u62A4\uFF08\u65E0\u53EF\u653E\u7F6E\u683C\uFF09");
+      }
+    }
     if (roomType === "boss" && pool.length > 0) {
       if (this.bypassRoute() && monsterCount() === 0) {
         const spot = this.freeSpotOnRoute(this.mainPath());
@@ -2867,23 +4192,7 @@ var RoomFill = class {
       if (route) issues.push("\u53EF\u7ED5\u8FC7\u4E14\u65E0\u7A7A\u4F4D\u8865\u602A");
       if (roomType === "elite") this.ensureEliteOnPath(this.mainPath(), pool, densityCap);
     }
-    for (const stair of this.room.entities.filter((e) => e.kind === "stair")) {
-      const guarded = this.monsterNear(stair.x, stair.y, g.stairRadius);
-      if (!guarded && pool.length > 0 && monsterCount() < densityCap) {
-        if (this.guardStair(1, pool) === 0 && !this.placeGuardCovering([{ x: stair.x, y: stair.y }], pool, g.stairRadius)) {
-          issues.push("\u697C\u68AF\u65E0\u5B88\u62A4\u4E14\u65E0\u7A7A\u4F4D");
-        }
-      }
-    }
-    if (roomType !== "boss") {
-      const chests = this.room.entities.filter((e) => e.kind === "chest");
-      let unguarded = chests.filter((c) => !this.monsterNear(c.x, c.y, g.chestRadius));
-      while (unguarded.length > 0 && pool.length > 0 && monsterCount() < densityCap) {
-        if (!this.placeGuardCovering(unguarded, pool, g.chestRadius)) break;
-        unguarded = chests.filter((c) => !this.monsterNear(c.x, c.y, g.chestRadius));
-      }
-      if (unguarded.length > 0) issues.push("\u5B9D\u7BB1\u65E0\u5B88\u62A4\u4E14\u65E0\u7A7A\u4F4D");
-    }
+    this.ensureReachable();
     return issues;
   }
   /**
@@ -2892,53 +4201,12 @@ var RoomFill = class {
    * 返回该路线用于精确封堵；无门对或已阻断返回 null。
    */
   bypassRoute() {
-    const inners = this.room.doors.map((d) => this.innerOfDoor(d)).filter((p) => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 0);
-    if (inners.length < 2) return null;
-    let best = [inners[0], inners[1]];
-    let bestD = -1;
-    for (let i = 0; i < inners.length; i++) {
-      for (let j = i + 1; j < inners.length; j++) {
-        const d = Math.abs(inners[i].x - inners[j].x) + Math.abs(inners[i].y - inners[j].y);
-        if (d > bestD) {
-          bestD = d;
-          best = [inners[i], inners[j]];
-        }
-      }
-    }
+    const pair = this.farthestDoorPair();
+    if (!pair) return null;
     const blocked = new Set(
-      this.room.entities.filter((e) => e.kind === "monster" || e.kind === "boss" || e.kind === "pillar").map((e) => `${e.x},${e.y}`)
+      this.room.entities.filter((e) => e.kind === "monster" || e.kind === "boss" || e.kind === "pillar").map((e) => ptKey(e))
     );
-    return this.bfsRoute(best[0], best[1], blocked);
-  }
-  /** 避开障碍格的 BFS 路线（不可达返回 null） */
-  bfsRoute(from, to, blocked) {
-    const key = (x, y) => `${x},${y}`;
-    const prev = /* @__PURE__ */ new Map([[key(from.x, from.y), null]]);
-    const queue = [from];
-    while (queue.length > 0) {
-      const cur = queue.shift();
-      if (cur.x === to.x && cur.y === to.y) {
-        const out = [];
-        let k = key(to.x, to.y);
-        while (k) {
-          const [x, y] = k.split(",").map(Number);
-          out.push({ x, y });
-          k = prev.get(k) ?? null;
-        }
-        return out.reverse();
-      }
-      for (const [dx, dy] of DIRS4) {
-        const nx = cur.x + dx;
-        const ny = cur.y + dy;
-        const k = key(nx, ny);
-        if (!this.inRoom(nx, ny)) continue;
-        if (this.grid[ny]?.[nx] !== 0) continue;
-        if (blocked.has(k) || prev.has(k)) continue;
-        prev.set(k, key(cur.x, cur.y));
-        queue.push({ x: nx, y: ny });
-      }
-    }
-    return null;
+    return this.bfsPath(pair[0], pair[1], blocked);
   }
   /** 开放路线上自中点向外第一个可放置格（封堵补怪/立柱用；forbidden 内的格子跳过） */
   freeSpotOnRoute(route, forbidden) {
@@ -2947,7 +4215,7 @@ var RoomFill = class {
       for (const i of [mid + off, mid - off]) {
         const p = route[i];
         if (!p || !this.freeAt(p.x, p.y)) continue;
-        if (forbidden?.has(`${p.x},${p.y}`)) continue;
+        if (forbidden?.has(ptKey(p))) continue;
         return p;
       }
     }
@@ -3032,7 +4300,7 @@ var RoomFill = class {
    * 超上限则把主路径上的一只普通怪升级为精英（保留位置与掉落规则）。
    */
   ensureEliteOnPath(path, pool, densityCap) {
-    const onPath = new Set(path.map((p) => `${p.x},${p.y}`));
+    const onPath = new Set(path.map((p) => ptKey(p)));
     const onPathElite = this.room.entities.some((e) => (e.kind === "monster" || e.kind === "boss") && e.isElite && onPath.has(`${e.x},${e.y}`));
     if (onPathElite) return;
     const count = this.room.entities.filter((e) => e.kind === "monster" || e.kind === "boss").length;
@@ -3060,7 +4328,7 @@ var RoomFill = class {
    */
   ensureReachable() {
     for (const d of this.room.doors) {
-      const p = this.innerOfDoor(d);
+      const p = doorInner(d);
       if (!this.inRoom(p.x, p.y) || this.grid[p.y]?.[p.x] === 0) continue;
       const blocker = this.room.entities.find((e) => (e.kind === "pillar" || e.kind === "cauldron" || e.kind === "shelf") && e.x === p.x && e.y === p.y);
       if (blocker) {
@@ -3075,7 +4343,7 @@ var RoomFill = class {
       }
     }
     if (floorCells.length === 0) return;
-    const firstInner = this.room.doors.map((d) => this.innerOfDoor(d)).find((p) => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 0);
+    const firstInner = this.room.doors.map((d) => doorInner(d)).find((p) => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 0);
     const source = firstInner ?? floorCells[Math.floor(floorCells.length / 2)];
     for (let round = 0; round < 64; round++) {
       const seen = /* @__PURE__ */ new Set([`${source.x},${source.y}`]);
@@ -3095,10 +4363,15 @@ var RoomFill = class {
       }
       const pockets = floorCells.filter((c) => !seen.has(`${c.x},${c.y}`));
       if (pockets.length === 0) return;
-      const blocker = this.room.entities.find((e) => (e.kind === "pillar" || e.kind === "cauldron" || e.kind === "shelf") && pockets.some((c) => Math.abs(e.x - c.x) + Math.abs(e.y - c.y) === 1));
-      if (!blocker) return;
-      this.room.entities = this.room.entities.filter((en) => en !== blocker);
-      this.grid[blocker.y][blocker.x] = 0;
+      const blocker = this.room.entities.find((e) => (e.kind === "pillar" || e.kind === "cauldron" || e.kind === "shelf") && pockets.some((c) => manhattan(e, c) === 1));
+      if (blocker) {
+        this.room.entities = this.room.entities.filter((en) => en !== blocker);
+        this.grid[blocker.y][blocker.x] = 0;
+        continue;
+      }
+      const cliff = pockets.flatMap((c) => DIRS4.map(([dx, dy]) => ({ x: c.x + dx, y: c.y + dy }))).find((p) => this.inRoom(p.x, p.y) && this.grid[p.y]?.[p.x] === 4);
+      if (!cliff) return;
+      this.grid[cliff.y][cliff.x] = 0;
     }
   }
   /**
@@ -3119,6 +4392,7 @@ var ContentFiller = class _ContentFiller {
     const all = dataManager.monsters.monsters.filter((m) => m.category === "normal");
     const avail = all.filter((m) => floorId >= m.floorMin && floorId <= m.floorMax);
     const pool = (avail.length > 0 ? avail : all).map((m) => ({ id: m.id, weight: m.weight }));
+    this.assignFloorRisk(rooms, floorId);
     for (const room of rooms) {
       const rf = new RoomFill(room, grid, floorId);
       switch (room.type) {
@@ -3126,10 +4400,21 @@ var ContentFiller = class _ContentFiller {
           if (kind === "initial") {
             rf.put({ kind: "npc", npcId: "npc_guide", x: room.centerX, y: room.y + 1 });
           }
-          rf.placePotions(rng.randInt(c.startRoom.potions[0], c.startRoom.potions[1]));
+          if (kind !== "summit") {
+            rf.placePotions(rng.randInt(c.startRoom.potions[0], c.startRoom.potions[1]));
+          }
           break;
         }
         case "end": {
+          if (kind === "summit") {
+            const gateSpot = { x: room.centerX, y: room.y + 1 };
+            if (rf.freeAt(gateSpot.x, gateSpot.y)) {
+              rf.put({ kind: "gate", x: gateSpot.x, y: gateSpot.y });
+            } else {
+              rf.put({ kind: "gate", x: room.centerX, y: room.centerY });
+            }
+            break;
+          }
           if (!rf.placeStairAgainstWall(floorId + 1)) {
             const ax = room.centerX - 1;
             const ay = room.centerY - 1;
@@ -3154,9 +4439,18 @@ var ContentFiller = class _ContentFiller {
           } else if (kind === "boss") {
             rf.put({ kind: "chest", chestTier: "grand", x: room.x + 1, y: room.y + 1 });
             rf.put({ kind: "chest", chestTier: "grand", x: room.x + room.width - 2, y: room.y + room.height - 2 });
+            if (isTierStartFloor(floorId + 1)) {
+              const spot = this.relicChestSpot(rf, room);
+              if (spot) rf.put({ kind: "chest", chestTier: "relic", x: spot.x, y: spot.y });
+            }
           } else {
+            const cap = this.densityCap(room);
+            const chests = rf.placeCornerChests(rng.randInt(c.exitRoom.chests[0], c.exitRoom.chests[1]));
+            for (const ch of chests) {
+              if (rf.monsterCount() >= cap - 1) break;
+              rf.placeGuardCovering([ch], pool, c.guard.chestRadius);
+            }
             rf.guardStair(rng.randInt(c.exitRoom.guards[0], c.exitRoom.guards[1]), pool);
-            rf.placeCornerChests(rng.randInt(c.exitRoom.chests[0], c.exitRoom.chests[1]));
           }
           rf.placePotions(rng.randInt(c.exitRoom.potions[0], c.exitRoom.potions[1]));
           break;
@@ -3182,7 +4476,10 @@ var ContentFiller = class _ContentFiller {
           break;
         }
         case "chest": {
-          const chests = rf.placeCornerChests(rng.randInt(c.treasureRoom.chests[0], c.treasureRoom.chests[1]), true);
+          const baseChests = rng.randInt(c.treasureRoom.chests[0], c.treasureRoom.chests[1]);
+          const bonusChest = rf.risk() >= 3 && baseChests < c.treasureRoom.chests[1] ? 1 : 0;
+          const chests = rf.placeCornerChests(baseChests + bonusChest, true);
+          rf.rollVault(chests);
           const cap = this.densityCap(room);
           let guards = Math.min(rng.randInt(c.treasureRoom.monsters[0], c.treasureRoom.monsters[1]), cap - rf.monsterCount());
           let unguarded = chests.filter((ch) => !rf.monsterNear(ch.x, ch.y, 2));
@@ -3197,7 +4494,7 @@ var ContentFiller = class _ContentFiller {
         case "combat": {
           const band = rf.bandFor(c.combatByDepth);
           const cap = this.densityCap(room);
-          const want = Math.max(1, Math.min(rng.randInt(band.monsters[0], band.monsters[1]), cap - 1));
+          const want = Math.max(1, Math.min(rng.randInt(band.monsters[0], band.monsters[1]), cap - 2));
           const bigW = room.width - 2 >= 8;
           const bigH = room.height - 2 >= 7;
           const layouts = [
@@ -3222,9 +4519,10 @@ var ContentFiller = class _ContentFiller {
             placed = rf.placeMonsters(want, false, pool);
           }
           if (placed === 0) rf.placeMonsters(want, false, pool);
-          const elites = Math.min(rng.randInt(band.elites[0], band.elites[1]), Math.max(0, cap - rf.monsterCount()));
+          const elites = Math.min(rng.randInt(band.elites[0], band.elites[1]), Math.max(0, cap - rf.monsterCount() - 1));
           if (elites > 0) rf.placeMonsters(elites, true, pool);
-          rf.placeCornerChests(rng.randInt(band.chests[0], band.chests[1]));
+          const chests = rf.placeCornerChests(rng.randInt(band.chests[0], band.chests[1]));
+          rf.rollVault(chests);
           rf.placePotions(rng.randInt(band.potions[0], band.potions[1]));
           break;
         }
@@ -3251,7 +4549,11 @@ var ContentFiller = class _ContentFiller {
           } else {
             if (rf.blockPath(1, pool, true) === 0) rf.placeMonsters(1, true, pool);
           }
-          const adds = rng.randInt(c.eliteRoom.monsters[0], c.eliteRoom.monsters[1]);
+          const eliteCap = this.densityCap(room);
+          const chestPlan = rng.randInt(c.eliteRoom.chests[0], c.eliteRoom.chests[1]);
+          const spare = Math.max(0, eliteCap - rf.monsterCount());
+          const addRoom = Math.max(0, spare - Math.min(chestPlan, spare));
+          const adds = Math.min(rng.randInt(c.eliteRoom.monsters[0], c.eliteRoom.monsters[1]), addRoom);
           if (layout === "throne") {
             const mid = rf.pickMonsterId(pool);
             let n = 0;
@@ -3266,8 +4568,8 @@ var ContentFiller = class _ContentFiller {
           } else {
             rf.placeMonsters(adds, false, pool);
           }
-          const chests = rf.placeCornerChests(rng.randInt(c.eliteRoom.chests[0], c.eliteRoom.chests[1]), true);
-          const eliteCap = this.densityCap(room);
+          const chests = rf.placeCornerChests(chestPlan, true);
+          rf.rollVault(chests);
           for (const ch of chests) {
             if (rf.monsterCount() >= eliteCap) break;
             rf.guardAround(ch.x, ch.y, 1, pool, false, 1);
@@ -3276,6 +4578,7 @@ var ContentFiller = class _ContentFiller {
           break;
         }
         case "boss": {
+          const bossId = this.bossIdForFloor(floorId);
           const variants = ["standard"];
           if (floorId >= 15) variants.push("arena");
           if (floorId >= 20) variants.push("gauntlet");
@@ -3287,7 +4590,7 @@ var ContentFiller = class _ContentFiller {
               variant = "standard";
             } else {
               rf.put({ kind: "carpet", x: cx, y: cy });
-              rf.bossAt("ancient_dragon", { x: cx, y: cy });
+              rf.bossAt(bossId, { x: cx, y: cy });
               const mid = rf.pickMonsterId(pool);
               if (mid) {
                 const flanks = [
@@ -3316,12 +4619,12 @@ var ContentFiller = class _ContentFiller {
               rf.placeMonsterAt(mid, false, path[2] ?? { x: cx, y: cy });
             }
             rf.put({ kind: "carpet", x: seat.x, y: seat.y });
-            rf.bossAt("ancient_dragon", seat);
+            rf.bossAt(bossId, seat);
             variant = "gauntlet_done";
           }
           if (variant === "standard") {
             rf.put({ kind: "carpet", x: cx, y: cy });
-            rf.bossAt("ancient_dragon", { x: cx, y: cy });
+            rf.bossAt(bossId, { x: cx, y: cy });
             rf.guardAround(cx, cy, rng.randInt(c.bossRoom.elites[0], c.bossRoom.elites[1]), pool, true, 2);
           }
           room.layout = `boss_${variant === "gauntlet_done" ? "gauntlet" : variant}`;
@@ -3332,6 +4635,7 @@ var ContentFiller = class _ContentFiller {
       }
       rf.placeRoomTorches();
       if (room.type !== "witch") rf.placePillars();
+      rf.furnish();
       if (!(room.type === "end" && (kind === "initial" || kind === "boss"))) {
         const issues = rf.validate(room.type, pool, this.densityCap(room));
         if (issues.length > 0) {
@@ -3352,6 +4656,72 @@ var ContentFiller = class _ContentFiller {
         }
       });
     }
+  }
+  /**
+   * 按楼层挑 Boss（每个层级有自己的 Boss）：
+   * 命中 floorMin~floorMax 区间者优先；未命中则回落列表首个（远古巨龙，覆盖塔顶与外推楼层）。
+   */
+  bossIdForFloor(floorId) {
+    const bosses = dataManager.monsters.monsters.filter((m) => m.category === "boss");
+    const hit = bosses.find((b) => floorId >= b.floorMin && floorId <= b.floorMax);
+    return hit?.id ?? bosses[0]?.id ?? "ancient_dragon";
+  }
+  /**
+   * 遗物宝箱落点：优先对角空位，其次房间中心；仍被占用则扫全房取第一个空位。
+   * 「必定生成」是设计约束，因此最后一步一定兜底（房间内几乎总有空格）。
+   */
+  relicChestSpot(rf, room) {
+    const preferred = [
+      { x: room.x + room.width - 2, y: room.y + 1 },
+      { x: room.x + 1, y: room.y + room.height - 2 },
+      { x: room.centerX, y: room.centerY }
+    ];
+    for (const p of preferred) if (rf.freeAt(p.x, p.y)) return p;
+    for (let y = room.y + 1; y <= room.y + room.height - 2; y++) {
+      for (let x = room.x + 1; x <= room.x + room.width - 2; x++) {
+        if (rf.freeAt(x, y)) return { x, y };
+      }
+    }
+    return null;
+  }
+  /**
+   * 房间「风险-收益」分层（引导玩家权衡路线）：按累积分值定档 ——
+   *   支线绕路 +sideBonus（最重）／精英·Boss 房 +eliteBonus／大房（内面积 ≥ areaBonusAt）+1／深入（深度 ≥ depthBonusAt）+1／高层 +1；
+   *   分值 ≥3 → 风险 3；1~2 → 风险 2；0 → 风险 1。
+   * 风险 → 宝箱收益更高（rewardMul）、更易出「大宝箱」（vaultChance）、遗物掉率更高（relicMul，开箱时结算）。
+   * 注意：**刻意不按风险增加怪物数量**——怪物数量直接决定经验收入，一旦膨胀就会冲垮整体成长曲线
+   * （equipTest 会因此失败）。风险房「更危险」由房型（精英/Boss）、大房、深度本身承担。
+   * 只有战斗/精英/宝箱/Boss 房参与：安全房（商栈/女巫/休整/铁匠）不设风险，避免误导路线判断。
+   */
+  riskScore(room, floorId) {
+    const r = dataManager.mapGen.content.risk;
+    const innerArea = (room.width - 2) * (room.height - 2);
+    let score = 0;
+    if (room.mountedOn) score += r.sideBonus;
+    if (room.type === "elite" || room.type === "boss") score += r.eliteBonus;
+    if (innerArea >= r.areaBonusAt) score += 1;
+    if (room.depth >= r.depthBonusAt) score += 1;
+    if (r.floorBonusEvery > 0 && floorId >= r.floorBonusEvery) score += 1;
+    return score >= 3 ? 3 : score >= 1 ? 2 : 1;
+  }
+  /**
+   * 楼层级风险分配 + **层内差异保底**：
+   *   ① 逐房间按 `riskScore` 定档；
+   *   ② 同层风险房 ≥2 且档位全同时，提最深一间（或全 3 时降最浅一间）——
+   *      否则玩家在一层里根本无从权衡「安全低收益 vs 危险高收益」。
+   * 保底规则本身也是可学习的：**越往深处越危险**。
+   */
+  assignFloorRisk(rooms, floorId) {
+    const riskRooms = rooms.filter((r) => RISK_ROOM_TYPES.has(r.type));
+    for (const room of riskRooms) room.risk = this.riskScore(room, floorId);
+    if (riskRooms.length >= 2 && new Set(riskRooms.map((r) => r.risk)).size === 1) {
+      const sorted = [...riskRooms].sort((a, b) => a.depth - b.depth);
+      const base = sorted[0].risk ?? 1;
+      if (base === 3) sorted[0].risk = 2;
+      else sorted[sorted.length - 1].risk = base + 1;
+    }
+    const mul = dataManager.mapGen.content.risk.rewardMul;
+    for (const room of riskRooms) room.rewardMul = mul[(room.risk ?? 1) - 1] ?? 1;
   }
   /** 怪物密度上限（按房间内面积） */
   densityCap(room) {
@@ -3378,7 +4748,7 @@ var ContentFiller = class _ContentFiller {
       { x: room.x + room.width - 2, y: room.y + 1 },
       { x: room.x + 1, y: room.y + room.height - 2 },
       { x: room.x + room.width - 2, y: room.y + room.height - 2 }
-    ].sort((a, b) => ent ? Math.abs(b.x - ent.x) + Math.abs(b.y - ent.y) - (Math.abs(a.x - ent.x) + Math.abs(a.y - ent.y)) : 0);
+    ].sort((a, b) => ent ? manhattan(b, ent) - manhattan(a, ent) : 0);
     const corner = corners.find((p) => rf.freeAt(p.x, p.y)) ?? corners[0];
     rf.put({ kind: "chest", chestTier: "grand", x: corner.x, y: corner.y });
     if (mid) {
@@ -3591,6 +4961,7 @@ var MapGenerator = class _MapGenerator {
       throw new Error(`\u7279\u6B8A\u5C42\u6821\u9A8C\u5931\u8D25: ${check2.errors.join("; ")}`);
     }
     const hiddenRooms = alloc.kind === "normal" ? corridorGen.spawnHiddenRooms(rooms, corridorResult.corridors, grid, floorId) : [];
+    this.carveCliffs(rooms, grid, floorId);
     filler.fill(rooms, corridorResult.corridors, grid, floorId, alloc.kind, hiddenRooms);
     const start = rooms[0];
     return {
@@ -3620,60 +4991,464 @@ var MapGenerator = class _MapGenerator {
     lines.push(`\u5165\u53E3: (${floor.entryX},${floor.entryY}) \u8DEF\u5F84\u6570: \u89C1\u9A8C\u8BC1\u5668`);
     return lines.join("\n");
   }
+  /**
+   * 悬崖地形（编码 4，规格 2.1.5）：在部分房间内挖出不可通行的不规则深渊。
+   *
+   * 约束：
+   * - 只作用于非关键房（战斗 / 精英 / 宝箱 / 商人 / 女巫 / 铁匠），起点、终点、Boss、休整房不挖；
+   * - 避开「门内侧格及其邻域」，保证进出房间的通道不被切断；
+   * - 每块深渊落地后立刻校验「房间内可行走格仍单连通且各门内侧可达」，不通过则**回滚**——
+   *   深渊绝不允许把房间切成两半或制造无法到达的口袋（内容校验器只能撤柱，救不了悬崖）。
+   */
+  carveCliffs(rooms, grid, floorId) {
+    const cfg = dataManager.mapGen.cliff;
+    if (floorId < cfg.minFloor) return;
+    const allowance = /* @__PURE__ */ new Set(["combat", "elite", "chest", "merchant", "witch", "blacksmith"]);
+    for (const room of rooms) {
+      if (!allowance.has(room.type)) continue;
+      const area = (room.width - 2) * (room.height - 2);
+      if (area < cfg.minInnerArea || !rng.chance(cfg.chance)) continue;
+      const doorInners = room.doors.map((d) => doorInner(d));
+      const candidates = [];
+      for (let y = room.y + 1; y <= room.y + room.height - 2; y++) {
+        for (let x = room.x + 1; x <= room.x + room.width - 2; x++) {
+          if (grid[y]?.[x] !== 0) continue;
+          if (doorInners.some((p) => Math.abs(x - p.x) <= 1 && Math.abs(y - p.y) <= 1)) continue;
+          if (Math.abs(x - room.centerX) <= 1 && Math.abs(y - room.centerY) <= 1) continue;
+          candidates.push({ x, y });
+        }
+      }
+      if (candidates.length === 0) continue;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const size = rng.randInt(cfg.patchMin, cfg.patchMax);
+        const anchor = candidates[rng.randInt(0, candidates.length - 1)];
+        const patch = this.growCliffPatch(anchor, size, candidates);
+        if (patch.length === 0) continue;
+        for (const p of patch) grid[p.y][p.x] = 4;
+        if (this.roomStillConnected(room, grid)) break;
+        for (const p of patch) grid[p.y][p.x] = 0;
+      }
+    }
+  }
+  /** 从锚点向四邻生长一小块连通深渊（仅取候选格 → 形状不规则且贴着可行走区） */
+  growCliffPatch(anchor, size, allowed) {
+    const key = (p) => `${p.x},${p.y}`;
+    const allowedSet = new Set(allowed.map(key));
+    const patch = [anchor];
+    const inPatch = /* @__PURE__ */ new Set([key(anchor)]);
+    while (patch.length < size) {
+      const frontier = allowed.filter((p) => allowedSet.has(key(p)) && !inPatch.has(key(p)) && patch.some((q) => manhattan(q, p) === 1));
+      if (frontier.length === 0) break;
+      const pick = frontier[rng.randInt(0, frontier.length - 1)];
+      patch.push(pick);
+      inPatch.add(key(pick));
+    }
+    return patch;
+  }
+  /** 房间内可行走格是否仍单连通，且各门内侧格都可达 */
+  roomStillConnected(room, grid) {
+    const cells = [];
+    for (let y = room.y + 1; y <= room.y + room.height - 2; y++) {
+      for (let x = room.x + 1; x <= room.x + room.width - 2; x++) {
+        if (grid[y]?.[x] === 0) cells.push({ x, y });
+      }
+    }
+    if (cells.length === 0) return true;
+    const doorInners = room.doors.map((d) => doorInner(d)).filter((p) => grid[p.y]?.[p.x] === 0);
+    const source = doorInners[0] ?? cells[0];
+    const seen = /* @__PURE__ */ new Set([`${source.x},${source.y}`]);
+    const queue = [source];
+    while (queue.length > 0) {
+      const cur = queue.shift();
+      for (const [dx, dy] of DIRS4) {
+        const nx = cur.x + dx;
+        const ny = cur.y + dy;
+        if (nx < room.x + 1 || nx > room.x + room.width - 2) continue;
+        if (ny < room.y + 1 || ny > room.y + room.height - 2) continue;
+        const k = `${nx},${ny}`;
+        if (seen.has(k) || grid[ny]?.[nx] !== 0) continue;
+        seen.add(k);
+        queue.push({ x: nx, y: ny });
+      }
+    }
+    return seen.size === cells.length && doorInners.every((p) => seen.has(`${p.x},${p.y}`));
+  }
   roomsSorted(floor) {
     return [...floor.rooms].sort((a, b) => a.order - b.order);
   }
 };
 
-// src/core/EventBus.ts
-var EventBus = class _EventBus {
+// src/systems/RelicManager.ts
+var CATEGORY_ICON = {
+  combat: "\u2694\uFE0F",
+  survival: "\u2764\uFE0F",
+  economy: "\u{1F4B0}",
+  explore: "\u{1F5FA}\uFE0F",
+  risk: "\u26A0\uFE0F",
+  fun: "\u{1F3B2}"
+};
+var COMBO_BONUS = {
+  assassin: { flat: { critRate: 10 } },
+  immortal: { flat: { maxHp: 80 } },
+  rich: { flat: { goldBonus: 50, merchantDiscount: 50, chestQualityUp: 1 } },
+  fortress: { flat: { thorns: 30, damageReduction: 15 } },
+  sacrifice: { pct: { attack: 100, defense: 60 }, flat: { goldBonus: 150 } }
+};
+var RelicManager = class _RelicManager {
   static instance;
-  handlers = /* @__PURE__ */ new Map();
   constructor() {
   }
   static getInstance() {
-    if (!_EventBus.instance) {
-      _EventBus.instance = new _EventBus();
+    if (!_RelicManager.instance) _RelicManager.instance = new _RelicManager();
+    return _RelicManager.instance;
+  }
+  get all() {
+    return dataManager.relics.relics;
+  }
+  get comboDefs() {
+    return dataManager.relics.combos;
+  }
+  def(id) {
+    return dataManager.getRelic(id);
+  }
+  ownedIds() {
+    return Player.getInstance().state.relics;
+  }
+  owned() {
+    return this.ownedIds().map((id) => this.def(id)).filter((d) => !!d);
+  }
+  has(id) {
+    return this.ownedIds().includes(id);
+  }
+  rarityName(r) {
+    return dataManager.relics.rarityNames[String(r)] ?? "";
+  }
+  rarityColor(r) {
+    return dataManager.relics.rarityColors[String(r)] ?? "#fff";
+  }
+  /** 遗物图标（emoji 或图片路径）：单件 icon > icons 映射 > 类别默认 */
+  iconOf(d) {
+    return d.icon ?? dataManager.relics.icons?.[d.id] ?? CATEGORY_ICON[d.category] ?? "\u{1F3FA}";
+  }
+  /** 图标渲染为 HTML（图片路径 → <img>；否则 emoji 文本） */
+  iconHtml(d, cls = "relic-icon") {
+    const icon = this.iconOf(d);
+    return /\.(png|jpe?g|webp|gif|svg)$/i.test(icon) ? `<img class="${cls}" src="${icon}" alt="" draggable="false">` : `<span class="${cls}">${icon}</span>`;
+  }
+  // ============ 持有 / 丢弃 / 净化 ============
+  /** 获得遗物（同类唯一，不可重复持有） */
+  add(id, opts = {}) {
+    const d = this.def(id);
+    if (!d) return false;
+    const p = Player.getInstance();
+    if (p.state.relics.includes(id)) return false;
+    p.state.relics.push(id);
+    p.clampHp();
+    if (!opts.silent) eventBus.emit("relicGained", { id, name: d.name, rarity: d.rarity });
+    this.announceNewCombos();
+    return true;
+  }
+  /**
+   * 掉落 / 开箱发现遗物：**不直接入账**，广播给 UI 让玩家抉择（收下 / 丢弃）。
+   * 玩家确认收下后由 UI 调 `add()` 真正入账；丢弃则什么也不发生。
+   */
+  offer(id, source = "drop") {
+    const d = this.def(id);
+    if (!d || this.has(id)) return false;
+    eventBus.emit("relicOffered", { id, name: d.name, rarity: d.rarity, source });
+    return true;
+  }
+  /**
+   * 遗物宝箱候选：抽 n 件互不重复的**正向**遗物（排除专属 / 未定稿 / 已持有）。
+   * 稀有度带权重（圣 > 神祇 > 尘世），保证三选一里有机会出好东西但不至于全是神祇。
+   */
+  randomCandidates(n) {
+    const weights = [
+      { rarity: 3, weight: 3 },
+      { rarity: 2, weight: 5 },
+      { rarity: 1, weight: 3 }
+    ];
+    const out = [];
+    const taken = /* @__PURE__ */ new Set();
+    for (let i = 0; i < n; i++) {
+      const pool = this.pickablePool((r) => r.rarity >= 0 && !r.tbd && !taken.has(r.id));
+      if (pool.length === 0) break;
+      const want = rng.pickWeighted(weights, (w) => w.weight).rarity;
+      const prefer = pool.filter((r) => r.rarity === want);
+      const from = prefer.length > 0 ? prefer : pool;
+      const pick = from[rng.randInt(0, from.length - 1)];
+      taken.add(pick.id);
+      out.push(pick);
     }
-    return _EventBus.instance;
+    return out;
   }
-  on(event, handler) {
-    let set = this.handlers.get(event);
-    if (!set) {
-      set = /* @__PURE__ */ new Set();
-      this.handlers.set(event, set);
-    }
-    set.add(handler);
+  remove(id, silent = false) {
+    const p = Player.getInstance();
+    const idx = p.state.relics.indexOf(id);
+    if (idx < 0) return false;
+    p.state.relics.splice(idx, 1);
+    p.clampHp();
+    const d = this.def(id);
+    if (!silent && d) eventBus.emit("relicRemoved", { id, name: d.name });
+    return true;
   }
-  once(event, handler) {
-    const wrapped = (payload) => {
-      this.off(event, wrapped);
-      handler(payload);
-    };
-    this.on(event, wrapped);
+  /** C 类灾厄净化：灾厄形态 → 专属对应的纯正面遗物（一对一） */
+  purify(curseId) {
+    const d = this.def(curseId);
+    if (!d || d.subtype !== "event" || !d.purifyTo || !this.has(curseId)) return false;
+    this.remove(curseId, true);
+    const p = Player.getInstance();
+    p.state.relics.push(d.purifyTo);
+    p.clampHp();
+    const target = this.def(d.purifyTo);
+    this.purifiedCount++;
+    eventBus.emit("relicPurified", { from: curseId, to: d.purifyTo, name: target?.name ?? "" });
+    this.announceNewCombos();
+    return true;
   }
-  off(event, handler) {
-    const set = this.handlers.get(event);
-    if (set) {
-      set.delete(handler);
-    }
+  /** 可净化的灾厄列表（UI / 事件用） */
+  purifiable() {
+    return this.owned().filter((d) => d.subtype === "event" && !!d.purifyTo);
   }
-  emit(event, payload) {
-    const set = this.handlers.get(event);
-    if (!set) return;
-    for (const handler of [...set]) {
-      try {
-        handler(payload);
-      } catch (err) {
-        console.error(`[EventBus] handler error on "${String(event)}"`, err);
+  /** 本轮已净化次数（每轮上限见 UI 提示） */
+  purifiedCount = 0;
+  get purified() {
+    return this.purifiedCount;
+  }
+  /** 荡魔义旗：本轮击杀累积的攻击百分比（resetRun 清零） */
+  killAttackStack = 0;
+  get killAttackPct() {
+    return this.killAttackStack;
+  }
+  /** 新一局重置运行时状态 */
+  resetRun() {
+    this.lastCombos = [];
+    this.firstStrikeFloor = -1;
+    this.purifiedCount = 0;
+    this.killAttackStack = 0;
+  }
+  // ============ 组合质变 ============
+  activeCombos() {
+    const owned = new Set(this.ownedIds());
+    return this.comboDefs.filter((c) => c.requires.every((r) => owned.has(r))).map((c) => c.id);
+  }
+  hasCombo(id) {
+    return this.activeCombos().includes(id);
+  }
+  lastCombos = [];
+  firstStrikeFloor = -1;
+  /** 每层首次攻击（先攻之刃 / 疾影之靴）：每层仅返回一次 true */
+  consumeFirstStrike(floorId) {
+    if (this.firstStrikeFloor === floorId) return false;
+    this.firstStrikeFloor = floorId;
+    return true;
+  }
+  /** 检测新增组合并广播（供 UI 提示"XX 已觉醒"） */
+  announceNewCombos() {
+    const now = this.activeCombos();
+    for (const cid of now) {
+      if (!this.lastCombos.includes(cid)) {
+        const c = this.comboDefs.find((x) => x.id === cid);
+        if (c) eventBus.emit("relicComboTriggered", { combo: c.id, name: c.name, desc: c.desc });
       }
     }
+    this.lastCombos = now;
   }
-  clear() {
-    this.handlers.clear();
+  // ============ 效果聚合 ============
+  /** 效果快照：按当前生命比例聚合（含低血/高血条件 + 组合加成） */
+  snapshot(hpRatio) {
+    const flat = {};
+    const pct = {};
+    const addFlat = (k, v) => {
+      if (k && v) flat[k] = (flat[k] ?? 0) + v;
+    };
+    const addPct = (k, v) => {
+      if (k && v) pct[k] = (pct[k] ?? 0) + v;
+    };
+    for (const d of this.owned()) {
+      for (const e of d.effects) this.applyEffect(e, hpRatio, addFlat, addPct);
+    }
+    for (const cid of this.activeCombos()) {
+      const b = COMBO_BONUS[cid];
+      if (!b) continue;
+      if (b.flat) for (const k of Object.keys(b.flat)) addFlat(k, b.flat[k]);
+      if (b.pct) for (const k of Object.keys(b.pct)) addPct(k, b.pct[k]);
+    }
+    if (this.killAttackStack) addPct("attack", this.killAttackStack);
+    return { flat, pct, combos: this.activeCombos() };
+  }
+  applyEffect(e, hpRatio, addFlat, addPct) {
+    switch (e.type) {
+      case "stat":
+        if (e.mode === "percent") addPct(e.stat, e.value);
+        else addFlat(e.stat, e.value);
+        break;
+      case "passive":
+        addFlat(e.stat, e.value ?? 1);
+        break;
+      case "onLowHp":
+        if (hpRatio < (e.threshold ?? 0.35)) {
+          if (e.mode === "percent") addPct(e.stat, e.value);
+          else addFlat(e.stat, e.value);
+        }
+        break;
+      case "onHighHp":
+        if (hpRatio > (e.threshold ?? 0.75)) {
+          if (e.mode === "percent") addPct(e.stat, e.value);
+          else addFlat(e.stat, e.value);
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  /** 读取某项被动值（无则 0；hpRatio 默认 1，避免依赖 Player.maxHp 造成重算） */
+  value(key, hpRatio = 1) {
+    return this.snapshot(hpRatio).flat[key] ?? 0;
+  }
+  // ============ 触发钩子 ============
+  /** 进层触发：再生符文 / 暖炉 / 钥匙串 / 点金指 / 诅咒之镜 / 血债之刃 / 永恒心核 等 */
+  onFloorEnter() {
+    const p = Player.getInstance();
+    const log = [];
+    for (const d of this.owned()) {
+      for (const e of d.effects) {
+        if (e.type !== "onFloorEnter") continue;
+        switch (e.action) {
+          case "healPct": {
+            const h = p.heal(Math.round(p.maxHp * (e.value ?? 0) / 100));
+            if (h > 0) log.push(`${d.name}\uFF1A\u56DE\u590D ${h} \u751F\u547D`);
+            break;
+          }
+          case "heal": {
+            const h = p.heal(e.value ?? 0);
+            if (h > 0) log.push(`${d.name}\uFF1A\u56DE\u590D ${h} \u751F\u547D`);
+            break;
+          }
+          case "key": {
+            p.state.keys += e.value ?? 1;
+            log.push(`${d.name}\uFF1A\u83B7\u5F97 ${e.value ?? 1} \u628A\u94A5\u5319`);
+            break;
+          }
+          case "hpLossPct": {
+            const loss = Math.max(1, Math.round(p.maxHp * (e.value ?? 0) / 100));
+            p.damage(loss);
+            log.push(`${d.name}\uFF1A\u635F\u5931 ${loss} \u751F\u547D`);
+            break;
+          }
+          default:
+            break;
+        }
+      }
+    }
+    return log;
+  }
+  /** 击杀触发：吸血獠牙 / 拾荒者 / 窃命之契 */
+  onKill() {
+    const p = Player.getInstance();
+    const floorId = p.state.currentFloor;
+    const log = [];
+    for (const d of this.owned()) {
+      for (const e of d.effects) {
+        if (e.type !== "onKill") continue;
+        switch (e.action) {
+          case "heal": {
+            const h = p.heal(e.value ?? 0);
+            if (h > 0) log.push(`${d.name}\uFF1A\u56DE\u590D ${h} \u751F\u547D`);
+            break;
+          }
+          case "healPct": {
+            const h = p.heal(Math.round(p.maxHp * (e.value ?? 0) / 100));
+            if (h > 0) log.push(`${d.name}\uFF1A\u56DE\u590D ${h} \u751F\u547D`);
+            break;
+          }
+          case "loseHp": {
+            p.damage(e.value ?? 0);
+            log.push(`${d.name}\uFF1A\u635F\u5931 ${e.value ?? 0} \u751F\u547D`);
+            break;
+          }
+          case "killGold": {
+            const g = Math.round(2 + floorId * 0.8);
+            p.gainGold(g);
+            log.push(`${d.name}\uFF1A\u989D\u5916\u6389\u843D ${g} \u91D1\u5E01`);
+            break;
+          }
+          case "killAttackPct": {
+            this.killAttackStack += e.value ?? 0;
+            log.push(`${d.name}\uFF1A\u653B\u51FB +${e.value ?? 0}%\uFF08\u7D2F\u8BA1 +${this.killAttackStack}%\uFF09`);
+            break;
+          }
+          default:
+            break;
+        }
+      }
+    }
+    return log;
+  }
+  // ============ 掉落掷骰 ============
+  /**
+   * 可随机授予的遗物池：统一排除「专属（难度 / 剧情指定）」与「已持有」。
+   * 所有随机渠道（掉落 / 灾厄 / 开局 / 三选一）都必须经由此处，避免规则分叉。
+   */
+  pickablePool(filter) {
+    return this.all.filter((r) => !r.exclusive && !this.has(r.id) && (!filter || filter(r)));
+  }
+  /** 从池中均匀取一件（空池返回 null） */
+  pickOne(pool) {
+    return pool.length > 0 ? pool[rng.randInt(0, pool.length - 1)] : null;
+  }
+  /** 随机取得某稀有度的遗物（排除已持有；可选排除灾厄） */
+  randomOfRarity(rarity, excludeCurses = true) {
+    return this.pickOne(this.pickablePool((r) => r.rarity === rarity && r.id !== "X007" && (!excludeCurses || r.rarity !== -1)));
+  }
+  /**
+   * 按渠道掷骰掉落。返回获得的遗物（无则 null）。
+   * kind：chest 通用渠道（各稀有度独立判定）/ boss / elite
+   * chanceMul：掉率倍率（风险房收益用；缺省 1 = 旧行为）
+   */
+  rollDrop(kind, chanceMul = 1) {
+    const rf = dataManager.relics;
+    const table = kind === "boss" ? rf.bossDropChances : kind === "elite" ? rf.eliteDropChances : rf.dropChances;
+    const order = [4, 3, 2, 1, 0];
+    for (const rar of order) {
+      const chance = (table[String(rar)] ?? 0) * chanceMul;
+      if (chance > 0 && rng.chance(chance)) {
+        const relic = this.randomOfRarity(rar, true);
+        if (relic) {
+          this.offer(relic.id, kind);
+          return relic;
+        }
+      }
+    }
+    return null;
+  }
+  /** 灾厄掉落（宝箱/事件）：B 类高风险中收益 */
+  rollRiskCurse() {
+    const relic = this.pickOne(this.pickablePool((r) => r.subtype === "risk"));
+    if (!relic) return null;
+    this.add(relic.id);
+    return relic;
+  }
+  /** 开局灾厄：A 类随机抽取 n 件 */
+  grantStartCurses(n) {
+    const pool = this.pickablePool((r) => r.subtype === "start");
+    const picked = [];
+    for (let i = 0; i < n && pool.length > 0; i++) {
+      const idx = rng.randInt(0, pool.length - 1);
+      const relic = pool.splice(idx, 1)[0];
+      this.add(relic.id, { silent: true });
+      picked.push(relic);
+    }
+    return picked;
+  }
+  /** C 类事件型灾厄：授予指定灾厄（净化目标需专一） */
+  grantEventCurse() {
+    const relic = this.pickOne(this.pickablePool((r) => r.subtype === "event"));
+    if (!relic) return null;
+    this.add(relic.id);
+    return relic;
   }
 };
-var eventBus = EventBus.getInstance();
 
 // src/entities/Player.ts
 var QUALITY_ORDER = ["poor", "common", "fine", "rare", "epic", "legendary", "mythic"];
@@ -3697,7 +5472,9 @@ var Player = class _Player {
       hotbar: [null, null, null, null, null],
       weaponId: null,
       armorId: null,
+      accessoryId: null,
       bag: [],
+      relics: [],
       x: 0,
       y: 0,
       currentFloor: 1,
@@ -3717,7 +5494,8 @@ var Player = class _Player {
   }
   // ============ 属性聚合（基础 + 装备 + 词条） ============
   equipped() {
-    return this.state.bag.filter((e) => e.id === this.state.weaponId || e.id === this.state.armorId);
+    const { weaponId, armorId, accessoryId } = this.state;
+    return this.state.bag.filter((e) => e.id === weaponId || e.id === armorId || e.id === accessoryId);
   }
   stats() {
     let attack = this.state.baseAttack;
@@ -3735,6 +5513,8 @@ var Player = class _Player {
     for (const equip of this.equipped()) {
       attack += equip.attack;
       defense += equip.defense;
+      if (equip.accessoryStat === "crit") critRate += equip.accessoryValue ?? 0;
+      else if (equip.accessoryStat === "dodge") dodgeRate += equip.accessoryValue ?? 0;
     }
     const affixes = this.equipped().flatMap((e) => e.affixes);
     for (const a of affixes) {
@@ -3777,9 +5557,50 @@ var Player = class _Player {
           break;
       }
     }
+    const relics = RelicManager.getInstance();
+    const hpRatio = maxHp > 0 ? this.state.hp / maxHp : 1;
+    const snap = relics.snapshot(hpRatio);
+    const F = snap.flat;
+    const P = snap.pct;
+    let critDamage = 0;
+    let damageReduction = 0;
+    let damageTaken = 0;
+    let thorns = 0;
+    let armorPen = 0;
+    let eliteBossDamage = 0;
+    let monsterAttackUp = 0;
+    let potionBonus = 0;
+    let potionExtraPct = 0;
+    let pctMaxHp = 0;
+    attack += F.attack ?? 0;
+    pctAtk += P.attack ?? 0;
+    defense += F.defense ?? 0;
+    pctDef += P.defense ?? 0;
+    maxHp += F.maxHp ?? 0;
+    pctMaxHp += P.maxHp ?? 0;
+    critRate += F.critRate ?? 0;
+    dodgeRate += F.dodgeRate ?? 0;
+    lifesteal += F.lifesteal ?? 0;
+    fireDamage += F.fireDamage ?? 0;
+    goldBonus += F.goldBonus ?? 0;
+    expBonus += F.expBonus ?? 0;
+    bossDamage += F.bossDamage ?? 0;
+    critDamage += F.critDamage ?? 0;
+    damageReduction += F.damageReduction ?? 0;
+    damageTaken += F.damageTaken ?? 0;
+    thorns += F.thorns ?? 0;
+    armorPen += F.armorPen ?? 0;
+    eliteBossDamage += F.eliteBossDamage ?? 0;
+    monsterAttackUp += F.monsterAttackUp ?? 0;
+    potionBonus += F.potionBonus ?? 0;
+    potionExtraPct += F.potionExtraPct ?? 0;
+    let finalMaxHp = Math.round(maxHp * (1 + pctMaxHp / 100));
+    if (snap.combos.includes("sacrifice")) finalMaxHp = 1;
+    let finalAttack = Math.round(attack * (1 + pctAtk / 100));
+    if (snap.combos.includes("bloodrage") && hpRatio < 0.35) finalAttack *= 2;
     return {
-      maxHp: Math.round(maxHp),
-      attack: Math.round(attack * (1 + pctAtk / 100)),
+      maxHp: Math.max(1, finalMaxHp),
+      attack: finalAttack,
       defense: Math.round(defense * (1 + pctDef / 100)),
       critRate: Math.min(75, critRate),
       dodgeRate: Math.min(50, dodgeRate),
@@ -3787,7 +5608,16 @@ var Player = class _Player {
       fireDamage,
       goldBonus,
       expBonus,
-      bossDamage
+      bossDamage,
+      critDamage,
+      damageReduction,
+      damageTaken,
+      thorns,
+      armorPen,
+      eliteBossDamage,
+      monsterAttackUp,
+      potionBonus,
+      potionExtraPct
     };
   }
   get maxHp() {
@@ -3815,6 +5645,15 @@ var Player = class _Player {
     const before = this.state.hp;
     this.state.hp = Math.max(0, this.state.hp - amount);
     eventBus.emit("hpChanged", { oldValue: before, newValue: this.state.hp, delta: this.state.hp - before });
+  }
+  /** 生命上限变化后夹取当前生命（如遗物降低上限） */
+  clampHp() {
+    const max = this.maxHp;
+    if (this.state.hp > max) {
+      const before = this.state.hp;
+      this.state.hp = max;
+      eventBus.emit("hpChanged", { oldValue: before, newValue: this.state.hp, delta: this.state.hp - before });
+    }
   }
   gainExp(amount) {
     const bonus = 1 + this.stats().expBonus / 100;
@@ -3875,18 +5714,23 @@ var Player = class _Player {
   addPotion(tier, count = 1) {
     this.state.potions[tier] = this.getPotionCount(tier) + count;
   }
-  /** 使用药水：百分比回复 */
+  /** 使用药水：百分比回复（含遗物药水加成；贪婪之匣禁止用药） */
   usePotion(tier) {
     if (this.getPotionCount(tier) <= 0) return false;
+    if (RelicManager.getInstance().value("noPotion") > 0) return false;
     const def = dataManager.getPotion(tier);
     if (!def) return false;
     this.state.potions[tier] -= 1;
-    const healed = this.heal(Math.round(this.maxHp * def.healPct));
+    const s = this.stats();
+    const pct = def.healPct * (1 + s.potionBonus / 100);
+    const extra = s.potionExtraPct > 0 ? this.maxHp * s.potionExtraPct / 100 : 0;
+    const healed = this.heal(Math.round(this.maxHp * pct + extra));
     eventBus.emit("potionUsed", { tier, healed });
     return true;
   }
-  /** 自动选最优药水（战斗中扣血超过其回复量时用） */
+  /** 自动选最优药水（战斗中扣血超过其回复量时用；贪婪之匣禁用） */
   bestPotionFor(missing) {
+    if (RelicManager.getInstance().value("noPotion") > 0) return null;
     const order = ["crude", "normal", "quality", "strong", "holy"];
     for (const tier of order) {
       const def = dataManager.getPotion(tier);
@@ -3905,28 +5749,42 @@ var Player = class _Player {
   get armor() {
     return this.state.bag.find((e) => e.id === this.state.armorId) ?? null;
   }
+  get accessory() {
+    return this.state.bag.find((e) => e.id === this.state.accessoryId) ?? null;
+  }
   /** 背包中未穿戴的装备 */
   get unequippedBag() {
-    return this.state.bag.filter((e) => e.id !== this.state.weaponId && e.id !== this.state.armorId);
+    const { weaponId, armorId, accessoryId } = this.state;
+    return this.state.bag.filter((e) => e.id !== weaponId && e.id !== armorId && e.id !== accessoryId);
   }
   addEquipment(equip) {
     this.state.bag.push(equip);
     eventBus.emit("equipmentGenerated", { equipment: equip, source: equip.source });
   }
+  /** 槽位当前穿戴的装备 ID（未知槽位 → null） */
+  equippedIdOf(slot) {
+    if (slot === "weapon") return this.state.weaponId;
+    if (slot === "armor") return this.state.armorId;
+    if (slot === "accessory") return this.state.accessoryId;
+    return null;
+  }
+  setEquippedId(slot, id) {
+    if (slot === "weapon") this.state.weaponId = id;
+    else if (slot === "armor") this.state.armorId = id;
+    else if (slot === "accessory") this.state.accessoryId = id;
+  }
   equip(equipId) {
     const equip = this.state.bag.find((e) => e.id === equipId);
     if (!equip) return false;
     const slot = equip.slot;
-    const current = slot === "weapon" ? this.state.weaponId : this.state.armorId;
+    const current = this.equippedIdOf(slot);
     if (current === equipId) return false;
-    if (slot === "weapon") this.state.weaponId = equipId;
-    else this.state.armorId = equipId;
+    this.setEquippedId(slot, equipId);
     eventBus.emit("equipmentEquipped", { slot, equipmentId: equipId, oldId: current });
     return true;
   }
   unequip(slot) {
-    if (slot === "weapon") this.state.weaponId = null;
-    else this.state.armorId = null;
+    this.setEquippedId(slot, null);
     eventBus.emit("equipmentEquipped", { slot, equipmentId: "", oldId: null });
   }
   removeEquipment(equipId) {
@@ -3934,6 +5792,7 @@ var Player = class _Player {
     if (idx < 0) return null;
     if (this.state.weaponId === equipId) this.state.weaponId = null;
     if (this.state.armorId === equipId) this.state.armorId = null;
+    if (this.state.accessoryId === equipId) this.state.accessoryId = null;
     const [removed] = this.state.bag.splice(idx, 1);
     return removed;
   }
@@ -3981,11 +5840,12 @@ var EquipmentGenerator = class _EquipmentGenerator {
     if (!opts.forcedQuality && opts.depth !== void 0 && opts.depth > 1) {
       quality = this.applyDepthQualityFloor(quality, opts.depth);
     }
-    const slot = opts.slot ?? (rng.chance(0.5) ? "weapon" : "armor");
+    const slot = opts.slot ?? this.rollSlot();
     const level = this.rollEquipLevel(player.state.level, floorId);
     const value = this.rollBaseValue(slot, quality, level);
     const attack = slot === "weapon" ? value : 0;
     const defense = slot === "armor" ? value : 0;
+    const accessoryStat = slot === "accessory" ? this.rollAccessoryStat() : void 0;
     const affixes = this.rollAffixes(quality, level);
     const q = dataManager.equipment.quality[quality];
     const baseName = this.baseName(slot, level);
@@ -4003,10 +5863,27 @@ var EquipmentGenerator = class _EquipmentGenerator {
       affixes,
       attack,
       defense,
+      accessoryStat,
+      accessoryValue: accessoryStat ? value : void 0,
       sellPrice,
       buyPrice,
       source
     };
+  }
+  /** 槽位掷骰（配置驱动：武器/胸甲/饰品；缺省回退 50/50 无饰品） */
+  rollSlot() {
+    const w = dataManager.equipment.slotWeights;
+    if (!w) return rng.chance(0.5) ? "weapon" : "armor";
+    const entries = Object.entries(w).filter(([, v]) => v > 0);
+    if (entries.length === 0) return "weapon";
+    return rng.pickWeighted(entries, ([, v]) => v)[0];
+  }
+  /** 饰品主属性掷骰（暴击 / 闪避） */
+  rollAccessoryStat() {
+    const w = dataManager.equipment.accessoryStatWeights ?? { crit: 50, dodge: 50 };
+    const entries = Object.entries(w).filter(([, v]) => v > 0);
+    if (entries.length === 0) return "crit";
+    return rng.pickWeighted(entries, ([, v]) => v)[0];
   }
   /** 教学关固定基础装备（破烂铁剑） */
   tutorialWeapon() {
@@ -4053,7 +5930,7 @@ var EquipmentGenerator = class _EquipmentGenerator {
   rebuild(e, over) {
     const quality = over.quality ?? e.quality;
     const level = over.level ?? e.level;
-    const value = over.value ?? (e.slot === "weapon" ? e.attack : e.defense);
+    const value = over.value ?? (e.slot === "weapon" ? e.attack : e.slot === "armor" ? e.defense : e.accessoryValue ?? 0);
     const affixes = over.affixes ?? e.affixes;
     const q = dataManager.equipment.quality[quality];
     const name = this.buildName(q.prefix, e.baseName, affixes);
@@ -4068,31 +5945,41 @@ var EquipmentGenerator = class _EquipmentGenerator {
       affixes,
       attack: e.slot === "weapon" ? value : 0,
       defense: e.slot === "armor" ? value : 0,
+      accessoryValue: e.slot === "accessory" ? value : void 0,
       sellPrice,
       buyPrice
     };
   }
-  /** 基础数值：等级段×品质范围；空缺(null)回退到更低的可用品质；神话=传说×1.43 */
+  /** 基础数值：等级段×品质范围；空缺(null)回退到更低的可用品质；神话=传说×1.43。
+   *  饰品为百分点（一位小数，前期约 1% 起，随品质与等级成长）。 */
   rollBaseValue(slot, quality, level) {
-    const table = slot === "weapon" ? dataManager.equipment.weaponTable : dataManager.equipment.armorTable;
+    const tables = dataManager.equipment;
+    const table = slot === "weapon" ? tables.weaponTable : slot === "armor" ? tables.armorTable : tables.accessoryTable;
     const row = table.find((r) => level >= r.minEquipLevel && level <= r.maxEquipLevel) ?? table[table.length - 1];
     const values = row.values;
     let range = values[quality] ?? null;
     if (!range && quality === "mythic") {
       const leg = values["legendary"];
       if (leg) {
-        const mythicFactor = dataManager.equipment.mythicFromLegendary;
-        range = [Math.round(leg[0] * mythicFactor), Math.round(leg[1] * mythicFactor)];
+        const f = tables.mythicFromLegendary;
+        range = slot === "accessory" ? [this.dec1(leg[0] * f), this.dec1(leg[1] * f)] : [Math.round(leg[0] * f), Math.round(leg[1] * f)];
       }
     }
-    const order = dataManager.equipment.qualityOrder;
+    const order = tables.qualityOrder;
     let qi = order.indexOf(quality);
     while (!range && qi > 0) {
       qi -= 1;
       range = values[order[qi]] ?? null;
     }
-    if (!range) range = [1, 2];
+    if (!range) range = slot === "accessory" ? [0.5, 1] : [1, 2];
+    if (slot === "accessory") {
+      return this.dec1(range[0] + Math.random() * (range[1] - range[0]));
+    }
     return rng.randInt(range[0], range[1]);
+  }
+  /** 保留一位小数 */
+  dec1(v) {
+    return Math.round(v * 10) / 10;
   }
   /** 词条生成：数量按品质（含高等级加成），不重复，品质下限过滤 */
   rollAffixes(quality, level) {
@@ -4115,7 +6002,8 @@ var EquipmentGenerator = class _EquipmentGenerator {
     });
   }
   baseName(slot, level) {
-    const table = slot === "weapon" ? dataManager.equipment.baseNames.weapon : dataManager.equipment.baseNames.armor;
+    const names = dataManager.equipment.baseNames;
+    const table = (slot === "weapon" ? names.weapon : slot === "armor" ? names.armor : names.accessory) ?? names.weapon;
     const row = table.find((r) => level >= r.minEquipLevel && level <= r.maxEquipLevel) ?? table[table.length - 1];
     return row.names[0];
   }
@@ -4255,10 +6143,11 @@ for (const f of [7, 20, 45]) {
       floorsChecked++;
       for (const attr of ["hp", "attack", "defense"]) {
         const normals = mons.filter((m) => !m.isElite);
-        const pool = normals.length > 0 ? normals : mons;
-        const nMin = Math.min(...pool.map((m) => m.stats[attr]));
-        const nMax = Math.max(...pool.map((m) => m.stats[attr]));
-        check(`\u666E\u901A\u6781\u5DEE\u22641.4 f${f}`, nMax <= nMin * 1.4 + EPS, `${attr} ${nMin}~${nMax}`);
+        if (normals.length > 0) {
+          const nMin = Math.min(...normals.map((m) => m.stats[attr]));
+          const nMax = Math.max(...normals.map((m) => m.stats[attr]));
+          check(`\u666E\u901A\u6781\u5DEE\u22641.4 f${f}`, nMax <= nMin * 1.4 + EPS, `${attr} ${nMin}~${nMax}`);
+        }
         const aMin = Math.min(...mons.map((m) => m.stats[attr]));
         const aMax = Math.max(...mons.map((m) => m.stats[attr]));
         check(`\u5168\u602A\u6781\u5DEE\u22641.8 f${f}`, aMax <= aMin * 1.8 + EPS, `${attr} ${aMin}~${aMax}`);
@@ -4421,7 +6310,7 @@ for (const f of [7, 20, 45]) {
           let connected = false;
           while (queue.length > 0 && !connected) {
             const cur = queue.shift();
-            for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+            for (const [dx, dy] of DIRS4) {
               const nx = cur.x + dx, ny = cur.y + dy, k = `${nx},${ny}`;
               if (!inRoom(nx, ny) || connected) continue;
               if (floor.grid[ny][nx] !== 0 || blocked.has(k) || seen.has(k)) continue;

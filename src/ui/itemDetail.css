@@ -1,0 +1,131 @@
+/* 物品详情页（信息卡片）：点击遗物 / 装备 / 药水 / 钥匙 打开 */
+/* 层级：位于 #overlay-layer（z-index 300）内，抬到其它面板之上，但不盖过商城悬浮/确认弹窗 */
+.overlay-panel[data-panel="itemDetail"] {
+  z-index: 350;
+}
+.op-box-item {
+  width: min(560px, 94vw);
+}
+
+.item-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 顶部：大图标 + 名称 + 标签 */
+.id-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.id-icon {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #666;
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 32%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02));
+  font-size: 34px;
+  line-height: 1;
+}
+.id-icon-img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  font-size: 36px;
+  line-height: 46px;
+}
+.id-hero-main {
+  min-width: 0;
+}
+.id-name {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.id-sub {
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+.id-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.id-tag {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border-strong);
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* 分节：标题 + 内容 */
+.id-sec {
+  border-top: 1px solid var(--panel-border);
+  padding-top: 10px;
+}
+.id-sec-title {
+  font-size: 12.5px;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.id-sec-body {
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+.id-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 18px;
+}
+.id-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.id-stat-k {
+  color: var(--text-dim);
+}
+.id-stat-v {
+  font-weight: 600;
+  text-align: right;
+}
+.id-text {
+  white-space: pre-wrap;
+}
+.id-lore {
+  font-style: italic;
+  color: var(--text-dim);
+}
+.id-combo {
+  padding: 3px 0;
+}
+.id-combo b {
+  color: #ffd76a;
+}
+.id-combo .ok {
+  color: #6beb9a;
+}
+.id-acquire .dim {
+  display: block;
+  margin-top: 3px;
+}
+.id-empty {
+  color: var(--text-dim);
+}
+
+/* 窄屏：数值单列 */
+@media (max-width: 460px) {
+  .id-stats {
+    grid-template-columns: 1fr;
+  }
+}

@@ -25,6 +25,8 @@ export class SaveManager {
   private constructor() {
     // 自动存档：仅楼层切换时（初始层第1层不触发）
     eventBus.on('floorChanged', p => {
+      // 房间编辑器预览会临时切换楼层，不能写进存档（否则预览房会被当成玩家所在层）
+      if (gameState.editorPreview) return;
       if (p.toFloor > dataManager.mapGen.initialFloor) this.autoSave();
     });
     eventBus.on('monsterDefeated', () => { this.stats.totalMonstersDefeated++; });
@@ -87,10 +89,12 @@ export class SaveManager {
       if (data.version !== dataManager.config.save.version) {
         Logger.warn(`[Save] 版本不匹配 ${data.version} → ${dataManager.config.save.version}`);
       }
-      // 旧存档兼容：补默认快捷栏
+      // 旧存档兼容：补默认快捷栏 / 饰品槽（饰品为后加槽位，旧档无此字段）
       if (!Array.isArray(data.player.hotbar) || data.player.hotbar.length !== 5) {
         data.player.hotbar = [null, null, null, null, null];
       }
+      data.player.accessoryId ??= null;
+      data.player.relics ??= [];
       Player.getInstance().restore(data.player);
       FloorManager.getInstance().restoreFloor(data.floor);
       WorldManager.getInstance().loadFloor(data.floor, data.entityStates);

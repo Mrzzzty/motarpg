@@ -48,10 +48,11 @@ export class BlacksmithPanel {
           .sort((a, b) => Number(!!b.isFavorite) - Number(!!a.isFavorite))
           .map(e => {
             const q = dataManager.equipment.quality[e.quality];
-            const equipped = e.id === player.state.weaponId || e.id === player.state.armorId;
+            const equipped = e.id === player.state.weaponId || e.id === player.state.armorId
+              || e.id === player.state.accessoryId;
             return `<div class="bag-cell ${e.id === this.selectedId ? 'active' : ''}" data-id="${e.id}"
                          style="border-color:${q.color};background:rgba(30,34,42,0.9)">
-              <div class="cell-icon" style="border-color:${q.color}">${e.slot === 'weapon' ? '🗡️' : '🛡️'}</div>
+              <div class="cell-icon" style="border-color:${q.color}">${e.slot === 'weapon' ? '🗡️' : e.slot === 'armor' ? '🛡️' : '💍'}</div>
               <div class="cell-name" style="color:${q.color}">${e.name}</div>
               <div class="cell-sub dim">Lv.${e.level}${equipped ? ' 已穿戴' : ''}</div>
             </div>`;
@@ -66,11 +67,13 @@ export class BlacksmithPanel {
       const costQuality = canQuality ? dataManager.equipment.quality[qualityUp(sel.quality)].basePrice * 3 + sel.level * 15 : 0;
       detail = `
         <div class="eq-detail">
-          <div class="eq-title" style="color:${q.color}">${sel.slot === 'weapon' ? '🗡️' : '🛡️'} ${sel.name}</div>
-          <div class="dim">品质：${q.name} · Lv.${sel.level}${sel.id === player.state.weaponId || sel.id === player.state.armorId ? ' · 已穿戴' : ''}</div>
+          <div class="eq-title" style="color:${q.color}">${sel.slot === 'weapon' ? '🗡️' : sel.slot === 'armor' ? '🛡️' : '💍'} ${sel.name}</div>
+          <div class="dim">品质：${q.name} · Lv.${sel.level}${sel.id === player.state.weaponId || sel.id === player.state.armorId || sel.id === player.state.accessoryId ? ' · 已穿戴' : ''}</div>
           <div class="eq-stats">
-            <div>⚔️ 攻击力 <b>${sel.attack}</b></div>
-            <div>🛡️ 防御力 <b>${sel.defense}</b></div>
+            ${sel.slot === 'accessory'
+              ? `<div>${sel.accessoryStat === 'crit' ? '🎯 暴击率' : '🌀 闪避率'} <b>${sel.accessoryValue ?? 0}%</b></div>`
+              : `<div>⚔️ 攻击力 <b>${sel.attack}</b></div>
+                 <div>🛡️ 防御力 <b>${sel.defense}</b></div>`}
           </div>
           ${sel.affixes.length > 0 ? `<div class="affix-list">${sel.affixes.map(a => `<div class="affix-row">✦ ${a.name} ${a.value}${a.isPercent ? '%' : ''}</div>`).join('')}</div>` : ''}
           <div class="eq-actions bs-actions">

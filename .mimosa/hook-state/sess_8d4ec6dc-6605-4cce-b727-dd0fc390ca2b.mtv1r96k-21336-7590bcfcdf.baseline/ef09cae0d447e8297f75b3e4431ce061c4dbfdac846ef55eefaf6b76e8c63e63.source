@@ -1,0 +1,115 @@
+/**
+ * 数值计算器：楼层锚点插值（怪物属性/金币/经验）、玩家成长、升级经验。
+ */
+import type { MonsterDef, MonsterStats } from '../types';
+import { dataManager } from '../core/DataManager';
+import type { GameConfig } from '../core/DataManager';
+
+export class StatCalculator {
+  private static instance: StatCalculator;
+  private constructor() {}
+  static getInstance(): StatCalculator {
+    if (!StatCalculator.instance) StatCalculator.instance = new StatCalculator();
+    return StatCalculator.instance;
+  }
+
+  private get anchors(): GameConfig['floorAnchors'] { return dataManager.config.floorAnchors; }
+
+  /**
+   * 深度倍率基准表（P0-1）：同楼层不同深度房间的难度与收益梯度。
+   * depth=1 为基准（倍率恒为 1.0，与未接入深度时完全一致）；
+   * 按楼层区间差异化梯度（1~10 / 11~30 / 31+），depth≥4 线性增长。
+   */
+  depthMultiplier(floorId: number, depth: number): number {
+    const band = floorId <= 10 ? 0 : floorId <= 30 ? 1 : 2;
+    if (depth <= 0) return [0.8, 0.75, 0.7][band];
+    if (depth === 1) return 1.0;
+    if (depth === 2) return [1.0, 1.1, 1.1][band];
+    if (depth === 3) return [1.1, 1.1, 1.2][band];
+    const over = depth - 4;
+    return [1.15 + over * 0.1, 1.15 + over * 0.15, 1.2 + over * 0.2][band];
+  }
+
+  /** 楼层锚点分段线性插值；超出末锚点后按 overflow 比例增长 */
+  anchorValue(series: number[], floorId: number, overflowRate: number): number {
+    const floors = this.anchors.floors;
+    const last = floors.length - 1;
+    if (floorId <= floors[0]) return series[0];
+    if (floorId >= floors[last]) {
+      const over = floorId - floors[last];
+      return series[last] * Math.pow(1 + overflowRate, over);
+    }
+    for (let i = 0; i < last; i++) {
+      if (floorId >= floors[i] && floorId <= floors[i + 1]) {
+        const t = (floorId - floors[i]) / (floors[i + 1] - floors[i]);
+        return series[i] + (series[i + 1] - series[i]) * t;
+      }
+    }
+    return series[last];
+  }
+
+  /**
+   * 怪物战斗属性：楼层基准 × 怪物倍率 × 深度倍率 × 精英/Boss 加成。
+   * depth 缺省 1（倍率 1.0）：所有旧调用行为与接入深度前完全一致。
+   * 深度倍率同时作用于金币/经验掉落（P0-1：风险收益对应）。
+   */
+  monsterStats(def: MonsterDef, floorId: number, isElite: boolean, depth = 1): MonsterStats {
+    const cfg = dataManager.config;
+    const a = this.anchors;
+    const round = (v: number) => Math.max(1, Math.round(v));
+    const isBoss = def.category === 'boss';
+    const depthMul = this.depthMultiplier(floorId, depth);
+    let hp = this.anchorValue(a.hp, floorId, a.overflowPerFloor.hp) * def.hpMul * depthMul;
+    let atk = this.anchorValue(a.atk, floorId, a.overflowPerFloor.atk) * def.atkMul * depthMul;
+    let defv = this.anchorValue(a.def, floorId, a.overflowPerFloor.def) * def.defMul * depthMul;
+    let exp = this.anchorValue(a.exp, floorId, a.overflowPerFloor.exp) * def.expMul * depthMul;
+    let gold = this.anchorValue(a.gold, floorId, a.overflowPerFloor.gold) * def.goldMul * depthMul;
+
+    if (isBoss) {
+      // Boss在楼层基准上额外放大（bossStatBonus.hp 为乘法加成基数）
+      hp *= 1 + cfg.bossStatBonus.hp;
+      atk *= 1 + cfg.bossStatBonus.atk;
+      defv *= 1 + cfg.bossStatBonus.def;
+    } else if (isElite) {
+      hp *= dataManager.monsters.eliteStatMultiplier;
+      atk *= dataManager.monsters.eliteStatMultiplier;
+      defv *= dataManager.monsters.eliteStatMultiplier;
+      gold *= dataManager.monsters.eliteGoldMultiplier;
+      exp *= dataManager.monsters.eliteExpMultiplier;
+    }
+
+    return {
+      name: isElite ? `精英·${def.name}` : def.name,
+      hp: round(hp),
+      attack: round(atk),
+      defense: round(defv),
+      exp: round(exp),
+      gold: round(gold),
+      isElite,
+      isBoss,
+    };
+  }
+
+  /** 玩家到达某等级时的基础属性（不含装备） */
+  playerBaseAt(level: number): { maxHp: number; attack: number; defense: number } {
+    const cfg = dataManager.config;
+    const base = cfg.playerBase;
+    let hp = base.maxHp;
+    let atk = base.attack;
+    let def = base.defense;
+    for (let lv = 2; lv <= level; lv++) {
+      const row = cfg.growthTable.find(g => lv >= g.minLevel && lv <= g.maxLevel)
+        ?? cfg.growthTable[cfg.growthTable.length - 1];
+      hp += row.hp;
+      atk += row.attack;
+      def += row.defense;
+    }
+    return { maxHp: hp, attack: atk, defense: def };
+  }
+
+  /** 升到下一级所需经验 */
+  expToNext(level: number): number {
+    const { base, power } = dataManager.config.expFormula;
+    return Math.round(base * Math.pow(level, power));
+  }
+}

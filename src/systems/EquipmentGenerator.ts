@@ -8,7 +8,7 @@
  * - 回收价 = 基础价(品质) × (1+等级×0.05) × (1+词条数×0.15)
  */
 import type {
-  AffixInstance, Equipment, EquipSlot, Quality,
+  AccessoryStat, AffixInstance, Equipment, EquipSlot, Quality,
 } from '../types';
 import { dataManager } from '../core/DataManager';
 import { Player } from '../entities/Player';
@@ -50,13 +50,14 @@ export class EquipmentGenerator {
     if (!opts.forcedQuality && opts.depth !== undefined && opts.depth > 1) {
       quality = this.applyDepthQualityFloor(quality, opts.depth);
     }
-    const slot: EquipSlot = opts.slot ?? (rng.chance(0.5) ? 'weapon' : 'armor');
+    const slot: EquipSlot = opts.slot ?? this.rollSlot();
     const level = this.rollEquipLevel(player.state.level, floorId);
 
-    // 基础数值
+    // 基础数值（武器=攻击 / 胸甲=防御 / 饰品=暴击或闪避百分点）
     const value = this.rollBaseValue(slot, quality, level);
     const attack = slot === 'weapon' ? value : 0;
     const defense = slot === 'armor' ? value : 0;
+    const accessoryStat = slot === 'accessory' ? this.rollAccessoryStat() : undefined;
 
     // 词条
     const affixes = this.rollAffixes(quality, level);
@@ -79,10 +80,29 @@ export class EquipmentGenerator {
       affixes,
       attack,
       defense,
+      accessoryStat,
+      accessoryValue: accessoryStat ? value : undefined,
       sellPrice,
       buyPrice,
       source,
     };
+  }
+
+  /** 槽位掷骰（配置驱动：武器/胸甲/饰品；缺省回退 50/50 无饰品） */
+  private rollSlot(): EquipSlot {
+    const w = dataManager.equipment.slotWeights;
+    if (!w) return rng.chance(0.5) ? 'weapon' : 'armor';
+    const entries = Object.entries(w).filter(([, v]) => v > 0) as [EquipSlot, number][];
+    if (entries.length === 0) return 'weapon';
+    return rng.pickWeighted(entries, ([, v]) => v)[0];
+  }
+
+  /** 饰品主属性掷骰（暴击 / 闪避） */
+  private rollAccessoryStat(): AccessoryStat {
+    const w = dataManager.equipment.accessoryStatWeights ?? { crit: 50, dodge: 50 };
+    const entries = Object.entries(w).filter(([, v]) => v > 0) as [AccessoryStat, number][];
+    if (entries.length === 0) return 'crit';
+    return rng.pickWeighted(entries, ([, v]) => v)[0];
   }
 
   /** 教学关固定基础装备（破烂铁剑） */
@@ -139,7 +159,8 @@ export class EquipmentGenerator {
   ): Equipment {
     const quality = over.quality ?? e.quality;
     const level = over.level ?? e.level;
-    const value = over.value ?? (e.slot === 'weapon' ? e.attack : e.defense);
+    const value = over.value
+      ?? (e.slot === 'weapon' ? e.attack : e.slot === 'armor' ? e.defense : (e.accessoryValue ?? 0));
     const affixes = over.affixes ?? e.affixes;
     const q = dataManager.equipment.quality[quality];
     const name = this.buildName(q.prefix, e.baseName, affixes);
@@ -151,13 +172,18 @@ export class EquipmentGenerator {
       name, level, quality, affixes,
       attack: e.slot === 'weapon' ? value : 0,
       defense: e.slot === 'armor' ? value : 0,
+      accessoryValue: e.slot === 'accessory' ? value : undefined,
       sellPrice, buyPrice,
     };
   }
 
-  /** 基础数值：等级段×品质范围；空缺(null)回退到更低的可用品质；神话=传说×1.43 */
+  /** 基础数值：等级段×品质范围；空缺(null)回退到更低的可用品质；神话=传说×1.43。
+   *  饰品为百分点（一位小数，前期约 1% 起，随品质与等级成长）。 */
   private rollBaseValue(slot: EquipSlot, quality: Quality, level: number): number {
-    const table = slot === 'weapon' ? dataManager.equipment.weaponTable : dataManager.equipment.armorTable;
+    const tables = dataManager.equipment;
+    const table = slot === 'weapon' ? tables.weaponTable
+      : slot === 'armor' ? tables.armorTable
+      : tables.accessoryTable;
     const row = table.find(r => level >= r.minEquipLevel && level <= r.maxEquipLevel)
       ?? table[table.length - 1];
     const values = row.values as Record<string, [number, number] | null>;
@@ -165,20 +191,29 @@ export class EquipmentGenerator {
     if (!range && quality === 'mythic') {
       const leg = values['legendary'];
       if (leg) {
-        const mythicFactor = dataManager.equipment.mythicFromLegendary;
-        range = [Math.round(leg[0] * mythicFactor), Math.round(leg[1] * mythicFactor)];
+        const f = tables.mythicFromLegendary;
+        range = slot === 'accessory'
+          ? [this.dec1(leg[0] * f), this.dec1(leg[1] * f)]
+          : [Math.round(leg[0] * f), Math.round(leg[1] * f)];
       }
     }
     // 空缺品质回退：向更低品质寻找
-    const order = dataManager.equipment.qualityOrder;
+    const order = tables.qualityOrder;
     let qi = order.indexOf(quality);
     while (!range && qi > 0) {
       qi -= 1;
       range = values[order[qi]] ?? null;
     }
-    if (!range) range = [1, 2];
+    if (!range) range = slot === 'accessory' ? [0.5, 1] : [1, 2];
+    if (slot === 'accessory') {
+      // 百分点取一位小数（整数化会把手感压成 0/1 跳变）
+      return this.dec1(range[0] + Math.random() * (range[1] - range[0]));
+    }
     return rng.randInt(range[0], range[1]);
   }
+
+  /** 保留一位小数 */
+  private dec1(v: number): number { return Math.round(v * 10) / 10; }
 
   /** 词条生成：数量按品质（含高等级加成），不重复，品质下限过滤 */
   private rollAffixes(quality: Quality, level: number): AffixInstance[] {
@@ -204,7 +239,9 @@ export class EquipmentGenerator {
   }
 
   private baseName(slot: EquipSlot, level: number): string {
-    const table = slot === 'weapon' ? dataManager.equipment.baseNames.weapon : dataManager.equipment.baseNames.armor;
+    const names = dataManager.equipment.baseNames;
+    const table = (slot === 'weapon' ? names.weapon : slot === 'armor' ? names.armor : names.accessory)
+      ?? names.weapon;
     const row = table.find(r => level >= r.minEquipLevel && level <= r.maxEquipLevel) ?? table[table.length - 1];
     return row.names[0];
   }

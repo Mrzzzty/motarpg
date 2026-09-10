@@ -16,6 +16,9 @@ import { CameraController } from './CameraController';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { BattlePanel } from '../ui/BattlePanel';
 import { SummitCinematic } from '../ui/SummitCinematic';
+import { RelicManager } from '../systems/RelicManager';
+import { DifficultySystem } from '../systems/DifficultySystem';
+import { DIRS4, manhattan } from '../utils/Grid';
 
 export class GameController {
   private static instance: GameController;
@@ -102,7 +105,7 @@ export class GameController {
       let ty = targetY;
       const blocked = !world.isWalkable(tx, ty) || !!world.getEntityAt(tx, ty);
       if (blocked) {
-        const adj = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+        const adj = DIRS4
           .map(([dx, dy]) => ({ x: tx + dx, y: ty + dy }))
           .find(p => world.isWalkable(p.x, p.y) && !world.getEntityAt(p.x, p.y));
         if (!adj) {
@@ -200,7 +203,7 @@ export class GameController {
         path.shift(); // 去掉起点
         return path;
       }
-      for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+      for (const [dx, dy] of DIRS4) {
         const nx = cur.x + dx;
         const ny = cur.y + dy;
         const k = key(nx, ny);
@@ -218,6 +221,8 @@ export class GameController {
 
   interact(entity: MapEntity): void {
     if (this.inputBlocked) return;
+    // 供事件系统的 on_interact 触发（数据侧按 roomTypes 决定是否响应）
+    eventBus.emit('entityInteracted', { kind: entity.kind, entityId: entity.id });
     const world = WorldManager.getInstance();
     const player = Player.getInstance();
     const confirm = ConfirmDialog.getInstance();
@@ -343,9 +348,15 @@ export class GameController {
     const world = WorldManager.getInstance();
     const room = world.getRoomAt(entity.x, entity.y);
     const rewards = ChestSystem.getInstance().open(entity, room?.type ?? 'combat', room?.depth ?? 1);
+    // 遗物宝箱：三选一面板由 RelicChoicePanel 接管，这里只给飘字反馈
+    if (entity.chestTier === 'relic') {
+      ParticleSystem.getInstance().floatText(entity.x, entity.y, '遗物宝箱！', '#d9a6ff');
+      return;
+    }
     let text = `+${rewards.gold} 金币`;
     if (rewards.potion) text += ` +${dataManager.getPotion(rewards.potion)?.name ?? '药水'}`;
     if (rewards.equipment) text += ' +装备';
+    if (rewards.relic) text += ' +遗物';
     ParticleSystem.getInstance().floatText(entity.x, entity.y, text, '#ffdd44');
     // 获得提示（右上角 toast，2.8s 自动收回）
     if (rewards.gold > 0) {
@@ -377,6 +388,23 @@ export class GameController {
     this.lastRoomId = '';
     this.checkRoomEnter();
     this.checkHiddenDiscovery();
+    this.applyRelicFloorEffects();
+  }
+
+  /** 遗物进层 / 事件型灾厄 钩子 */
+  private applyRelicFloorEffects(): void {
+    const rm = RelicManager.getInstance();
+    const floorId = Player.getInstance().state.currentFloor;
+    // 进层触发（再生符文 / 暖炉 / 钥匙串 / 点金指 等）
+    for (const line of rm.onFloorEnter()) {
+      eventBus.emit('notification', { message: line, type: 'info', icon: '🏺' });
+    }
+    // C 类·事件型灾厄：前期（第 8 层起，中层前）低概率获得，尚未持有时
+    const hasEventCurse = rm.owned().some(d => d.subtype === 'event');
+    if (!hasEventCurse && floorId >= 8 && floorId < 41 && Math.random() < 0.25) {
+      const curse = rm.grantEventCurse();
+      if (curse) eventBus.emit('notification', { message: `事件灾厄：${curse.name}（第 41 层后可净化）`, type: 'warning', icon: '☠️' });
+    }
   }
 
   /**
@@ -391,7 +419,7 @@ export class GameController {
     for (const room of [...floor.hiddenRooms]) {
       const ent = room.hiddenEntrance;
       if (!ent) continue;
-      if (Math.abs(p.x - ent.x) + Math.abs(p.y - ent.y) <= 1) {
+      if (manhattan(p, ent) <= 1) {
         world.revealHiddenRoom(room);
         eventBus.emit('hiddenRoomDiscovered', { roomId: room.id, x: ent.x, y: ent.y });
         eventBus.emit('notification', { message: '墙后传来微光——发现了一间隐藏房间！', type: 'success', icon: '🕯️' });
@@ -412,7 +440,10 @@ export class GameController {
 
     player.state.currentRoomId = roomId;
     const name = dataManager.texts.roomNames?.[room.type] ?? room.type;
-    eventBus.emit('roomEntered', { roomId, roomType: room.type, depth: room.depth, name });
+    eventBus.emit('roomEntered', {
+      roomId, roomType: room.type, depth: room.depth, name,
+      risk: room.risk ?? 1, rewardMul: room.rewardMul ?? 1,
+    });
 
     // 休整房：首次进入回复30%生命
     if (room.type === 'rest' && world.getEntityState(`rest_${roomId}`).isUsed !== true) {
@@ -436,6 +467,18 @@ export class GameController {
   /** 死亡处理由 playerDied 事件触发（BattleSystem 等发出）；此处只做复活结算 */
   handleDeath(): void {
     const player = Player.getInstance();
+    // 遗物复活（不灭之魂 / 不朽壁垒）：本轮一次
+    const rm = RelicManager.getInstance();
+    const revivePct = rm.value('revive');
+    const reviveOnce = rm.value('reviveOnce');
+    if (!player.state.relicReviveUsed && (revivePct > 0 || reviveOnce > 0)) {
+      player.state.relicReviveUsed = true;
+      const pct = revivePct > 0 ? revivePct : 30;
+      const healed = player.heal(Math.round(player.maxHp * pct / 100));
+      eventBus.emit('notification', { message: `不灭之魂：原地复活（+${healed}）`, type: 'success', icon: '💫' });
+      eventBus.emit('playerRevived', { penaltyGold: 0 });
+      return;
+    }
     const cfg = dataManager.config.revive;
     const penalty = Math.round(player.state.gold * cfg.goldPenaltyRate);
     const world = WorldManager.getInstance();
@@ -452,9 +495,12 @@ export class GameController {
     eventBus.emit('playerRevived', { penaltyGold: penalty });
   }
 
-  /** 重开新局 */
-  restart(): void {
-    FloorManager.getInstance().clearPregen(); // 新一局：清掉旧预生成楼层
+  /**
+   * 新一局开始：重置玩家与遗物运行时，并按当前难度授予开局灾厄（A 类）与专属遗物
+   * （摇篮曲 → 摇篮 R065 / 天堂 → 命定之死 X009）。
+   * 标题屏「开始新游戏」与暂停菜单「重新开始」都必须调用此方法，否则开局遗物不会发放。
+   */
+  startNewRun(): void {
     Player.getInstance().restore({
       ...Player.getInstance().state,
       level: 1, exp: 0, hp: dataManager.config.playerBase.maxHp,
@@ -463,8 +509,29 @@ export class GameController {
       baseDefense: dataManager.config.playerBase.defense,
       gold: 0, keys: 0,
       potions: { crude: 0, normal: 0, quality: 0, strong: 0, holy: 0 },
-      weaponId: null, armorId: null, bag: [],
+      weaponId: null, armorId: null, accessoryId: null, bag: [],
+      relics: [], relicReviveUsed: false,
     });
+    // 遗物：重置运行时 + 高难度开局灾厄（A 类）
+    RelicManager.getInstance().resetRun();
+    const startCurses = DifficultySystem.getInstance().startCurseCount();
+    if (startCurses > 0) {
+      for (const c of RelicManager.getInstance().grantStartCurses(startCurses)) {
+        eventBus.emit('notification', { message: `开局灾厄：${c.name}`, type: 'warning', icon: '☠️' });
+      }
+    }
+    // 难度专属开局遗物（摇篮曲 → 摇篮 / 天堂 → 命定之死）
+    for (const id of DifficultySystem.getInstance().startRelics()) {
+      const relic = RelicManager.getInstance().def(id);
+      if (!relic || !RelicManager.getInstance().add(id, { silent: true })) continue;
+      eventBus.emit('notification', { message: `开局遗物：${relic.name}`, type: 'info', icon: '🏺' });
+    }
+  }
+
+  /** 重开新局 */
+  restart(): void {
+    FloorManager.getInstance().clearPregen(); // 新一局：清掉旧预生成楼层
+    this.startNewRun();
     FloorManager.getInstance().enterFloor(1, false);
     CameraController.getInstance().snapToPlayer();
     this.lastRoomId = '';

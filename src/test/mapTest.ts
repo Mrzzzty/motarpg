@@ -5,6 +5,7 @@ declare const process: { exit(code?: number): void };
 import { dataManager } from '../core/DataManager';
 import { MapGenerator } from '../map/MapGenerator';
 import { MapValidator } from '../map/MapValidator';
+import { DIRS4 } from '../utils/Grid';
 import type { FloorMap } from '../types';
 
 interface Stats {
@@ -44,7 +45,7 @@ function gridReachable(floor: FloorMap): boolean {
   seen.add(`${floor.entryX},${floor.entryY}`);
   while (queue.length > 0) {
     const cur = queue.shift()!;
-    for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+    for (const [dx, dy] of DIRS4) {
       const nx = cur.x + dx;
       const ny = cur.y + dy;
       const key = `${nx},${ny}`;
@@ -88,6 +89,15 @@ function run(): void {
 
   const FLOORS = [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 15, 19, 20, 21, 25, 30, 35, 40, 45, 50, 60];
   const ITER = 300;
+  // 悬崖地形（编码 4）统计：出现次数 / 实体压在悬崖上的违规数
+  let cliffCells = 0;
+  let cliffOnEntity = 0;
+  /** 区段末 Boss 层（下一层是新区段起点）终点房的遗物宝箱缺失计数 */
+  const RELIC_CHEST_FLOORS = [15, 40, 60, 80, 100];
+  let relicChestMissing = 0;
+  /** 怪物阵容：可用普通怪少于 2 种的楼层 / Boss 与楼层区间不匹配的次数 */
+  let thinMonsterFloors = 0;
+  let bossMismatch = 0;
 
   for (const floorId of FLOORS) {
     for (let it = 0; it < ITER; it++) {
@@ -155,11 +165,57 @@ function run(): void {
       // 终点房必有楼梯
       const endRoom = floor.rooms[floor.rooms.length - 1];
       if (!endRoom.entities.some(e => e.kind === 'stair')) stats.failures++;
+
+      // 区段末 Boss 层：终点房必须有一个「遗物宝箱」（三选一奖励）
+      if (RELIC_CHEST_FLOORS.includes(floorId)) {
+        const has = endRoom.entities.some(e => e.kind === 'chest' && e.chestTier === 'relic');
+        if (!has) { relicChestMissing++; console.log(`[遗物宝箱缺失] 楼层${floorId}`); }
+      }
+
+      // 怪物阵容：每层至少 2 种可用普通怪（层级主题阵容不应出现空档）
+      const availNormals = dataManager.monsters.monsters.filter(m =>
+        m.category === 'normal' && floorId >= m.floorMin && floorId <= m.floorMax);
+      if (availNormals.length < 2) {
+        thinMonsterFloors++;
+        console.log(`[怪物池过薄] 楼层${floorId} 仅 ${availNormals.length} 种`);
+      }
+      // Boss 分层：出现的 Boss 必须覆盖当前楼层
+      const bossEnt = floor.rooms.flatMap(r => r.entities).find(e => e.kind === 'boss');
+      if (bossEnt) {
+        const bdef = dataManager.getMonster(bossEnt.monsterId ?? '');
+        if (!bdef || floorId < bdef.floorMin || floorId > bdef.floorMax) {
+          bossMismatch++;
+          console.log(`[Boss 不匹配] 楼层${floorId} → ${bossEnt.monsterId}`);
+        }
+      }
+
+      // 悬崖地形（编码 4）：统计格数 + 校验没有实体落在悬崖上（火把挂墙，豁免）
+      for (const room of floor.rooms) {
+        for (const e of room.entities) {
+          // 仅校验「实体压在悬崖(4)上」：火把在墙(1)、柱子自身即装饰(2)，均属正常
+          if (floor.grid[e.y]?.[e.x] === 4) {
+            cliffOnEntity++;
+            console.log(`[悬崖冲突] 楼层${floorId} 房${room.id} 实体${e.kind} @${e.x},${e.y}`);
+          }
+        }
+        for (let y = room.y + 1; y <= room.y + room.height - 2; y++) {
+          for (let x = room.x + 1; x <= room.x + room.width - 2; x++) {
+            if (floor.grid[y][x] === 4) cliffCells++;
+          }
+        }
+      }
     }
   }
 
   console.log('=== 阶段一地图生成压力测试 ===');
   console.log(`生成次数: ${stats.attempts}  失败断言: ${stats.failures}`);
+  console.log(`悬崖格总数: ${cliffCells}  实体压悬崖: ${cliffOnEntity}`);
+  if (cliffOnEntity > 0) stats.failures++;
+  console.log(`遗物宝箱缺失: ${relicChestMissing}（期望 0）`);
+  if (relicChestMissing > 0) stats.failures++;
+  console.log(`怪物池过薄楼层: ${thinMonsterFloors}  Boss 与楼层不匹配: ${bossMismatch}（期望均为 0）`);
+  if (thinMonsterFloors > 0 || bossMismatch > 0) stats.failures++;
+  if (cliffCells === 0) { console.log('[悬崖] 未生成任何悬崖格（预期 ≥1）'); stats.failures++; }
   console.log(`平均尝试次数: ${(stats.totalAttempts / stats.attempts).toFixed(2)}  最差: ${stats.maxAttemptsSeen}`);
   console.log(`房间重叠: ${stats.overlapViolations}  网格不可达: ${stats.gridReachFailures}`);
   console.log(`商人超限: ${stats.merchantViolations}  精英房外精英: ${stats.eliteOutsideEliteRoom}  宝箱房数量违规: ${stats.chestRoomChestViolations}`);

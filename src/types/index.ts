@@ -8,8 +8,11 @@
 /** 装备品质：7档（破烂/普通/优秀/稀有/史诗/传说/神话） */
 export type Quality = 'poor' | 'common' | 'fine' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
-/** 装备槽位：武器 / 胸甲（共2个） */
-export type EquipSlot = 'weapon' | 'armor';
+/** 装备槽位：武器 / 胸甲 / 饰品（饰品提供暴击或闪避，数值随品质与等级成长） */
+export type EquipSlot = 'weapon' | 'armor' | 'accessory';
+
+/** 饰品主属性：暴击率 / 闪避率（百分点） */
+export type AccessoryStat = 'crit' | 'dodge';
 
 /** 词条类型：12种（锋利/坚固/活力/精准/灵巧/强攻/铁壁/嗜血/业火/贪婪/博学/屠龙） */
 export type AffixType =
@@ -22,6 +25,89 @@ export type AffixType =
 /** 药水品质：5档（劣质/普通/优质/强效/圣药） */
 export type PotionTier = 'crude' | 'normal' | 'quality' | 'strong' | 'holy';
 
+// ============ 遗物（docs/遗物系统设计.md） ============
+
+/** 遗物稀有度：-1 灾厄造物 / 0 尘芥 / 1 尘世遗物 / 2 圣遗物 / 3 神祇遗物 / 4 天堂（预留） */
+export type RelicRarity = -1 | 0 | 1 | 2 | 3 | 4;
+
+/** 遗物类别 */
+export type RelicCategory = 'combat' | 'survival' | 'economy' | 'explore' | 'risk' | 'fun';
+
+/** 灾厄造物子类型：start 开局灾厄 / risk 高风险中收益 / event 事件型（可净化） */
+export type CurseSubtype = 'start' | 'risk' | 'event';
+
+/** 遗物效果类型（声明式） */
+export type RelicEffectType =
+  | 'stat'          // 数值加成（flat/percent，可配 onLowHp/onHighHp 条件）
+  | 'onKill'        // 击杀触发
+  | 'onFloorEnter'  // 进层触发
+  | 'onLowHp'       // 低血条件 + stat
+  | 'onHighHp'      // 高血条件 + stat
+  | 'onCrit'        // 暴击触发
+  | 'passive'       // 常驻规则
+  | 'none';         // 趣味类（无效果）
+
+/** 遗物可影响的属性键 */
+export type RelicStatKey =
+  | 'attack' | 'defense' | 'maxHp'
+  | 'critRate' | 'critDamage' | 'dodgeRate'
+  | 'lifesteal' | 'thorns' | 'damageReduction' | 'damageTaken'
+  | 'fireDamage' | 'bossDamage' | 'eliteBossDamage' | 'armorPen'
+  | 'followUp' | 'firstStrikeDouble' | 'revive' | 'reviveOnce' | 'shieldEvery5'
+  | 'goldBonus' | 'expBonus' | 'killGold' | 'potionBonus' | 'potionExtraPct'
+  | 'merchantDiscount' | 'chestQualityUp' | 'monsterAttackUp'
+  | 'revealStairs' | 'revealMap' | 'revealElite' | 'revealChest' | 'revealHidden'
+  | 'revealAround' | 'teleport' | 'regenStep' | 'soulBonus' | 'showMonsterHp'
+  | 'noPotion' | 'potionPerBattle' | 'chaos' | 'resetBuffOnFloor' | 'ambush' | 'firstStrikeBoost';
+
+/** 单条遗物效果 */
+export interface RelicEffect {
+  type: RelicEffectType;
+  /** 影响属性（stat/passive/onLowHp/onHighHp/onCrit 用） */
+  stat?: RelicStatKey;
+  value?: number;
+  /** flat = 加法（默认）；percent = 百分比 */
+  mode?: 'flat' | 'percent';
+  /** 条件阈值（低血/高血比例，0~1） */
+  threshold?: number;
+  /** onFloorEnter/onKill 的动作：healPct/heal/key/hpLossPct/loseHp/gold/monsterAttackUp */
+  action?: string;
+  note?: string;
+}
+
+/** 遗物定义（relics.json） */
+export interface RelicDef {
+  id: string;
+  name: string;
+  rarity: RelicRarity;
+  category: RelicCategory;
+  /** 灾厄子类型（rarity === -1） */
+  subtype?: CurseSubtype;
+  /** C 类灾厄：专属净化目标 id（一对一） */
+  purifyTo?: string;
+  /** 参与的质变组合名 */
+  combos?: string[];
+  desc: string;
+  effects: RelicEffect[];
+  /** 图标：emoji 或图片路径（如 "img/relic/r001.png"）；缺省按类别给默认 emoji */
+  icon?: string;
+  /** 备注（进阶链 / 组合名 / 来源） */
+  note?: string;
+  /** 介绍 / 风味文案（图鉴与物品详情页展示） */
+  lore?: string;
+  /** 稀有度/数值未定标记 */
+  tbd?: boolean;
+  /** 专属遗物：不进任何随机掉落池（由剧情 / 难度开局指定授予） */
+  exclusive?: boolean;
+}
+
+/** 物品详情页请求：点击遗物 / 装备 / 药水 / 钥匙 时发出 */
+export type ItemDetailRequest =
+  | { kind: 'relic'; id: string }
+  | { kind: 'equipment'; id: string }
+  | { kind: 'potion'; tier: PotionTier }
+  | { kind: 'key' };
+
 /** 房间类型：起点/终点/战斗/精英/宝箱/商人/女巫/Boss/休整 */
 /** 房间类型：起点/终点/战斗/精英/宝箱/商人/女巫/铁匠/Boss/休整 */
 export type RoomType = 'start' | 'end' | 'combat' | 'elite' | 'chest' | 'merchant' | 'witch' | 'blacksmith' | 'boss' | 'rest';
@@ -32,8 +118,16 @@ export type FloorKind = 'initial' | 'boss' | 'summit' | 'normal';
 /** 方向 */
 export type Direction = 'north' | 'south' | 'east' | 'west';
 
-/** 地形编码：-1虚空（不绘制，显示背景色） 0空地 1墙 2装饰 */
-export type TileCode = -1 | 0 | 1 | 2;
+/**
+ * 通口类型（出口模式）——房间「有几条边相通、如何相通」的拓扑分类，是「入口类型」的离散化。
+ * 依据**全部门（含入口）的边关系**自动判定（见 `src/map/ExitPattern.ts`）：
+ *   单口(1) / 上下通口(一对对边,2) / 对角通口(一对邻边,2) / T型通口(3) / 四方通口(4)。
+ * 运行时用于按「房间类型 + 通口类型」从手工房间库中抽取（见 `src/map/RoomLibrary.ts`）。
+ */
+export type ExitPattern = 'single' | 'vertical' | 'diagonal' | 'tee' | 'cross';
+
+/** 地形编码：-1虚空（不绘制，显示背景色） 0空地 1墙 2装饰 4悬崖（不可通行深渊） */
+export type TileCode = -1 | 0 | 1 | 2 | 4;
 
 // ============ 地图与房间（文档二） ============
 
@@ -54,14 +148,18 @@ export interface MapEntity {
   stats?: MonsterStats;
   /** NPC定义ID */
   npcId?: string;
-  /** 宝箱档次：普通 / 大宝箱（Boss奖励房） */
-  chestTier?: 'normal' | 'grand';
+  /** 宝箱档次：普通 / 大宝箱（Boss奖励房） / 遗物宝箱（三选一） */
+  chestTier?: 'normal' | 'grand' | 'relic';
   /** 药水档次（kind === 'potion' 时有效） */
   potionTier?: PotionTier;
   /** 楼梯目标楼层 */
   targetFloor?: number;
   /** 楼梯跨度：2 = 2×2 主实体（渲染整座阶梯）；1 = 2×2 占位从属格（只阻挡/触发，不渲染）；缺省 = 旧版单格 */
   stairSpan?: number;
+  /** 宝箱：所在房间风险级（收益结算用；缺省 1 = 旧行为） */
+  riskTier?: number;
+  /** 宝箱：收益倍率（ContentFiller 按房间风险写入；缺省 1 = 旧行为） */
+  rewardMul?: number;
 }
 
 /** 房间数据（文档二 4.3 输出） */
@@ -100,6 +198,21 @@ export interface RoomData {
   entities: MapEntity[];
   /** 内容布局模式（战斗/精英房由 ContentFiller 填充时记录：barrier/double/arena/scattered/throne） */
   layout?: string;
+  /** 风险等级 1~3（侧室 / 大房 / 高层更高）：守军更强、奖励更好——玩家据此权衡路线 */
+  risk?: 1 | 2 | 3;
+  /** 收益倍率（= 风险级对应 rewardMul；开箱结算 / UI 提示用） */
+  rewardMul?: number;
+  /**
+   * 张力值：本房对路径张力的贡献（与 `mapGeneration.tension.weights` 同尺度，正=加压 / 负=泄压）。
+   * 运行时为**已解析的最终值**（预制房可显式标注覆盖房型默认）。**保留给后续「房间类型决定」使用**
+   * ——例如按张力梯度决定战斗/精英/安全房的落位，使手工房也能参与运气平衡器。
+   */
+  tension?: number;
+  /**
+   * 通口类型（由本房全部门方向判定）：与 `type` 一起构成「从手工房间库抽取」的键
+   * （同一类型 + 同一通口类型仍可有多间房，用 `tension` 区分体验）。
+   */
+  pattern?: ExitPattern;
 }
 
 export interface RoomDoor {
@@ -225,6 +338,10 @@ export interface Equipment {
   affixes: AffixInstance[];
   attack: number;
   defense: number;
+  /** 饰品主属性类型（仅 slot === 'accessory'）：暴击 / 闪避 */
+  accessoryStat?: AccessoryStat;
+  /** 饰品主属性数值（百分点，一位小数；仅 slot === 'accessory'） */
+  accessoryValue?: number;
   sellPrice: number;
   buyPrice: number;
   source: 'chest' | 'monster' | 'boss' | 'merchant' | 'quest' | 'tutorial';
@@ -264,14 +381,20 @@ export interface PlayerState {
   hotbar: (PotionTier | null)[];
   weaponId: string | null;
   armorId: string | null;
+  /** 饰品（旧存档无此字段 → 视为未装备） */
+  accessoryId: string | null;
   bag: Equipment[];
+  /** 持有遗物 ID 列表（永久绑定，本轮爬塔内持续生效；获取时可选丢弃） */
+  relics: string[];
+  /** 遗物复活（不灭之魂 / 不朽壁垒）本轮是否已用 */
+  relicReviveUsed?: boolean;
   x: number;
   y: number;
   currentFloor: number;
   currentRoomId: string;
 }
 
-/** 玩家聚合属性（基础 + 装备 + 词条） */
+/** 玩家聚合属性（基础 + 装备 + 词条 + 遗物） */
 export interface PlayerStats {
   maxHp: number;
   attack: number;
@@ -283,6 +406,24 @@ export interface PlayerStats {
   goldBonus: number;
   expBonus: number;
   bossDamage: number;
+  /** 额外暴击伤害（百分点，叠在基础暴击倍率上） */
+  critDamage: number;
+  /** 受到伤害减免（百分比） */
+  damageReduction: number;
+  /** 受到伤害增加（百分比，负面） */
+  damageTaken: number;
+  /** 反弹所受伤害（百分比） */
+  thorns: number;
+  /** 无视目标防御（百分比） */
+  armorPen: number;
+  /** 对精英与 Boss 伤害加成（百分比） */
+  eliteBossDamage: number;
+  /** 怪物攻击加成（百分比，负面） */
+  monsterAttackUp: number;
+  /** 药水回复量加成（百分比） */
+  potionBonus: number;
+  /** 药水额外回复最大生命（百分比） */
+  potionExtraPct: number;
 }
 
 // ============ 战斗 ============
@@ -375,9 +516,12 @@ export interface QuestDef {
 
 export interface QuestState {
   id: string;
+  /** 当前目标的进度（多目标任务时为「当前目标」内的进度） */
   progress: number;
   isCompleted: boolean;
   isAccepted: boolean;
+  /** 多目标任务：当前推进到的目标序号（缺省 0） */
+  objectiveIndex?: number;
 }
 
 // ============ 粒子 ============
@@ -432,16 +576,24 @@ export interface GameSettings {
 export interface GameEventMap {
   gameStarted: Record<string, never>;
   floorChanged: { fromFloor: number; toFloor: number };
-  roomEntered: { roomId: string; roomType: RoomType; depth: number; name: string };
+  roomEntered: {
+    roomId: string; roomType: RoomType; depth: number; name: string;
+    /** 风险等级 1~3（>1 时 UI 提示「危险度 / 收益」，安全房为 1） */
+    risk?: number;
+    /** 收益倍率（与风险对应，开箱结算同一系数） */
+    rewardMul?: number;
+  };
   /** 发现隐藏房间（P1-1）：入口墙格被挖开，房间并入当前楼层 */
   hiddenRoomDiscovered: { roomId: string; x: number; y: number };
   playerMoved: { x: number; y: number };
+  /** 主动交互（撞向 / 点击实体）——供 on_interact 事件触发 */
+  entityInteracted: { kind: MapEntity['kind']; entityId: string };
   stepsChanged: { steps: number };
   /** manual=true 时战斗结果面板不自动弹出（微操面板自行收尾） */
   battleEnded: { result: BattleResult; manual?: boolean };
   /** 登顶反转演出播完（§4 假终点揭示，一次性旗标随存档） */
   summitRevealed: Record<string, never>;
-  monsterDefeated: { entityId: string; name: string; isElite: boolean; isBoss: boolean };
+  monsterDefeated: { entityId: string; name: string; monsterId?: string; isElite: boolean; isBoss: boolean };
   bossDefeated: { floor: number; name: string };
   bossWarning: { floor: number; name: string };
   chestOpened: { entityId: string; roomType: RoomType };
@@ -453,6 +605,20 @@ export interface GameEventMap {
   equipmentGenerated: { equipment: Equipment; source: string };
   equipmentEquipped: { slot: EquipSlot; equipmentId: string; oldId: string | null };
   equipmentSold: { equipmentId: string; price: number };
+  /** 获得遗物 */
+  relicGained: { id: string; name: string; rarity: number };
+  /** 发现遗物（掉落 / 开箱）：交给玩家抉择「收下 / 丢弃」，尚未入账 */
+  relicOffered: { id: string; name: string; rarity: number; source: string };
+  /** 请求遗物「三选一」（遗物宝箱） */
+  relicChoiceRequested: { entityId: string; floor: number; count: number };
+  /** 丢弃/净化遗物 */
+  relicRemoved: { id: string; name: string };
+  /** 组合质变觉醒 */
+  relicComboTriggered: { combo: string; name: string; desc: string };
+  /** C 类灾厄净化（灾厄形态 → 净化形态） */
+  relicPurified: { from: string; to: string; name: string };
+  /** 点击物品 → 打开物品详情页（信息卡片） */
+  itemDetailRequested: ItemDetailRequest;
   potionUsed: { tier: PotionTier; healed: number };
   potionPurchased: { tier: PotionTier; price: number };
   keyPurchased: { price: number };
@@ -472,6 +638,8 @@ export interface GameEventMap {
   saveLoaded: Record<string, never>;
   saveCleared: Record<string, never>;
   settingsChanged: { key: string; value: unknown };
+  /** 调试开关变化（点亮图鉴等），面板据此实时刷新 */
+  debugFlagsChanged: Record<string, never>;
   notification: { message: string; type: 'info' | 'success' | 'warning' | 'error'; icon?: string };
   firstEquipmentGained: { equipment: Equipment };
   panelToggled: { panel: string; open: boolean };

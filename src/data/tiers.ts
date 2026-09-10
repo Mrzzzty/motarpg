@@ -22,6 +22,31 @@ export type TierParticle = 'none' | 'spore' | 'dust' | 'stardust' | 'ember';
 /** 标题卡背景美术类型 */
 export type TierCardBg = 'brick' | 'moss' | 'book' | 'stars' | 'gears' | 'halo';
 
+/** 走廊样式变体（各区段走廊建模不同） */
+export type CorridorVariant =
+  | 'balustrade' // 栏柱式：立柱 + 中横档 + 逐格细栏柱（石质 / 星辉 / 黄铜 / 白金）
+  | 'timber'     // 木质式：立柱 + 两道横板
+  | 'panel';     // 栏板式：实心薄板 + 顶部线脚（书架侧板感）
+
+/** 区段走廊样式（配色 / 金属度 / 栏柱密度 / 柱头 / 点缀/自发光） */
+export interface TierCorridor {
+  variant: CorridorVariant;
+  /** 立柱色 */
+  postColor: number;
+  /** 扶手 / 横档 / 栏柱色 */
+  railColor: number;
+  metalness: number;
+  roughness: number;
+  /** 每格栏柱数（仅 balustrade 变体） */
+  balusters: number;
+  /** 立柱柱头（球顶） */
+  finial: boolean;
+  /** 自发光色（星辉 / 黄铜暖光），缺省无 */
+  glow?: number;
+  /** 点缀：rivet 铆钉（黄铜）/ rune 星辉符文（观星） */
+  accents?: 'rivet' | 'rune';
+}
+
 export interface TierTheme {
   id: string;
   /** 区段短名（进层提示「进入【…】」用） */
@@ -83,6 +108,9 @@ export interface TierTheme {
   uiAccent: string;
   uiAccentCool: string;
 
+  /** 走廊样式（各区段走廊建模不同，见 TierCorridor） */
+  corridor: TierCorridor;
+
   /** 引导者低语（§6 [推荐稿]，可选；区段进入后画面边缘手写体浮现） */
   whisper?: string;
 }
@@ -114,6 +142,10 @@ export const TIERS: TierTheme[] = [
     windowGlow: 0x8fa8c0,
     uiAccent: '#8fb3d9',
     uiAccentCool: '#5a7ba0',
+    corridor: {
+      variant: 'balustrade', postColor: 0x46525f, railColor: 0x6b7b8c,
+      metalness: 0.2, roughness: 0.72, balusters: 3, finial: true,
+    },
   },
   {
     id: 'garden',
@@ -141,6 +173,10 @@ export const TIERS: TierTheme[] = [
     windowGlow: 0xd9722e,
     uiAccent: '#8fc77a',
     uiAccentCool: '#d9722e',
+    corridor: {
+      variant: 'timber', postColor: 0x4e3a28, railColor: 0x6f5636,
+      metalness: 0.06, roughness: 0.85, balusters: 0, finial: false,
+    },
     whisper: '还在向上么？……也好。',
   },
   {
@@ -169,6 +205,10 @@ export const TIERS: TierTheme[] = [
     windowGlow: 0xe8dcc0,
     uiAccent: '#e0c294',
     uiAccentCool: '#a0785a',
+    corridor: {
+      variant: 'panel', postColor: 0x463527, railColor: 0x7a5a3a,
+      metalness: 0.14, roughness: 0.8, balusters: 0, finial: true,
+    },
     whisper: '书页翻动的时候，塔也在读你。',
   },
   {
@@ -198,6 +238,11 @@ export const TIERS: TierTheme[] = [
     windowGlow: 0x8fb0e8,
     uiAccent: '#9ab8ea',
     uiAccentCool: '#8d7ad0',
+    corridor: {
+      variant: 'balustrade', postColor: 0x263251, railColor: 0x8fb0e8,
+      metalness: 0.55, roughness: 0.34, balusters: 4, finial: true,
+      glow: 0x8fb0e8, accents: 'rune',
+    },
     whisper: '星星不说话。它们只是在看。',
   },
   {
@@ -226,6 +271,11 @@ export const TIERS: TierTheme[] = [
     windowGlow: 0xd9b878,
     uiAccent: '#d9b878',
     uiAccentCool: '#7a9ec4',
+    corridor: {
+      variant: 'balustrade', postColor: 0x5b4520, railColor: 0xd9b878,
+      metalness: 0.78, roughness: 0.3, balusters: 2, finial: true,
+      glow: 0xd9b878, accents: 'rivet',
+    },
     whisper: '发条拧紧了。你听见了吗。',
   },
   {
@@ -255,6 +305,10 @@ export const TIERS: TierTheme[] = [
     windowGlow: 0xfff2cf,
     uiAccent: '#e6ddc4',
     uiAccentCool: '#d4af6a',
+    corridor: {
+      variant: 'balustrade', postColor: 0xdcd2b8, railColor: 0xf0e9d8,
+      metalness: 0.12, roughness: 0.52, balusters: 3, finial: true, glow: 0xfff7e0,
+    },
   },
 ];
 

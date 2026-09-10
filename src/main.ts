@@ -3,6 +3,9 @@
  * 初始化顺序：数据 → UI → 单例预热 → 标题屏（新游戏/读档）→ 游戏循环。
  */
 import './style.css';
+import './ui/relic.css';
+import './ui/itemDetail.css';
+import './ui/roomEditor.css';
 import { dataManager } from './core/DataManager';
 import { GameUI } from './ui/GameUI';
 import { GameLoop } from './core/GameLoop';
@@ -20,6 +23,7 @@ import { BestiaryManager } from './systems/BestiaryManager';
 import { MerchantSystem } from './systems/MerchantSystem';
 import { SaveManager } from './systems/SaveManager';
 import { AchievementSystem } from './systems/AchievementSystem';
+import { RelicManager } from './systems/RelicManager';
 import { GuidanceSystem } from './systems/GuidanceSystem';
 import { MapGenerator } from './map/MapGenerator';
 import { buildPrefabFloor } from './map/PrefabMap';
@@ -76,6 +80,7 @@ async function bootstrap(): Promise<void> {
     quest: QuestManager.getInstance(),
     bestiary: BestiaryManager.getInstance(),
     merchant: MerchantSystem.getInstance(),
+    relic: RelicManager.getInstance(),
     save: SaveManager.getInstance(),
     guidance: GuidanceSystem.getInstance(),
     describeFloor(): string {

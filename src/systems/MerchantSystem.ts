@@ -9,6 +9,11 @@ import { EquipmentGenerator } from './EquipmentGenerator';
 import { AchievementSystem, UNLOCK } from './AchievementSystem';
 import { rng } from '../utils/MathUtils';
 
+/**
+ * 商店条目。
+ * 注意：**遗物不存在任何售卖 / 回收渠道**（遗物只进不出，仅可在遗物面板丢弃 / 净化），
+ * 因此这里没有 relic 类型——勿再引入。
+ */
 export interface ShopEntry {
   kind: 'potion' | 'key' | 'equipment';
   tier?: PotionTier;
@@ -157,13 +162,15 @@ export class MerchantSystem {
     return { ok: true };
   }
 
-  /** 出售装备（回收价）。收藏与正在穿戴的装备不可回收 */
+  /** 出售装备（回收价）。收藏与正在穿戴的装备不可回收。**遗物不在可回收范围内** */
   sell(equipmentId: string): { ok: boolean; price: number; reason?: string } {
     const player = Player.getInstance();
     const equip = player.state.bag.find(e => e.id === equipmentId);
     if (!equip) return { ok: false, price: 0, reason: '无此装备' };
     if (equip.isFavorite) return { ok: false, price: 0, reason: '已收藏的装备无法回收' };
-    if (player.state.weaponId === equipmentId || player.state.armorId === equipmentId) {
+    if (player.state.weaponId === equipmentId
+      || player.state.armorId === equipmentId
+      || player.state.accessoryId === equipmentId) {
       return { ok: false, price: 0, reason: '正在穿戴的装备无法回收' };
     }
     player.removeEquipment(equipmentId);

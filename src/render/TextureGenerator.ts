@@ -273,13 +273,18 @@ class HTMLCanvasElementGenerator {
         case 'chest': {
           const openedNow = this.chestOpened;
           const grand = e.chestTier === 'grand';
-          const h = dataManager.config.heights.chest + (grand ? 8 : 0);
-          placeholderArt.drawBox(ctx, 0, 0, h, grand ? 0.7 : 0.55, {
-            top: openedNow ? '#aaaaaa' : '#ffe066',
-            left: openedNow ? '#666666' : '#b8860b',
-            right: openedNow ? '#777777' : '#daa520',
-            border: openedNow ? '#888888' : '#ffcc00',
-          }, { label: openedNow ? '' : grand ? '大宝箱' : '宝箱', labelColor: '#ffcc00' });
+          const relic = e.chestTier === 'relic';
+          const h = dataManager.config.heights.chest + (grand ? 8 : relic ? 10 : 0);
+          // 遗物宝箱：紫金配色 + 更大的箱体，一眼可辨（区段末奖励）
+          const tone = relic
+            ? { top: '#f2d9ff', left: '#5a2a86', right: '#8a3fd1', border: '#d9a6ff', label: '#e7c6ff' }
+            : { top: '#ffe066', left: '#b8860b', right: '#daa520', border: '#ffcc00', label: '#ffcc00' };
+          placeholderArt.drawBox(ctx, 0, 0, h, relic ? 0.72 : grand ? 0.7 : 0.55, {
+            top: openedNow ? '#aaaaaa' : tone.top,
+            left: openedNow ? '#666666' : tone.left,
+            right: openedNow ? '#777777' : tone.right,
+            border: openedNow ? '#888888' : tone.border,
+          }, { label: openedNow ? '' : relic ? '遗物宝箱' : grand ? '大宝箱' : '宝箱', labelColor: tone.label });
           break;
         }
         case 'potion': {
@@ -426,7 +431,7 @@ class HTMLCanvasElementGenerator {
     switch (e.kind) {
       case 'monster': return `m_${def?.id ?? '?'}_${e.isElite ? 1 : 0}`;
       case 'boss': return `b_${def?.id ?? '?'}`;
-      case 'chest': return `c_${this.chestOpened ? 1 : 0}_${e.chestTier === 'grand' ? 1 : 0}`;
+      case 'chest': return `c_${this.chestOpened ? 1 : 0}_${e.chestTier ?? 'normal'}`;
       case 'npc': return `n_${e.npcId ?? '?'}`;
       case 'stair': return `s_${e.targetFloor ?? room.floorId + 1}`;
       case 'torch': return `t_${room.type}`;
